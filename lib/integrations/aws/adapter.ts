@@ -27,6 +27,7 @@ import {
 } from "@aws-sdk/client-rds";
 import {
   EC2Client,
+  DescribeRegionsCommand,
   paginateDescribeVpcs,
   paginateDescribeSubnets,
   paginateDescribeSecurityGroups,
@@ -68,6 +69,13 @@ export interface AwsIntegrationAdapter extends IntegrationAdapter {
 
 const TARGETED_SERVICES = new Set(["ecs", "ecr", "s3", "rds", "ec2"]);
 
+/**
+ * Cap on how many enabled regions we fan out to at once. Each region's discovery
+ * itself fans out (ECS/S3 use pLimit(5) internally), so we keep the outer cap modest
+ * to respect per-service API rate limits under `adaptive` retry.
+ */
+const REGION_CONCURRENCY = 4;
+
 export function createAwsAdapter(cfg: AwsAdapterConfig): AwsIntegrationAdapter {
   const { accountId, label } = cfg;
 
@@ -100,36 +108,13 @@ export function createAwsAdapter(cfg: AwsAdapterConfig): AwsIntegrationAdapter {
 
     async discover(): Promise<DiscoveryResult> {
       const factory = createClientFactory(accountId);
-      const region = factory.region;
+      const defaultRegion = factory.region;
       const errors: AdapterError[] = [];
-
-      // 1. Cheap ARN inventory via the tagging API (non-fatal). Builds an ARN→tags
-      //    map used to enrich the targeted describes, plus captures "extra" tagged
-      //    resources for services we do not deep-describe (lambda, dynamodb, sns…).
-      let tagMap = new Map<string, Record<string, string>>();
-      let extras: CloudResource[] = [];
-      try {
-        const inv = await discoverTagInventory(factory, region);
-        tagMap = inv.tagMap;
-        extras = inv.extras;
-      } catch (err) {
-        errors.push(toAdapterError(`tagging:${region}`, err));
-      }
-
-      // 2. Targeted describes, one scope per (service). Never let one failure abort
-      //    the rest — collect AdapterErrors and mark the result partial.
-      const scopes: Array<[string, () => Promise<ScopeResult>]> = [
-        [`ecs:${region}`, () => discoverEcs(factory, region, tagMap)],
-        [`ecr:${region}`, () => discoverEcr(factory, region, tagMap)],
-        [`s3:global`, () => discoverS3(factory, region, tagMap)],
-        [`rds:${region}`, () => discoverRds(factory, region, tagMap)],
-        [`ec2:${region}`, () => discoverEc2Vpc(factory, region, tagMap)],
-      ];
-
-      const settled = await Promise.allSettled(scopes.map(([, fn]) => fn()));
 
       const resById = new Map<string, CloudResource>();
       const edgeMap = new Map<string, GraphEdge>();
+      // These closures only ever run inside synchronous `.forEach`/`.push` blocks
+      // (never mid-await), so concurrent region tasks can share them safely.
       const addResource = (r: CloudResource) => {
         if (!resById.has(r.urn)) resById.set(r.urn, r);
       };
@@ -138,16 +123,88 @@ export function createAwsAdapter(cfg: AwsAdapterConfig): AwsIntegrationAdapter {
         if (!edgeMap.has(k)) edgeMap.set(k, { ...e, id: k });
       };
 
-      extras.forEach(addResource);
-      settled.forEach((res, i) => {
-        const scope = scopes[i][0];
-        if (res.status === "fulfilled") {
-          res.value.resources.forEach(addResource);
-          res.value.edges.forEach(addEdge);
-        } else {
-          errors.push(toAdapterError(scope, res.reason));
-        }
-      });
+      // 1. Enumerate the account's enabled regions. A failure here degrades to the
+      //    single default region rather than aborting the whole account.
+      let regions: string[];
+      try {
+        regions = await listEnabledRegions(factory, defaultRegion);
+      } catch (err) {
+        errors.push(toAdapterError("ec2:DescribeRegions", err));
+        regions = [defaultRegion];
+      }
+
+      // 2. Cheap ARN inventory via the tagging API — once per region, since the
+      //    tagging API is regional. Builds a per-region ARN→tags map used to enrich
+      //    the targeted describes, plus captures "extra" tagged resources for services
+      //    we do not deep-describe (lambda, dynamodb, sns…). Non-fatal per region.
+      const tagMaps = new Map<string, Map<string, Record<string, string>>>();
+      const tagLimit = pLimit(REGION_CONCURRENCY);
+      await Promise.all(
+        regions.map((region) =>
+          tagLimit(async () => {
+            try {
+              const inv = await discoverTagInventory(factory, region);
+              tagMaps.set(region, inv.tagMap);
+              inv.extras.forEach(addResource);
+            } catch (err) {
+              errors.push(toAdapterError(`tagging:${region}`, err));
+              tagMaps.set(region, new Map());
+            }
+          }),
+        ),
+      );
+
+      // 3. Global scopes — discovered ONCE per account (S3 bucket listing is global).
+      //    Merge every region's tag map so the global describes see the widest tag
+      //    coverage regardless of which region surfaced a given ARN.
+      const globalTagMap = new Map<string, Record<string, string>>();
+      for (const m of tagMaps.values()) {
+        for (const [k, v] of m) globalTagMap.set(k, v);
+      }
+      const globalScopes: Array<[string, () => Promise<ScopeResult>]> = [
+        ["s3:global", () => discoverS3(factory, defaultRegion, globalTagMap)],
+      ];
+
+      // 4. Regional describes — one pass per enabled region, bounded so we respect
+      //    per-service API limits. Never let one region/service abort the rest:
+      //    collect AdapterErrors and mark the result partial.
+      const regionLimit = pLimit(REGION_CONCURRENCY);
+      const regionalWork = regions.map((region) =>
+        regionLimit(async () => {
+          const tagMap =
+            tagMaps.get(region) ?? new Map<string, Record<string, string>>();
+          const scopes: Array<[string, () => Promise<ScopeResult>]> = [
+            [`ecs:${region}`, () => discoverEcs(factory, region, tagMap)],
+            [`ecr:${region}`, () => discoverEcr(factory, region, tagMap)],
+            [`rds:${region}`, () => discoverRds(factory, region, tagMap)],
+            [`ec2:${region}`, () => discoverEc2Vpc(factory, region, tagMap)],
+          ];
+          const settled = await Promise.allSettled(scopes.map(([, fn]) => fn()));
+          settled.forEach((res, i) => {
+            const scope = scopes[i][0];
+            if (res.status === "fulfilled") {
+              res.value.resources.forEach(addResource);
+              res.value.edges.forEach(addEdge);
+            } else {
+              errors.push(toAdapterError(scope, res.reason));
+            }
+          });
+        }),
+      );
+
+      const globalWork = globalScopes.map(([scope, fn]) =>
+        (async () => {
+          try {
+            const r = await fn();
+            r.resources.forEach(addResource);
+            r.edges.forEach(addEdge);
+          } catch (err) {
+            errors.push(toAdapterError(scope, err));
+          }
+        })(),
+      );
+
+      await Promise.all([...regionalWork, ...globalWork]);
 
       return {
         resources: [...resById.values()],
@@ -168,11 +225,36 @@ interface ScopeResult {
   edges: GraphEdge[];
 }
 
+/**
+ * List the account's enabled regions via EC2 DescribeRegions, keeping only regions
+ * that are usable without an opt-in dance (`opt-in-not-required`) plus those already
+ * opted into (`opted-in`). The configured default region is always included so we can
+ * never regress below single-region coverage.
+ */
+async function listEnabledRegions(
+  factory: AwsClientFactory,
+  defaultRegion: string,
+): Promise<string[]> {
+  const ec2 = factory.get(EC2Client, { region: defaultRegion });
+  const res = await ec2.send(
+    new DescribeRegionsCommand({
+      Filters: [
+        { Name: "opt-in-status", Values: ["opt-in-not-required", "opted-in"] },
+      ],
+    }),
+  );
+  const regions = (res.Regions ?? [])
+    .map((r) => r.RegionName)
+    .filter((x): x is string => Boolean(x));
+  if (!regions.includes(defaultRegion)) regions.push(defaultRegion);
+  return regions;
+}
+
 async function discoverTagInventory(
   factory: AwsClientFactory,
   region: string,
 ): Promise<{ tagMap: Map<string, Record<string, string>>; extras: CloudResource[] }> {
-  const client = factory.get(ResourceGroupsTaggingAPIClient);
+  const client = factory.get(ResourceGroupsTaggingAPIClient, { region });
   const tagMap = new Map<string, Record<string, string>>();
   const extras: CloudResource[] = [];
 
@@ -188,10 +270,15 @@ async function discoverTagInventory(
       // Services we deep-describe are authoritative; skip them here to avoid dupes.
       if (TARGETED_SERVICES.has(parsed.service)) continue;
 
+      // Globally-scoped ARNs carry an empty region segment (iam, route53, cloudfront,
+      // wafv2 global…). Give them a region-less urn so the per-region tagging sweeps
+      // collapse to a single row per account instead of one duplicate per region.
+      const resourceRegion = parsed.region.length > 0 ? parsed.region : null;
+
       extras.push(
         buildResource({
           accountId: factory.accountId,
-          region: parsed.region || region,
+          region: resourceRegion,
           serviceToken: parsed.service,
           nativeType: parsed.resourceType
             ? `aws:${parsed.service}:${parsed.resourceType}`
@@ -215,7 +302,7 @@ async function discoverEcs(
   region: string,
   tagMap: Map<string, Record<string, string>>,
 ): Promise<ScopeResult> {
-  const ecs = factory.get(ECSClient);
+  const ecs = factory.get(ECSClient, { region });
   const resources: CloudResource[] = [];
   const edges: GraphEdge[] = [];
 
@@ -407,7 +494,7 @@ async function discoverEcr(
   region: string,
   tagMap: Map<string, Record<string, string>>,
 ): Promise<ScopeResult> {
-  const ecr = factory.get(ECRClient);
+  const ecr = factory.get(ECRClient, { region });
   const resources: CloudResource[] = [];
 
   for await (const page of paginateDescribeRepositories({ client: ecr }, {})) {
@@ -458,12 +545,18 @@ async function discoverS3(
         const name = b.Name;
         if (!name) return;
 
-        let bregion: string | null = null;
+        // A bucket's region is NEVER null. `region: null` is reserved for truly-global
+        // resources (IAM/Route53/CloudFront/WAFv2); if an S3 bucket landed there, a transient
+        // GetBucketLocation failure could group it into that global scope and let the presence
+        // sweep mark every real global resource absent. Unresolved lookups fall back to S3's
+        // canonical us-east-1 home (the same default an empty LocationConstraint already maps to),
+        // which self-corrects on the next successful sync.
+        let bregion = "us-east-1";
         try {
           const loc = await s3.send(new GetBucketLocationCommand({ Bucket: name }));
           bregion = loc.LocationConstraint || "us-east-1";
         } catch {
-          bregion = null;
+          // best-effort: keep the us-east-1 default rather than degrading to null.
         }
 
         let tags: Record<string, string> = { ...(tagMap.get(`arn:aws:s3:::${name}`) ?? {}) };
@@ -502,7 +595,7 @@ async function discoverRds(
   region: string,
   tagMap: Map<string, Record<string, string>>,
 ): Promise<ScopeResult> {
-  const rds = factory.get(RDSClient);
+  const rds = factory.get(RDSClient, { region });
   const resources: CloudResource[] = [];
   const edges: GraphEdge[] = [];
 
@@ -590,7 +683,7 @@ async function discoverEc2Vpc(
   region: string,
   _tagMap: Map<string, Record<string, string>>,
 ): Promise<ScopeResult> {
-  const ec2 = factory.get(EC2Client);
+  const ec2 = factory.get(EC2Client, { region });
   const resources: CloudResource[] = [];
   const edges: GraphEdge[] = [];
 
