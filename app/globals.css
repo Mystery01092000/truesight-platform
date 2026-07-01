@@ -129,3 +129,51 @@ body {
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
+
+/* ── Topology canvas (React Flow) ────────────────────────────────────
+   Edges start hidden and reveal after the nodes settle, so the weave
+   "draws in" once the discovery entrance has resolved. Scoped under
+   .topo-canvas so nothing leaks to other React Flow usages. */
+.topo-canvas .react-flow__edge {
+  opacity: 0;
+}
+.topo-canvas.topo-revealed .react-flow__edge {
+  opacity: 1;
+  transition: opacity 0.7s ease;
+}
+.topo-edge-flow {
+  stroke-dasharray: 5 7;
+  animation: topo-flow 0.9s linear infinite;
+}
+@keyframes topo-flow {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+/* React Flow chrome, themed to the Argus surface ladder. */
+.topo-minimap {
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.topo-controls {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: none;
+}
+.topo-controls button {
+  background: var(--color-surface-card) !important;
+  border-bottom: 1px solid var(--color-hairline) !important;
+  color: var(--color-mute) !important;
+}
+.topo-controls button:hover {
+  background: var(--color-surface-elevated) !important;
+  color: var(--color-on-dark) !important;
+}
+.topo-controls button svg {
+  fill: currentColor;
+}
+.topo-canvas .react-flow__attribution {
+  display: none;
+}

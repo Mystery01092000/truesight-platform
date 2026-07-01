@@ -1,4 +1,4 @@
-import { LayoutDashboard, Cloud } from "lucide-react";
+import { LayoutDashboard, Cloud, Workflow } from "lucide-react";
 
 /**
  * Primary app navigation — one entry per pillar. Icons are lucide components.
@@ -10,6 +10,7 @@ import { LayoutDashboard, Cloud } from "lucide-react";
 export const NAV_ITEMS = [
   { href: "/overview", label: "Overview", icon: LayoutDashboard },
   { href: "/aws", label: "AWS estate", icon: Cloud },
+  { href: "/topology", label: "Topology", icon: Workflow },
 ] as const;
 
 /** Command-palette destinations ("Ask Argus" quick-nav). */
