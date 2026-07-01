@@ -16,7 +16,7 @@ export type ButtonVariant =
 export type ButtonSize = "sm" | "md";
 
 const BASE =
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium tracking-[0.2px] transition-colors select-none disabled:cursor-not-allowed disabled:pointer-events-none";
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium tracking-[0.2px] select-none transition duration-150 ease-smooth active:scale-[0.98] disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100";
 
 const VARIANTS: Record<ButtonVariant, string> = {
   // white pill, black label — the universal primary action

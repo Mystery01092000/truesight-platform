@@ -56,6 +56,7 @@ export function AppIconTile({ kind, size = 48, className }: AppIconTileProps) {
     <div
       className={cn(
         "relative grid shrink-0 place-items-center overflow-hidden rounded-md border border-hairline bg-surface-card",
+        "transition duration-200 ease-smooth group-hover:border-hairline-strong",
         size === 64 ? "size-16" : "size-12",
         className,
       )}

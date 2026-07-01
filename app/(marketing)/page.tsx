@@ -17,7 +17,7 @@ import { PillTabs } from "@/components/ui/PillTabs";
 import { Reveal } from "@/components/ui/Reveal";
 import { Surface } from "@/components/ui/Surface";
 import { LoginForm } from "@/components/auth/LoginForm";
-import { HeroDashboard } from "@/components/marketing/HeroDashboard";
+import { EstateAtlas } from "@/components/marketing/EstateAtlas";
 
 /* ────────────────────────────────────────────────────────────────────────── *
  * Capability showcase — auto-cycling every ~4s. One short title + one line +
@@ -275,7 +275,7 @@ export default function LandingPage() {
         </div>
 
         <Reveal delay={0.12} className="flex justify-center md:justify-end">
-          <HeroDashboard />
+          <EstateAtlas />
         </Reveal>
       </section>
 

@@ -79,6 +79,20 @@
   --animate-scan: scan 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   --animate-pulse-ring: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   --animate-flow: flow 1.6s linear infinite;
+  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
+
+  /* ── Cinematic scene motion (the watcher over the living estate) ──────
+     Slow, ambient loops so the hero/login field feels alive but never busy:
+     breathe = the iris bloom expanding; drift = nodes bobbing on their orbit;
+     sweep = the lighthouse scan beam rotating; twinkle = distant estate stars. */
+  --animate-breathe: breathe 7s ease-in-out infinite;
+  --animate-drift: drift 9s ease-in-out infinite;
+  --animate-sweep: sweep 16s linear infinite;
+  --animate-twinkle: twinkle 4.5s ease-in-out infinite;
+
+  /* Interaction easing — one soft, confident out-curve for every hover / press,
+     so micro-interactions across the app feel like one hand made them. */
+  --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes scan {
@@ -93,6 +107,25 @@
 }
 @keyframes flow {
   to { stroke-dashoffset: -16; }
+}
+@keyframes shimmer {
+  0% { background-position: 150% 0; }
+  100% { background-position: -150% 0; }
+}
+@keyframes breathe {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+@keyframes drift {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes sweep {
+  to { transform: rotate(360deg); }
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 0.12; }
+  50% { opacity: 0.7; }
 }
 
 /*
@@ -119,6 +152,26 @@ h3,
 h4 {
   font-family: var(--font-display);
   letter-spacing: -0.015em;
+}
+
+/* Machine data reads in tabular figures, so live-updating numbers hold their
+   column and never reflow as the estate refreshes in place. */
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Loading skeletons: a quiet hairline shimmer that resolves into content,
+   instead of a flat pulse. Honors reduced-motion via the floor below. */
+.skeleton {
+  background: linear-gradient(
+    100deg,
+    var(--color-surface-elevated) 30%,
+    var(--color-surface-card) 50%,
+    var(--color-surface-elevated) 70%
+  );
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+  border-radius: var(--radius-sm);
 }
 
 /* Quiet, tokenized scrollbars — the chrome stays monochrome. */
@@ -151,6 +204,65 @@ h4 {
   outline: 2px solid var(--color-hairline-strong);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
+}
+
+/* ── Cinematic watcher scene (hero + login backdrop) ─────────────────
+   The aperture-over-estate visual that replaced the numbers dashboard.
+   Depth is built from stacked light, not shadow: an iris bloom lifting the
+   centre, a vignette darkening the edges to focus the eye, and a slow conic
+   "lighthouse" beam sweeping the field. All decorative + pointer-inert. */
+.watcher-canvas {
+  position: relative;
+  isolation: isolate;
+}
+/* Iris bloom — the aperture's own light, warming the centre of the field. */
+.watcher-canvas::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 55% at 50% 46%, rgba(124, 141, 255, 0.16), transparent 70%),
+    radial-gradient(90% 80% at 50% 44%, rgba(124, 141, 255, 0.05), transparent 72%);
+}
+/* Vignette — pulls focus inward for a cinematic, watched centre. */
+.watcher-canvas::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: radial-gradient(115% 90% at 50% 45%, transparent 52%, rgba(0, 0, 0, 0.55) 100%);
+}
+/* The lighthouse beam — a faint iris wedge rotating from the pupil. */
+.watcher-beam {
+  position: absolute;
+  inset: -20%;
+  z-index: 0;
+  pointer-events: none;
+  background: conic-gradient(
+    from 0deg at 50% 50%,
+    transparent 0deg,
+    rgba(124, 141, 255, 0.10) 18deg,
+    transparent 42deg,
+    transparent 360deg
+  );
+  animation: var(--animate-sweep);
+  transform-origin: 50% 50%;
+  mix-blend-mode: screen;
+}
+.watcher-scene {
+  position: relative;
+  z-index: 1;
+}
+/* Deterministic per-element loops (delays set inline by index, SSR-safe). */
+.watcher-node { animation: var(--animate-drift); transform-box: fill-box; transform-origin: center; }
+.watcher-star { animation: var(--animate-twinkle); transform-box: fill-box; transform-origin: center; }
+.watcher-bloom { animation: var(--animate-breathe); transform-box: fill-box; transform-origin: center; }
+.watcher-edge { stroke-dasharray: 4 8; animation: topo-flow 1.1s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .watcher-beam { display: none; }
 }
 
 /* ── Topology canvas (React Flow) ────────────────────────────────────
