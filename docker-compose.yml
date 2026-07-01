@@ -1,0 +1,40 @@
+# Local development dependencies for Argus (Postgres + Redis).
+# NOT a production deployment — the app itself runs via `npm run dev`.
+# Match these to DATABASE_URL / REDIS_URL in your .env.cwt.
+#
+#   docker compose up -d
+#   DATABASE_URL=postgres://argus:argus@localhost:5432/argus
+#   REDIS_URL=redis://localhost:6379
+#
+# Host ports are overridable to avoid collisions with other local Postgres/Redis:
+#   ARGUS_DB_PORT=5433 ARGUS_REDIS_PORT=6380 docker compose up -d
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: argus-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: argus
+      POSTGRES_PASSWORD: argus
+      POSTGRES_DB: argus
+    ports:
+      - "${ARGUS_DB_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U argus -d argus"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: argus-redis
+    restart: unless-stopped
+    ports:
+      - "${ARGUS_REDIS_PORT:-6379}:6379"
+
+volumes:
+  pgdata:

@@ -1,0 +1,51 @@
+# Keep the build context lean — anything not needed by `npm ci` / `npm run build`.
+
+# Dependencies & build output (reinstalled/regenerated inside the image)
+node_modules
+.next
+out
+build
+dist
+coverage
+.turbo
+*.tsbuildinfo
+next-env.d.ts
+
+# Version control & CI
+.git
+.gitignore
+.github
+.gitattributes
+
+# Secrets / local env — NEVER bake into an image layer
+.env
+.env.*
+!.env.example
+
+# Local dev tooling (not part of the production image)
+docker-compose.yml
+docker-compose.*.yml
+Dockerfile
+.dockerignore
+
+# Infra / deploy assets (Terraform, Jenkins) — not part of the app build
+deploy
+*.tfstate
+*.tfstate.*
+*.tfplan
+.terraform
+
+# Docs & meta (do not affect the build)
+*.md
+docs
+DESIGN.md
+LICENSE
+
+# Logs & OS/editor cruft
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+.vscode
+.idea
