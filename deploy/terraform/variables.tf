@@ -201,6 +201,11 @@ variable "app_secret_keys" {
     "GITHUB_PAT",
     "AWS_ACCESS_KEY_ID",
     "AWS_SECRET_ACCESS_KEY",
+    # Direct prod-account read keys — resolveAccountCredentials() uses these for
+    # the prod account (direct-prod mode); without them prod discovery falls back
+    # to AssumeRole argus-readonly@prod, which the base principal cannot assume.
+    "AWS_PROD_ACCESS_KEY_ID",
+    "AWS_PROD_SECRET_ACCESS_KEY",
     "AWS_READONLY_ROLE_ARN",
     "AZURE_CLIENT_ID",
     "AZURE_CLIENT_SECRET",
@@ -219,6 +224,25 @@ variable "argus_readonly_role_arns" {
   description = "Cross-account read-only roles the task may assume for estate discovery."
   type        = list(string)
   default     = ["arn:aws:iam::*:role/argus-readonly"]
+}
+
+# ---- Discovery config (non-secret) -------------------------------------------
+variable "github_org" {
+  description = "GitHub org discovered for the GitHub insights pillar."
+  type        = string
+  default     = "centricitywealthtech"
+}
+
+variable "azure_resource_group" {
+  description = "Azure resource group scanned by the estate explorer."
+  type        = string
+  default     = "rg-centricity-prod"
+}
+
+variable "azure_subscription_name" {
+  description = "Azure subscription display name (resolved to a GUID at runtime)."
+  type        = string
+  default     = "Centricity-Oneinvictus"
 }
 
 # ---- Monitoring --------------------------------------------------------------

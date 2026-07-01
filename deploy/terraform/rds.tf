@@ -15,6 +15,10 @@ module "rds" {
   subnet_ids             = var.data_subnet_ids
   vpc_security_group_ids = [aws_security_group.rds.id]
 
+  # Module default (16.6) was retired from RDS; pin a currently-available 16.x
+  # (16.9). Parameter group family "postgres16" already covers this version.
+  engine_version = "16.9"
+
   instance_class        = var.db_instance_class # db.t4g.micro
   initial_database_name = var.db_name           # argus
   allocated_storage     = var.db_allocated_storage

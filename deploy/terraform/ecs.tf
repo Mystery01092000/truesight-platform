@@ -78,6 +78,13 @@ module "ecs_service" {
     DATABASE_PORT           = "5432"
     DATABASE_NAME           = var.db_name
     DATABASE_SSL            = "true"
+    # Non-secret discovery config — which accounts/org/resource-group to scan.
+    # Account IDs pick the direct-key credential mode per account (see client.ts).
+    AWS_MGMT_ACCOUNT_ID     = var.management_account_id
+    AWS_PROD_ACCOUNT_ID     = var.prod_account_id
+    GITHUB_ORG              = var.github_org
+    AZURE_RESOURCE_GROUP    = var.azure_resource_group
+    AZURE_SUBSCRIPTION_NAME = var.azure_subscription_name
   }
 
   # Runtime secrets pulled from SSM by the execution role at task start.
