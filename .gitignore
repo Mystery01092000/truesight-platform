@@ -43,6 +43,10 @@ deploy/terraform/.terraform/
 deploy/terraform/*.tfstate
 deploy/terraform/*.tfstate.*
 *.tfplan
+# tfvars may carry real values / overrides — never commit (use SSM for secrets)
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
 # NOTE: .terraform.lock.hcl is intentionally NOT ignored — the provider lock
 # file must be committed so every environment resolves identical provider
 # versions (reproducible, drift-free plans).
