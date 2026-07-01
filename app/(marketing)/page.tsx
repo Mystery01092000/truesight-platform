@@ -14,96 +14,11 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { buttonClass } from "@/components/ui/Button";
-import { Keycap } from "@/components/ui/Keycap";
 import { PillTabs } from "@/components/ui/PillTabs";
 import { Reveal } from "@/components/ui/Reveal";
 import { Surface } from "@/components/ui/Surface";
-
-/* ────────────────────────────────────────────────────────────────────────── *
- * Hero aperture — the Argus "watching / scanning" motif. Concentric hairline
- * rings + radial blades that rotate, a monochrome scan sweep, pulse rings out
- * of the pupil. All decoration is monochrome; accent lives only in icon tiles.
- * ────────────────────────────────────────────────────────────────────────── */
-function Aperture() {
-  const reduced = useReducedMotion();
-  // Round to 3dp so SSR and client emit identical coordinate strings (raw
-  // Math.cos/sin floats differ in the last digit → hydration mismatch).
-  const r = (n: number) => Math.round(n * 1000) / 1000;
-  const blades = Array.from({ length: 12 }, (_, i) => {
-    const a = (Math.PI / 6) * i;
-    const rO = 78;
-    const rI = 54;
-    return {
-      x1: r(100 + rO * Math.cos(a)),
-      y1: r(100 + rO * Math.sin(a)),
-      x2: r(100 + rI * Math.cos(a)),
-      y2: r(100 + rI * Math.sin(a)),
-    };
-  });
-
-  return (
-    <div className="relative grid aspect-square w-full max-w-[340px] place-items-center">
-      {/* pulse rings emanating from the pupil */}
-      <span className="absolute size-40 rounded-full border border-hairline-strong animate-pulse-ring" />
-      <span
-        className="absolute size-40 rounded-full border border-hairline animate-pulse-ring"
-        style={{ animationDelay: "1s" }}
-      />
-
-      <svg viewBox="0 0 200 200" fill="none" className="relative size-full text-ink">
-        {/* static concentric iris rings */}
-        <circle cx="100" cy="100" r="92" stroke="currentColor" strokeWidth="1" opacity="0.14" />
-        <circle cx="100" cy="100" r="72" stroke="currentColor" strokeWidth="1" opacity="0.28" />
-        <circle cx="100" cy="100" r="52" stroke="currentColor" strokeWidth="1" opacity="0.45" />
-
-        {/* rotating aperture: dashed ring + converging blades */}
-        <motion.g
-          style={{ transformOrigin: "100px 100px" }}
-          animate={reduced ? undefined : { rotate: 360 }}
-          transition={{ duration: 48, repeat: Infinity, ease: "linear" }}
-        >
-          <circle
-            cx="100"
-            cy="100"
-            r="88"
-            stroke="currentColor"
-            strokeWidth="1"
-            strokeDasharray="3 9"
-            opacity="0.4"
-            className="animate-flow"
-          />
-          {blades.map((b, i) => (
-            <line
-              key={i}
-              x1={b.x1}
-              y1={b.y1}
-              x2={b.x2}
-              y2={b.y2}
-              stroke="currentColor"
-              strokeWidth="1"
-              strokeLinecap="round"
-              opacity="0.4"
-            />
-          ))}
-        </motion.g>
-
-        {/* pupil */}
-        <circle cx="100" cy="100" r="8" fill="currentColor" />
-      </svg>
-
-      {/* monochrome scan sweep, clipped to the iris */}
-      <div className="pointer-events-none absolute size-[184px] overflow-hidden rounded-full">
-        <div className="absolute inset-x-0 h-20 animate-scan bg-[linear-gradient(180deg,transparent,rgba(255,255,255,0.07),transparent)]" />
-      </div>
-
-      {/* watching pulse over the pupil */}
-      <span
-        className="absolute size-3 rounded-full border border-on-dark animate-pulse-ring"
-        style={{ animationDelay: "0.4s" }}
-      />
-    </div>
-  );
-}
+import { LoginForm } from "@/components/auth/LoginForm";
+import { HeroDashboard } from "@/components/marketing/HeroDashboard";
 
 /* ────────────────────────────────────────────────────────────────────────── *
  * Capability showcase — auto-cycling every ~4s. One short title + one line +
@@ -331,35 +246,34 @@ function Showcase() {
 export default function LandingPage() {
   return (
     <div className="flex flex-col">
-      {/* Hero */}
-      <section className="mx-auto grid w-full max-w-[1240px] items-center gap-12 px-6 py-20 md:grid-cols-2 md:py-28">
-        <div className="flex flex-col items-start gap-6">
+      {/* Hero — narrative + inline sign-in beside a live estate dashboard */}
+      <section className="mx-auto grid w-full max-w-[1240px] items-center gap-12 px-6 py-16 md:grid-cols-2 md:py-24">
+        <div className="flex w-full flex-col items-start gap-6">
           <Reveal>
-            <h1 className="max-w-xl text-[44px] font-semibold leading-[1.08] tracking-[0.2px] text-ink md:text-[56px]">
+            <span className="inline-flex items-center gap-2 rounded-full border border-hairline bg-surface-card px-3 py-1 text-[12px] tracking-[0.3px] text-mute">
+              <span className="size-1.5 rounded-full bg-iris" />
+              Multi-cloud governance · AWS · Azure
+            </span>
+          </Reveal>
+          <Reveal delay={0.05}>
+            <h1 className="max-w-xl text-[40px] font-semibold leading-[1.08] tracking-[0.2px] text-ink md:text-[52px]">
               Cloud governance with no blind spots.
             </h1>
           </Reveal>
-          <Reveal delay={0.06}>
-            <p className="max-w-lg text-[18px] leading-[1.6] text-body">
+          <Reveal delay={0.1}>
+            <p className="max-w-lg text-[17px] leading-[1.6] text-body">
               Argus watches every account, subscription, and Terraform state across AWS and
-              Azure — one visual, self-discovering pane that never looks away.
+              Azure — one self-discovering pane that never looks away. Sign in to open your
+              estate.
             </p>
           </Reveal>
-          <Reveal delay={0.12}>
-            <div className="flex flex-col gap-3">
-              <Link href="/login" className={buttonClass("primary", "md")}>
-                Enter Argus
-                <ArrowRight size={16} strokeWidth={2} />
-              </Link>
-              <span className="inline-flex items-center gap-1.5 text-[13px] text-mute">
-                Search your estate with <Keycap>⌘</Keycap> <Keycap>K</Keycap>
-              </span>
-            </div>
+          <Reveal delay={0.16} className="w-full">
+            <LoginForm next="/overview" compact />
           </Reveal>
         </div>
 
-        <Reveal delay={0.1} className="flex justify-center md:justify-end">
-          <Aperture />
+        <Reveal delay={0.12} className="flex justify-center md:justify-end">
+          <HeroDashboard />
         </Reveal>
       </section>
 

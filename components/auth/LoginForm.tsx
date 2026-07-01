@@ -1,33 +1,55 @@
 "use client";
 
 import { useActionState } from "react";
+import { cn } from "@/lib/utils/cn";
 import { loginAction, type LoginState } from "@/app/(auth)/login/actions";
 import { Surface } from "@/components/ui/Surface";
 import { Button } from "@/components/ui/Button";
 import { TextInput } from "@/components/ui/TextInput";
 import { Logo } from "@/components/brand/Logo";
 
-export function LoginForm({ next }: { next: string }) {
+export function LoginForm({
+  next,
+  compact = false,
+}: {
+  next: string;
+  /**
+   * Hero embed: drop the brand mark + heading + tagline (the landing headline
+   * already carries the message) and render just a labelled sign-in form.
+   * Default is the standalone card used by the /login route.
+   */
+  compact?: boolean;
+}) {
   const [state, formAction, pending] = useActionState<LoginState, FormData>(
     loginAction,
     {},
   );
 
   return (
-    <Surface level={1} radius="xl" className="w-full max-w-sm p-8">
-      <div className="flex flex-col items-center gap-4 text-center">
-        <Logo watching />
-        <div>
-          <h1 className="text-[20px] font-medium leading-[1.4] text-ink">
-            Sign in to Argus
-          </h1>
-          <p className="mt-1 text-[14px] leading-[1.6] text-mute">
-            Cloud governance with no blind spots.
-          </p>
+    <Surface
+      level={1}
+      radius="xl"
+      className={compact ? "w-full max-w-sm p-6" : "w-full max-w-sm p-8"}
+    >
+      {compact ? (
+        <span className="text-[13px] font-medium tracking-[0.3px] text-mute">
+          Sign in
+        </span>
+      ) : (
+        <div className="flex flex-col items-center gap-4 text-center">
+          <Logo watching />
+          <div>
+            <h1 className="text-[20px] font-medium leading-[1.4] text-ink">
+              Sign in to Argus
+            </h1>
+            <p className="mt-1 text-[14px] leading-[1.6] text-mute">
+              Cloud governance with no blind spots.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
-      <form action={formAction} className="mt-8 flex flex-col gap-4">
+      <form action={formAction} className={cn("flex flex-col gap-4", compact ? "mt-5" : "mt-8")}>
         <input type="hidden" name="next" value={next} />
         <label className="flex flex-col gap-1.5">
           <span className="text-[13px] text-mute">Email</span>
