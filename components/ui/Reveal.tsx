@@ -4,12 +4,13 @@ import { motion, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils/cn";
 
 /**
- * Reveal — the shared entrance. Fades + rises children into place on in-view
- * with the system's signature spring (stiffness 120, damping 18). Motion
- * carries meaning here, so it's honored — but reduced-motion collapses it to a
- * plain, instantly-present element.
+ * Reveal — the shared entrance. Fades + rises children into place immediately on
+ * mount with the system's signature spring. Triggering on mount (not in-view)
+ * means above-the-fold content is never left invisible waiting on an
+ * IntersectionObserver — critical for readability and LCP. Reduced-motion
+ * collapses it to a plain, instantly-present element.
  */
-const SPRING = { type: "spring", stiffness: 120, damping: 18 } as const;
+const SPRING = { type: "spring", stiffness: 220, damping: 26 } as const;
 
 export type RevealProps = {
   children: React.ReactNode;
@@ -29,7 +30,6 @@ export function Reveal({
   style,
   delay = 0,
   y = 12,
-  once = true,
 }: RevealProps) {
   const reduced = useReducedMotion();
 
@@ -46,8 +46,7 @@ export function Reveal({
       className={cn(className)}
       style={style}
       initial={{ opacity: 0, y }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once, margin: "-64px" }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ ...SPRING, delay }}
     >
       {children}
