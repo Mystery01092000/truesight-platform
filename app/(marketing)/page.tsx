@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   Radar,
@@ -268,7 +267,10 @@ export default function LandingPage() {
             </p>
           </Reveal>
           <Reveal delay={0.16} className="w-full">
-            <LoginForm next="/overview" compact />
+            {/* The one definitive sign-in CTA — every #signin anchor scrolls here. */}
+            <div id="signin" className="scroll-mt-24">
+              <LoginForm next="/overview" compact />
+            </div>
           </Reveal>
         </div>
 
@@ -304,10 +306,10 @@ export default function LandingPage() {
               GitHub, AWS, Azure, and Terraform — discovered, visualized, and governed from a
               single surface. Stateless by design, live by default.
             </p>
-            <Link href="/login" className={buttonClass("primary", "md")}>
+            <a href="#signin" className={buttonClass("primary", "md")}>
               Enter Argus
               <ArrowRight size={16} strokeWidth={2} />
-            </Link>
+            </a>
           </Surface>
         </Reveal>
       </section>

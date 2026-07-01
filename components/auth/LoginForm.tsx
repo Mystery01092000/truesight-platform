@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils/cn";
 import { loginAction, type LoginState } from "@/app/(auth)/login/actions";
 import { Surface } from "@/components/ui/Surface";
@@ -24,6 +24,55 @@ export function LoginForm({
     loginAction,
     {},
   );
+
+  const emailRef = useRef<HTMLInputElement>(null);
+
+  // Hero embed only: own every same-page "#signin" activation so there is a
+  // single, definitive sign-in CTA. Clicking any `a[href="#signin"]` (nav,
+  // footer, closing band) — or deep-linking `/#signin` — smooth-scrolls this form
+  // into view and moves keyboard focus to the email field. Reduced-motion users
+  // get an instant jump. Progressive enhancement: without JS the native anchor
+  // still lands on the form.
+  useEffect(() => {
+    if (!compact) return;
+
+    const scrollToSignin = () => {
+      const target = document.getElementById("signin");
+      if (!target) return;
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      target.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
+      emailRef.current?.focus({ preventScroll: true });
+    };
+
+    const onClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+        return;
+      }
+      const el = e.target as Element | null;
+      const anchor = el?.closest('a[href="#signin"]');
+      if (!anchor || !document.getElementById("signin")) return;
+      e.preventDefault();
+      scrollToSignin();
+      // Keep the URL deep-linkable without a native re-jump or history spam.
+      history.replaceState(null, "", "#signin");
+    };
+
+    const onHashChange = () => {
+      if (window.location.hash === "#signin") scrollToSignin();
+    };
+
+    document.addEventListener("click", onClick);
+    window.addEventListener("hashchange", onHashChange);
+    if (window.location.hash === "#signin") {
+      // Defer a frame so the target is laid out before we scroll to it.
+      requestAnimationFrame(scrollToSignin);
+    }
+
+    return () => {
+      document.removeEventListener("click", onClick);
+      window.removeEventListener("hashchange", onHashChange);
+    };
+  }, [compact]);
 
   return (
     <Surface
@@ -54,10 +103,13 @@ export function LoginForm({
         <label className="flex flex-col gap-1.5">
           <span className="text-[13px] text-mute">Email</span>
           <TextInput
+            ref={emailRef}
             name="email"
             type="text"
             autoComplete="username"
-            autoFocus
+            // Standalone /login autofocuses; the hero embed waits for an explicit
+            // "Sign in" activation so the landing page doesn't jump on load.
+            autoFocus={!compact}
             required
             placeholder="admin"
           />
