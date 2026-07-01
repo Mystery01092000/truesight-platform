@@ -37,9 +37,10 @@ export default async function TopologyPage({
             Topology
           </h1>
           <p className="mt-1 max-w-prose text-[13.5px] leading-[1.55] text-mute">
-            The live weave — {graph.stats.nodes} resources and {graph.stats.edges}{" "}
-            dependencies across {accountN} account{accountN === 1 ? "" : "s"}. Select any
-            node to trace what it touches.
+            The live weave — <span className="font-mono text-body">{graph.stats.nodes}</span>{" "}
+            resources and <span className="font-mono text-body">{graph.stats.edges}</span>{" "}
+            dependencies across <span className="font-mono text-body">{accountN}</span> account
+            {accountN === 1 ? "" : "s"}. Select any node to trace what it touches.
           </p>
         </div>
         <ScopeTabs active={scope} />

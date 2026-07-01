@@ -16,24 +16,19 @@ import { NODE_W, NODE_H, type TopoNode, type TopoEdge, type TopoGroup } from "./
 
 const elk = new ELK();
 
+// Organic force layout — the estate weave has shallow depth but high breadth, so
+// a layered layout collapses into a tall unreadable column. Force spreads nodes
+// in 2D: hubs (a VPC, an ECS cluster) settle at the centre of their satellites,
+// giving a genuine mind-map. Deterministic via a fixed random seed so the same
+// estate always lays out identically (no client jump).
 const LAYOUT_OPTIONS: Record<string, string> = {
-  "elk.algorithm": "layered",
-  "elk.direction": "RIGHT",
-  // Generous horizontal gap so the weave reads as a left→right flow; tighter
-  // vertical stacking so wide sibling fans (a VPC's subnets) stay compact.
-  "elk.layered.spacing.nodeNodeBetweenLayers": "128",
-  "elk.spacing.nodeNode": "18",
-  "elk.layered.spacing.edgeNodeBetweenLayers": "34",
-  // NETWORK_SIMPLEX balances layers vertically for an even, mind-map-like spread.
-  "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
-  "elk.layered.layering.strategy": "NETWORK_SIMPLEX",
-  "elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
-  "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
-  // Fold very long single layers so no band becomes a tall thin column.
-  "elk.layered.wrapping.strategy": "MULTI_EDGE",
-  "elk.aspectRatio": "1.7",
+  "elk.algorithm": "org.eclipse.elk.force",
+  "elk.force.model": "FRUCHTERMAN_REINGOLD",
+  "elk.force.iterations": "300",
+  "elk.spacing.nodeNode": "64",
+  "elk.randomSeed": "1",
   "elk.separateConnectedComponents": "true",
-  "elk.spacing.componentComponent": "40",
+  "elk.spacing.componentComponent": "72",
 };
 
 const GROUP_PAD_X = 30;

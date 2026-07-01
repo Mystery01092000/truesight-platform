@@ -10,12 +10,12 @@ export type GroupFlowNode = Node<{ label: string; account: string; count: number
  *  with a header. Non-interactive; it only groups the weave visually. */
 function GroupNodeImpl({ data }: NodeProps<GroupFlowNode>) {
   return (
-    <div className="pointer-events-none h-full w-full rounded-2xl border border-hairline/60 bg-white/[0.012]">
-      <div className="flex items-center gap-2 px-4 pt-3.5">
-        <Cloud size={13} className="text-mute" />
-        <span className="text-[12px] font-medium tracking-[0.01em] text-body">{data.label}</span>
-        <span className="text-[11px] tabular-nums text-ash">· {data.account}</span>
-        <span className="ml-auto text-[11px] tabular-nums text-ash">{data.count} resources</span>
+    <div className="pointer-events-none h-full w-full rounded-[20px] border border-hairline/40">
+      <div className="inline-flex items-center gap-2 rounded-full border border-hairline/60 bg-surface/70 px-3 py-1.5 backdrop-blur-sm" style={{ transform: "translate(14px, 14px)" }}>
+        <Cloud size={12} className="text-iris" />
+        <span className="text-[11.5px] font-medium tracking-[0.01em] text-body">{data.label}</span>
+        <span className="font-mono text-[10.5px] tabular-nums text-ash">{data.account}</span>
+        <span className="font-mono text-[10.5px] tabular-nums text-ash">· {data.count}</span>
       </div>
     </div>
   );

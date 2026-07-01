@@ -41,6 +41,12 @@ export type TopoNodeData = {
   nativeType: string | null;
   /** Seconds of entrance delay, derived from layout layer (cascade left → right). */
   appearDelay: number;
+  /** True when this node summarizes many collapsed structural leaves (mind-map
+   *  curation) — e.g. "24 network resources" standing in for a VPC's subnets/SGs. */
+  isCluster?: boolean;
+  clusterCount?: number;
+  /** Names of the collapsed members, surfaced in the detail panel. */
+  clusterMembers?: string[];
 };
 
 export type TopoNode = {

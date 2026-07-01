@@ -56,10 +56,18 @@ export function LogoMark({
           cy="12"
           r="2.6"
           className="animate-pulse-ring"
+          stroke="var(--color-iris)"
           style={{ transformBox: "fill-box", transformOrigin: "center" }}
         />
       )}
-      <circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none" />
+      {/* The pupil is the one accent point — iris when watching, else monochrome. */}
+      <circle
+        cx="12"
+        cy="12"
+        r="2.5"
+        fill={watching ? "var(--color-iris-bright)" : "currentColor"}
+        stroke="none"
+      />
     </svg>
   );
 }
@@ -85,7 +93,7 @@ export function Logo({
       {showWordmark && (
         <span
           className={cn(
-            "text-[18px] font-semibold leading-none tracking-[0.2px] text-ink",
+            "font-display text-[18px] font-semibold leading-none tracking-[-0.01em] text-ink",
             wordmarkClassName,
           )}
         >

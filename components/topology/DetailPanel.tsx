@@ -34,7 +34,10 @@ function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-4 py-1.5">
       <span className="text-[11.5px] uppercase tracking-[0.04em] text-ash">{label}</span>
-      <span className="min-w-0 truncate text-right text-[12.5px] text-body" title={value}>
+      <span
+        className="min-w-0 truncate text-right font-mono text-[12px] text-body"
+        title={value}
+      >
         {value}
       </span>
     </div>
@@ -91,6 +94,25 @@ export function DetailPanel({
           <Row label="Environment" value={node.environment ?? "untagged"} />
           {node.nativeType ? <Row label="Type" value={node.nativeType} /> : null}
         </div>
+
+        {node.isCluster && node.clusterMembers ? (
+          <div className="mt-3 border-b border-hairline pb-3">
+            <div className="mb-1.5 text-[11.5px] uppercase tracking-[0.04em] text-ash">
+              Grouped · {node.clusterMembers.length}
+            </div>
+            <ul className="flex max-h-40 flex-col gap-0.5 overflow-y-auto">
+              {node.clusterMembers.map((m) => (
+                <li
+                  key={m}
+                  className="truncate rounded-md px-2 py-1 text-[12px] text-body"
+                  title={m}
+                >
+                  {m}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         <div className="mt-3">
           <div className="mb-1.5 text-[11.5px] uppercase tracking-[0.04em] text-ash">

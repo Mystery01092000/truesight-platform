@@ -23,7 +23,8 @@
   --color-body: #cdcdcd;
   --color-charcoal: #d3d3d4;
   --color-mute: #9c9c9d;
-  --color-ash: #6a6b6c;
+  /* ash bumped from #6a6b6c → #85868a for a legible AA floor on meta text */
+  --color-ash: #85868a;
   --color-stone: #434345;
   --color-on-dark: #ffffff;
   --color-on-dark-mute: rgba(255, 255, 255, 0.72);
@@ -43,6 +44,13 @@
   --color-accent-yellow: #ffc533;
   --color-accent-yellow-soft: rgba(255, 197, 51, 0.15);
 
+  /* ── Iris — the signature brand accent (Argus, the watching eye). Distinct
+     from the functional status accents: reserved for the aperture, the live
+     data-flow, selection focus and the wordmark pupil. ─────────────────── */
+  --color-iris: #7c8dff;
+  --color-iris-bright: #9aa6ff;
+  --color-iris-soft: rgba(124, 141, 255, 0.16);
+
   /* Brand launch-banner gradient (used once per page, hero only) */
   --color-hero-stripe-start: #ff5757;
   --color-hero-stripe-end: #a1131a;
@@ -59,8 +67,13 @@
   /* ── Spacing (8px base, 96px section rhythm) ──────────────────────── */
   --spacing-section: 96px;
 
-  /* ── Typography ───────────────────────────────────────────────────── */
+  /* ── Typography — a three-voice system (not a single generic sans) ──
+     sans  = Inter, the quiet body workhorse
+     display = Space Grotesk, the character face for headings + wordmark
+     mono  = JetBrains Mono, the instrument face for all machine data */
   --font-sans: var(--font-inter), "Inter", "Inter Fallback", system-ui, -apple-system, sans-serif;
+  --font-display: var(--ff-display), "Space Grotesk", var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--ff-mono), "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
   /* ── Signature motion (aperture / scanning) ──────────────────────── */
   --animate-scan: scan 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
@@ -96,6 +109,16 @@ body {
   color: var(--color-body);
   font-family: var(--font-sans);
   font-feature-settings: "calt", "kern", "liga", "ss03";
+}
+
+/* Headings speak in the display voice (Space Grotesk). Component tracking
+   utilities still win; this only sets the family + a tight default. */
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  letter-spacing: -0.015em;
 }
 
 /* Quiet, tokenized scrollbars — the chrome stays monochrome. */
@@ -134,8 +157,22 @@ body {
    Edges start hidden and reveal after the nodes settle, so the weave
    "draws in" once the discovery entrance has resolved. Scoped under
    .topo-canvas so nothing leaks to other React Flow usages. */
+/* A faint iris bloom gives the canvas cinematic depth (the aperture's light). */
+.topo-canvas::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(85% 55% at 50% 32%, rgba(124, 141, 255, 0.05), transparent 70%);
+}
 .topo-canvas .react-flow__edge {
   opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .topo-flow-dot {
+    display: none;
+  }
 }
 .topo-canvas.topo-revealed .react-flow__edge {
   opacity: 1;

@@ -18,6 +18,7 @@ import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { ResourceNode } from "./nodes/ResourceNode";
 import { GroupNode } from "./nodes/GroupNode";
 import { FlowEdge } from "./edges/FlowEdge";
+import { FlowField } from "./FlowField";
 import { TopoFocusContext, type TopoFocus } from "./focus";
 import { DetailPanel, type Relation } from "./DetailPanel";
 import { Legend } from "./Legend";
@@ -134,6 +135,8 @@ function CanvasInner({ graph }: { graph: TopoGraph }) {
   return (
     <TopoFocusContext.Provider value={focus}>
       <div className={cn("topo-canvas relative h-full w-full", revealed && "topo-revealed")}>
+        {/* WebGL data-nebula — cinematic depth behind the weave */}
+        <FlowField className="pointer-events-none absolute inset-0 z-0 h-full w-full" />
         <ReactFlow
           nodes={rfNodes}
           edges={rfEdges}
@@ -149,9 +152,9 @@ function CanvasInner({ graph }: { graph: TopoGraph }) {
           proOptions={{ hideAttribution: true }}
           fitView
           fitViewOptions={{ padding: 0.1, maxZoom: 1.1 }}
-          className="bg-canvas"
+          className="!bg-transparent"
         >
-          <Background variant={BackgroundVariant.Dots} gap={22} size={1} color="#1b1d1e" />
+          <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#212327" />
           <Controls showInteractive={false} className="topo-controls" position="bottom-right" />
           <MiniMap
             pannable

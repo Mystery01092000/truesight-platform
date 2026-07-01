@@ -58,7 +58,7 @@ export default async function OverviewPage() {
           <Reveal key={s.label} delay={i * 0.06}>
             <Surface level={1} radius="lg" className="p-5">
               <div className="text-[13px] text-mute">{s.label}</div>
-              <div className="mt-2 text-[40px] font-medium leading-none tracking-[-0.5px] text-ink tabular-nums">
+              <div className="mt-2 font-display text-[40px] font-medium leading-none tracking-[-0.5px] text-ink tabular-nums">
                 {s.value}
               </div>
               <div className="mt-2 text-[12px] text-mute">{s.hint}</div>

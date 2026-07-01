@@ -4,7 +4,7 @@ import { memo, useContext } from "react";
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
 import { motion, useReducedMotion } from "motion/react";
 import * as LucideIcons from "lucide-react";
-import { Box, type LucideIcon } from "lucide-react";
+import { Box, Layers, type LucideIcon } from "lucide-react";
 import { kindAccent, kindIcon, type ResourceStatus } from "@/lib/taxonomy";
 import { cn } from "@/lib/utils/cn";
 import type { TopoNodeData } from "@/lib/topology/types";
@@ -44,7 +44,7 @@ function ResourceNodeImpl({ data, selected }: NodeProps<ResourceFlowNode>) {
   const reduce = useReducedMotion();
   const focus = useContext(TopoFocusContext);
   const accent = (kindAccent[data.kind] ?? "mute") as Accent;
-  const Icon = resolveIcon(kindIcon[data.kind]);
+  const Icon = data.isCluster ? Layers : resolveIcon(kindIcon[data.kind]);
 
   const isFocused = focus.selected === data.urn;
   const isNeighbor = focus.neighbors.has(data.urn);
@@ -61,16 +61,32 @@ function ResourceNodeImpl({ data, selected }: NodeProps<ResourceFlowNode>) {
           ? { duration: 0 }
           : { opacity: { duration: 0.45, delay: data.appearDelay }, scale: { type: "spring", stiffness: 220, damping: 24, delay: data.appearDelay }, y: { type: "spring", stiffness: 220, damping: 24, delay: data.appearDelay } }
       }
-      className="group"
+      className="group relative"
       style={{ width: 216 }}
     >
       <Handle type="target" position={Position.Left} style={handleStyle} isConnectable={false} />
+      {/* focus spotlight — a soft aperture glow behind the selected node */}
+      {selected || isFocused ? (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -inset-2 z-0 rounded-2xl bg-iris-soft blur-lg"
+        />
+      ) : null}
+      {/* stacked-card shadow — signals a collapsed group of resources */}
+      {data.isCluster ? (
+        <span
+          aria-hidden
+          className="absolute left-1.5 right-1.5 top-1.5 h-full rounded-lg border border-hairline bg-surface-card/60"
+          style={{ transform: "translateY(5px)" }}
+        />
+      ) : null}
       <div
         className={cn(
-          "relative flex items-center gap-2.5 overflow-hidden rounded-lg border bg-surface-card px-2.5 py-2 transition-colors duration-150",
+          "relative z-10 flex items-center gap-2.5 overflow-hidden rounded-lg border bg-surface-card px-2.5 py-2 transition-colors duration-150",
           "hover:border-hairline-strong hover:bg-surface-elevated",
+          data.isCluster && "border-dashed",
           selected || isFocused
-            ? "border-accent-blue/70 ring-1 ring-accent-blue/40"
+            ? "border-iris/70 ring-1 ring-iris/40"
             : isNeighbor
               ? "border-hairline-strong"
               : "border-hairline",
@@ -89,11 +105,18 @@ function ResourceNodeImpl({ data, selected }: NodeProps<ResourceFlowNode>) {
             {data.name}
           </div>
           <div className="mt-0.5 flex items-center gap-1.5 text-[10.5px] leading-none text-ash">
-            <span className="uppercase tracking-[0.04em] text-mute">{data.service}</span>
+            <span className="uppercase tracking-[0.04em] text-mute">
+              {data.isCluster ? "grouped" : data.service}
+            </span>
             {data.region ? <span className="text-stone">·</span> : null}
-            {data.region ? <span className="truncate">{data.region}</span> : null}
+            {data.region ? <span className="truncate font-mono">{data.region}</span> : null}
           </div>
         </div>
+        {data.isCluster ? (
+          <span className="shrink-0 rounded-full border border-hairline bg-surface px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-mute">
+            {data.clusterCount}
+          </span>
+        ) : null}
       </div>
       <Handle type="source" position={Position.Right} style={handleStyle} isConnectable={false} />
     </motion.div>

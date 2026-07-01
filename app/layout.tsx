@@ -1,11 +1,30 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
+// Body workhorse — quiet, neutral, highly readable.
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
   display: "swap",
+});
+
+// Display voice — a sharp technical grotesk for headings, the wordmark and
+// hero numerals. This is the character face; it carries the Argus identity.
+const display = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--ff-display",
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
+});
+
+// Instrument face — every piece of machine data (URNs, IDs, counts, regions,
+// metrics) is set in mono, so the product reads like a console for the estate.
+const mono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--ff-mono",
+  display: "swap",
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
@@ -31,7 +50,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${inter.variable} ${display.variable} ${mono.variable}`}
+      suppressHydrationWarning
+    >
       <body>{children}</body>
     </html>
   );

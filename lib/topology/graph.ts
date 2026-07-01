@@ -46,6 +46,95 @@ const asKind = (t: string | null): ResourceKind =>
 const asStatus = (s: string | null): ResourceStatus =>
   s === "healthy" || s === "degraded" || s === "stopped" ? s : "unknown";
 
+const pushInto = (m: Map<string, string[]>, k: string, v: string) => {
+  const a = m.get(k);
+  if (a) a.push(v);
+  else m.set(k, [v]);
+};
+
+/**
+ * Mind-map curation. A VPC `contains` dozens of subnets/SGs that add density
+ * without dependency signal — they only ever appear as the target of a
+ * `contains` edge. We fold those pure structural leaves into a single summary
+ * node per container ("N network resources"), so the workload weave (ECS → ECR
+ * lineage, workload → networking) becomes the visual hero. Anything that also
+ * participates in a non-`contains` edge stays a first-class node.
+ */
+const MIN_COLLAPSE = 4;
+function curate(
+  nodes: TopoNode[],
+  edges: TopoEdge[],
+): { nodes: TopoNode[]; edges: TopoEdge[] } {
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const isContainer = new Set<string>();
+  const hasWorkloadEdge = new Set<string>();
+  const containedBy = new Map<string, string[]>();
+
+  for (const e of edges) {
+    if (e.kind === "contains") {
+      isContainer.add(e.source);
+      pushInto(containedBy, e.target, e.source);
+    } else {
+      hasWorkloadEdge.add(e.source);
+      hasWorkloadEdge.add(e.target);
+    }
+  }
+
+  const collapsibleByParent = new Map<string, string[]>();
+  for (const n of nodes) {
+    const parents = containedBy.get(n.id);
+    if (
+      n.data.kind === "network" &&
+      !isContainer.has(n.id) &&
+      !hasWorkloadEdge.has(n.id) &&
+      parents &&
+      parents.length === 1
+    ) {
+      pushInto(collapsibleByParent, parents[0], n.id);
+    }
+  }
+
+  const removed = new Set<string>();
+  const clusterNodes: TopoNode[] = [];
+  const clusterEdges: TopoEdge[] = [];
+  for (const [parent, children] of collapsibleByParent) {
+    const parentNode = byId.get(parent);
+    if (!parentNode || children.length < MIN_COLLAPSE) continue;
+    for (const c of children) removed.add(c);
+    const clusterId = `cluster:${parent}`;
+    clusterNodes.push({
+      id: clusterId,
+      group: parentNode.group,
+      position: { x: 0, y: 0 },
+      width: 0,
+      height: 0,
+      data: {
+        urn: clusterId,
+        name: `${children.length} network resources`,
+        kind: "network",
+        service: parentNode.data.service,
+        provider: parentNode.data.provider,
+        account: parentNode.data.account,
+        accountLabel: parentNode.data.accountLabel,
+        region: parentNode.data.region,
+        environment: parentNode.data.environment,
+        status: "unknown",
+        drift: "unknown",
+        nativeType: null,
+        appearDelay: 0,
+        isCluster: true,
+        clusterCount: children.length,
+        clusterMembers: children.map((c) => byId.get(c)?.data.name ?? c).sort(),
+      },
+    });
+    clusterEdges.push({ id: `e:${clusterId}`, source: parent, target: clusterId, kind: "contains" });
+  }
+
+  const keptNodes = nodes.filter((n) => !removed.has(n.id));
+  const keptEdges = edges.filter((e) => !removed.has(e.source) && !removed.has(e.target));
+  return { nodes: [...keptNodes, ...clusterNodes], edges: [...keptEdges, ...clusterEdges] };
+}
+
 export async function getTopology(scope: TopoEnvScope): Promise<TopoGraph> {
   const scopeAll = scope === "all";
   const like = `${scope}%`;
@@ -127,29 +216,32 @@ export async function getTopology(scope: TopoEnvScope): Promise<TopoGraph> {
     };
   });
 
-  const { nodes: laidOut, groups } = await layoutGraph(nodes, edges);
+  // Fold structural leaves into cluster nodes for a mind-map-clean canvas, then
+  // lay out and derive stats from what is actually rendered (header ↔ canvas
+  // stay consistent; the cluster nodes themselves state the collapsed counts).
+  const curated = curate(nodes, edges);
+  const { nodes: laidOut, groups } = await layoutGraph(curated.nodes, curated.edges);
 
-  // Stats — computed off the real scoped set.
   const kindCounts = new Map<ResourceKind, number>();
-  for (const n of nodes) kindCounts.set(n.data.kind, (kindCounts.get(n.data.kind) ?? 0) + 1);
+  for (const n of curated.nodes) kindCounts.set(n.data.kind, (kindCounts.get(n.data.kind) ?? 0) + 1);
   const byKind = [...kindCounts.entries()]
     .map(([kind, n]) => ({ kind, n }))
     .sort((a, b) => b.n - a.n);
 
   const acctCounts = new Map<string, number>();
-  for (const n of nodes) acctCounts.set(n.data.account, (acctCounts.get(n.data.account) ?? 0) + 1);
+  for (const n of curated.nodes) acctCounts.set(n.data.account, (acctCounts.get(n.data.account) ?? 0) + 1);
   const accounts = [...acctCounts.entries()]
     .map(([account, n]) => ({ account, label: labelFor(account), n }))
     .sort((a, b) => b.n - a.n);
 
   const stats: TopoStats = {
     scope,
-    nodes: nodes.length,
-    edges: edges.length,
+    nodes: curated.nodes.length,
+    edges: curated.edges.length,
     accounts,
     byKind,
-    drifted: nodes.filter((n) => n.data.drift !== "in_sync" && n.data.drift !== "unknown").length,
+    drifted: curated.nodes.filter((n) => n.data.drift !== "in_sync" && n.data.drift !== "unknown").length,
   };
 
-  return { nodes: laidOut, groups, edges, stats };
+  return { nodes: laidOut, groups, edges: curated.edges, stats };
 }
