@@ -197,7 +197,10 @@ variable "app_secret_keys" {
     "DATABASE_URL",
     "SESSION_SECRET",
     "ADMIN_EMAIL",
-    "ADMIN_NAME",
+    # NOTE: ADMIN_NAME is intentionally NOT here. It is read only at seed time
+    # (db/seed.ts, scripts/seed.mjs) to set the super-admin's display name — the web
+    # runtime and the scheduled sync never read it. Injecting it into the task-def
+    # would force a needless new revision, and its SSM param already exists out-of-band.
     "ADMIN_PASSWORD_HASH",
     "GITHUB_PAT",
     "AWS_ACCESS_KEY_ID",
