@@ -47,6 +47,16 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
+# Migration bundle — lets a one-off task run `node scripts/migrate.mjs` in-VPC to
+# apply schema to the private RDS before the service scales up. The standalone
+# trace omits the migrator submodule, so copy the full drizzle-orm + postgres
+# packages to guarantee it resolves at runtime (the app itself only pulls the
+# driver + query builder).
+COPY --from=builder --chown=nextjs:nodejs /app/db/migrations ./db/migrations
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/migrate.mjs ./scripts/migrate.mjs
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/drizzle-orm ./node_modules/drizzle-orm
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/postgres ./node_modules/postgres
+
 USER nextjs
 
 EXPOSE 3000
