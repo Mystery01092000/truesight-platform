@@ -52,7 +52,7 @@ let cached: ServerEnv | null = null;
 /** Validate + return the server environment (cached after first call). */
 export function serverEnv(): ServerEnv {
   if (cached) return cached;
-  const parsed = schema.safeParse({
+  const raw: Record<string, string | undefined> = {
     NODE_ENV: process.env.NODE_ENV,
     APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     SESSION_SECRET: process.env.SESSION_SECRET,
@@ -75,7 +75,14 @@ export function serverEnv(): ServerEnv {
     GITHUB_ORG: process.env.GITHUB_ORG,
     GITHUB_PAT: process.env.GITHUB_PAT,
     TERRAFORM_STATE_BUCKET: process.env.TERRAFORM_STATE_BUCKET,
-  });
+  };
+  // Treat empty-string values as unset so Zod `.default()`/`.optional()` apply.
+  // Next.js inlines NEXT_PUBLIC_* at BUILD time; when a build arg is missing the value
+  // bakes in as "" rather than undefined, which would fail `.url()` (and similar)
+  // instead of falling back to the default. Runtime task-def values can't override an
+  // inlined NEXT_PUBLIC_* constant, so this coercion is what keeps the app resilient.
+  for (const key of Object.keys(raw)) if (raw[key] === "") raw[key] = undefined;
+  const parsed = schema.safeParse(raw);
   if (!parsed.success) {
     throw new Error(
       `Invalid server environment: ${parsed.error.issues
