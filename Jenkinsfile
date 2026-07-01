@@ -88,6 +88,38 @@ pipeline {
             }
         }
 
+        stage('Build & Push Sync Image') {
+            when { branch 'main' }
+            steps {
+                // The auto-refresh scheduled task (EventBridge → Fargate, owned by
+                // Terraform: deploy/terraform/scheduled-sync.tf) runs a SEPARATE toolbox
+                // image — Dockerfile.sync: node + tsx + the three estate sync CLIs —
+                // pushed to the isolated prod ECR cwt-prod/argus-sync:latest. Rebuilt on
+                // every main deploy so the scheduled sync tracks the app's schema/adapters.
+                // Same base-cred + assume-role@404 + ECR-login pattern cwtEcsDeploy uses
+                // (agent runs in the management account; ECR lives in prod). Terraform owns
+                // the task-def + rule; this only rolls the :latest (+ sha) image tag.
+                withCredentials([usernamePassword(credentialsId: 'aws-management-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                    sh '''
+                      set -e
+                      REG=404063516552.dkr.ecr.ap-south-1.amazonaws.com
+                      REPO=$REG/cwt-prod/argus-sync
+                      set +x
+                      CREDS=$(aws sts assume-role --role-arn arn:aws:iam::404063516552:role/OrganizationAccountAccessRole --role-session-name argus-sync-image --output json)
+                      export AWS_ACCESS_KEY_ID=$(echo "$CREDS" | jq -r .Credentials.AccessKeyId)
+                      export AWS_SECRET_ACCESS_KEY=$(echo "$CREDS" | jq -r .Credentials.SecretAccessKey)
+                      export AWS_SESSION_TOKEN=$(echo "$CREDS" | jq -r .Credentials.SessionToken)
+                      set -x
+                      aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin $REG
+                      TAG=$(echo ${GIT_COMMIT:-latest} | cut -c1-8)
+                      DOCKER_BUILDKIT=1 docker build --platform linux/amd64 -t $REPO:latest -t $REPO:$TAG -f Dockerfile.sync .
+                      docker push $REPO:latest
+                      docker push $REPO:$TAG
+                    '''
+                }
+            }
+        }
+
         // NOTE: no separate ECS Health Check stage. cwtEcsDeploy already waits for
         // services-stable and verifies running == desired inside the prod account
         // (assume-role). The library's cwtHealthCheck runs `aws ecs describe-services`

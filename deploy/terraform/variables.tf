@@ -197,6 +197,7 @@ variable "app_secret_keys" {
     "DATABASE_URL",
     "SESSION_SECRET",
     "ADMIN_EMAIL",
+    "ADMIN_NAME",
     "ADMIN_PASSWORD_HASH",
     "GITHUB_PAT",
     "AWS_ACCESS_KEY_ID",
@@ -243,6 +244,18 @@ variable "azure_subscription_name" {
   description = "Azure subscription display name (resolved to a GUID at runtime)."
   type        = string
   default     = "Centricity-Oneinvictus"
+}
+
+# ---- Auto-refresh sync schedule ----------------------------------------------
+variable "sync_schedule_expression" {
+  description = <<-EOT
+    EventBridge schedule for the estate auto-refresh (the argus-prod-sync Fargate
+    task re-discovers AWS + Azure + GitHub into the KB, incrementally). Tunable:
+    `rate(10 minutes)` for freshest, `cron(0/30 8-20 ? * MON-FRI *)` for business
+    hours. Default balances freshness vs GitHub/Azure API limits and cost.
+  EOT
+  type        = string
+  default     = "rate(30 minutes)"
 }
 
 # ---- Monitoring --------------------------------------------------------------

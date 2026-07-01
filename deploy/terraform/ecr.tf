@@ -13,8 +13,8 @@ module "ecr" {
   #   git::https://github.com/centricitywealthtech/iac-self-service-terraform.git//terraform/modules/compute/ecr?ref=main
   source = "../../../iac-self-service-terraform/terraform/modules/compute/ecr"
 
-  namespace = var.ecr_namespace # cwt-prod
-  services  = [var.app_name]    # -> cwt-prod/argus
+  namespace = var.ecr_namespace                    # cwt-prod
+  services  = [var.app_name, "${var.app_name}-sync"] # -> cwt-prod/argus + cwt-prod/argus-sync
 
   # MUTABLE so the rolling `latest` tag can be re-pushed; immutable sha-<git>
   # tags are what deployments actually pin.
