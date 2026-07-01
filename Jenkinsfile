@@ -60,35 +60,30 @@ pipeline {
             }
         }
 
-        stage('Docker Build & Push') {
-            when { branch 'main' }
-            steps {
-                script {
-                    // Tags pushed: sha-<gitSHA8> + stable (prod). Returns the image tag.
-                    env.IMAGE_TAG = cwtDockerBuildPush(
-                        service_name: env.SERVICE_NAME,
-                        environment:  'prod',
-                        repo:         env.ECR_REPO,
-                        dockerfile:   'Dockerfile',
-                        build_args:   "NEXT_PUBLIC_APP_URL=https://${env.APP_HOST}"
-                    )
-                }
-            }
-        }
-
         stage('Deploy (ECS)') {
             when { branch 'main' }
             steps {
-                // Registers a new task definition revision, updates the service
-                // (--force-new-deployment) and waits for it to stabilise.
+                // Single library step does the full prod deploy on its own docker node:
+                // assume-role into the prod account (404063516552), build the image
+                // from the Dockerfile, push to the isolated prod ECR, then image-swap
+                // the running task definition (env/secrets stay Terraform-owned — no
+                // drift) and force a new deployment, waiting for it to stabilise.
+                //
+                // We deliberately do NOT use a separate cwtDockerBuildPush stage: that
+                // step only authenticates to the central management-account registry
+                // (Constants.ECR_REGISTRY) and cannot push to Argus's prod-account ECR.
+                // cwtEcsDeploy resolves the prod ECR account itself and assumes the org
+                // role before login/push/deploy — matching every other prod service.
                 cwtEcsDeploy(
-                    service_name: env.SERVICE_NAME,
-                    cluster:      env.CLUSTER,
-                    project:      env.PROJECT,
-                    stack:        env.STACK,
-                    environment:  'prod',
-                    repo:         env.ECR_REPO,
-                    tag:          env.IMAGE_TAG
+                    service_name:  env.SERVICE_NAME,
+                    cluster:       env.CLUSTER,
+                    project:       env.PROJECT,
+                    stack:         env.STACK,
+                    environment:   'prod',
+                    repo:          env.ECR_REPO,
+                    dockerfile:    'Dockerfile',
+                    build_args:    "NEXT_PUBLIC_APP_URL=https://${env.APP_HOST}",
+                    use_appconfig: false
                 )
             }
         }
@@ -126,7 +121,7 @@ pipeline {
     }
 
     post {
-        success { echo "OK: ${env.SERVICE_NAME} deployed (${env.BRANCH_NAME}) tag=${env.IMAGE_TAG}" }
+        success { echo "OK: ${env.SERVICE_NAME} deployed (${env.BRANCH_NAME}) @ ${env.GIT_COMMIT?.take(8)}" }
         failure { echo "FAIL: ${env.SERVICE_NAME} branch=${env.BRANCH_NAME}" }
         always  { cleanWs(deleteDirs: true, notFailBuild: true) }
     }
