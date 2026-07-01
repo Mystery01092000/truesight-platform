@@ -26,6 +26,12 @@ ARG NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# `next build` imports every route module to collect page data; the Drizzle
+# client (@/db) validates DATABASE_URL at import and throws when unset. postgres.js
+# connects lazily, so this placeholder is never dialed during the build — ECS
+# injects the real SecureString DATABASE_URL at runtime. Build-only, not in runner.
+ENV DATABASE_URL=postgres://build:build@127.0.0.1:5432/build
+
 RUN npm run build
 
 # ---- Stage: runner -------------------------------------------------------
@@ -54,6 +60,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 # driver + query builder).
 COPY --from=builder --chown=nextjs:nodejs /app/db/migrations ./db/migrations
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/migrate.mjs ./scripts/migrate.mjs
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/seed.mjs ./scripts/seed.mjs
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules/drizzle-orm ./node_modules/drizzle-orm
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules/postgres ./node_modules/postgres
 
