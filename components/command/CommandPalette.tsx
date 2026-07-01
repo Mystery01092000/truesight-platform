@@ -16,6 +16,8 @@ import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 const SUGGESTIONS = [
   { label: "Trace a service's dependencies", href: "/topology" },
   { label: "Browse the AWS estate", href: "/aws" },
+  { label: "Browse the Azure estate", href: "/azure" },
+  { label: "See the org's top contributors", href: "/github" },
   { label: "Estate overview", href: "/overview" },
 ];
 
