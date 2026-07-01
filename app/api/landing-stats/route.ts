@@ -83,13 +83,24 @@ async function computeStats(): Promise<LandingStats> {
 
 export async function GET() {
   try {
-    const stats = await cacheable(LANDING_STATS_CACHE_KEY, CACHE_TTL_SECONDS, computeStats);
+    // The cache is a non-essential optimization: never let it (or the env read it
+    // performs) take down the stats. If it faults, log and compute directly.
+    let stats: LandingStats;
+    try {
+      stats = await cacheable(LANDING_STATS_CACHE_KEY, CACHE_TTL_SECONDS, computeStats);
+    } catch (cacheErr) {
+      console.error("[landing-stats] cache layer failed, computing directly:", cacheErr);
+      stats = await computeStats();
+    }
     return NextResponse.json(stats, {
       headers: { "Cache-Control": "public, max-age=30, s-maxage=30" },
     });
-  } catch {
-    // Never leak internals or fabricate numbers — the client renders a graceful,
-    // non-misleading fallback (no fake stats, no "· Live") when this fails.
+  } catch (err) {
+    // Log server-side (private CloudWatch) so a data/runtime fault is diagnosable —
+    // a silently-swallowed catch here would hide exactly this kind of outage. Never
+    // leak internals or fabricate numbers to the client: it renders a graceful,
+    // non-misleading fallback (no fake stats, no "· Live") on this 503.
+    console.error("[landing-stats] failed to compute estate stats:", err);
     return NextResponse.json({ error: "unavailable" }, { status: 503 });
   }
 }
