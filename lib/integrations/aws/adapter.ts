@@ -110,6 +110,18 @@ export function createAwsAdapter(cfg: AwsAdapterConfig): AwsIntegrationAdapter {
       const factory = createClientFactory(accountId);
       const defaultRegion = factory.region;
       const errors: AdapterError[] = [];
+      const denied: string[] = [];
+      // Region-scoped access denials (e.g. an org SCP that pins an account to a single
+      // region) are expected, not failures — skip them quietly instead of marking the
+      // whole sync `partial`. A denial in the DEFAULT region, or any non-permission
+      // failure, is still recorded as a real error so genuine gaps stay visible.
+      const recordFailure = (scope: string, err: unknown, region?: string) => {
+        if (isAccessDenied(err) && region !== undefined && region !== defaultRegion) {
+          denied.push(scope);
+          return;
+        }
+        errors.push(toAdapterError(scope, err));
+      };
 
       const resById = new Map<string, CloudResource>();
       const edgeMap = new Map<string, GraphEdge>();
@@ -147,7 +159,7 @@ export function createAwsAdapter(cfg: AwsAdapterConfig): AwsIntegrationAdapter {
               tagMaps.set(region, inv.tagMap);
               inv.extras.forEach(addResource);
             } catch (err) {
-              errors.push(toAdapterError(`tagging:${region}`, err));
+              recordFailure(`tagging:${region}`, err, region);
               tagMaps.set(region, new Map());
             }
           }),
@@ -186,7 +198,7 @@ export function createAwsAdapter(cfg: AwsAdapterConfig): AwsIntegrationAdapter {
               res.value.resources.forEach(addResource);
               res.value.edges.forEach(addEdge);
             } else {
-              errors.push(toAdapterError(scope, res.reason));
+              recordFailure(scope, res.reason, region);
             }
           });
         }),
@@ -205,6 +217,14 @@ export function createAwsAdapter(cfg: AwsAdapterConfig): AwsIntegrationAdapter {
       );
 
       await Promise.all([...regionalWork, ...globalWork]);
+
+      if (denied.length > 0) {
+        console.warn(
+          `[aws:${accountId}] ${denied.length} scope(s) skipped — access denied ` +
+            `(expected for policy-restricted regions): ${denied.slice(0, 8).join(", ")}` +
+            `${denied.length > 8 ? " …" : ""}`,
+        );
+      }
 
       return {
         resources: [...resById.values()],
@@ -941,6 +961,22 @@ function toAdapterError(scope: string, err: unknown): AdapterError {
   const message = e?.message ?? String(err);
   const retryable = Boolean(e?.$retryable) || /throttl|timeout|rate exceeded|503|500/i.test(message);
   return { provider: "aws", scope, code, message, retryable };
+}
+
+/**
+ * SCP / IAM access denials are expected when a principal is scoped out of a region
+ * (e.g. an org SCP that pins an account to a single region). They mean "can't see this
+ * scope", not "discovery failed", so region-scoped denials are skipped rather than
+ * reported as sync errors that would mark the whole account `partial`.
+ */
+function isAccessDenied(err: unknown): boolean {
+  const e = err as { name?: string; Code?: string; __type?: string; message?: string };
+  const code = `${e?.Code ?? e?.name ?? e?.__type ?? ""}`;
+  const message = `${e?.message ?? ""}`;
+  return (
+    /AccessDenied|UnauthorizedOperation|AuthorizationError|Forbidden/i.test(code) ||
+    /explicit deny|service control policy|not authorized to perform/i.test(message)
+  );
 }
 
 function chunk<T>(arr: T[], size: number): T[][] {
