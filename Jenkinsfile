@@ -52,7 +52,11 @@ pipeline {
             steps {
                 // Early build validation (the shippable image is built in the
                 // Docker stage against the same standalone output).
-                sh "NEXT_PUBLIC_APP_URL=https://${APP_HOST} NEXT_TELEMETRY_DISABLED=1 npm run build"
+                // `next build` collects page data by importing every route; the
+                // Drizzle client (@/db) validates DATABASE_URL at import. postgres.js
+                // connects lazily, so this build-only placeholder is never dialed —
+                // it mirrors the Dockerfile's build ENV. Runtime uses the real SSM value.
+                sh "DATABASE_URL=postgres://build:build@127.0.0.1:5432/build NEXT_PUBLIC_APP_URL=https://${APP_HOST} NEXT_TELEMETRY_DISABLED=1 npm run build"
             }
         }
 
