@@ -51,7 +51,29 @@ export async function runSync(opts: RunSyncOptions): Promise<SyncSummary[]> {
   for (const adapter of opts.adapters) {
     summaries.push(await syncOne(db, adapter, opts.trigger));
   }
+  // Announce the write over Postgres NOTIFY so any web task's SSE listener pushes an
+  // "estate changed" event to live screens immediately. Cross-connection, so the
+  // scheduled Fargate sync task's writes reach the web tasks too. Best-effort — a
+  // NOTIFY failure must never fail the sync itself.
+  await notifyEstateChanged(db, opts.trigger, summaries).catch(() => {});
   return summaries;
+}
+
+/** Publish a compact estate-change event on the `argus_estate` NOTIFY channel. */
+async function notifyEstateChanged(
+  db: Db,
+  trigger: string,
+  summaries: SyncSummary[],
+): Promise<void> {
+  const payload = JSON.stringify({
+    type: "estate:changed",
+    at: new Date().toISOString(),
+    trigger,
+    accounts: summaries.length,
+    resources: summaries.reduce((n, s) => n + s.resourceCount, 0),
+  });
+  // pg_notify(channel, payload) — payload is tiny, well under Postgres' 8000-byte cap.
+  await db.execute(sql`select pg_notify('argus_estate', ${payload})`);
 }
 
 /* -------------------------------------------------------------------------- */
