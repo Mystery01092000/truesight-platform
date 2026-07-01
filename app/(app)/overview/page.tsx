@@ -61,7 +61,7 @@ export default async function OverviewPage() {
               <div className="mt-2 text-[40px] font-medium leading-none tracking-[-0.5px] text-ink tabular-nums">
                 {s.value}
               </div>
-              <div className="mt-2 text-[12px] text-ash">{s.hint}</div>
+              <div className="mt-2 text-[12px] text-mute">{s.hint}</div>
             </Surface>
           </Reveal>
         ))}

@@ -12,11 +12,10 @@ import { usePersistedState } from "@/lib/hooks/use-persisted-state";
  * (Raycast-native). Guided self-discovery: quick-nav + suggestion prompts, not a
  * blank search box. Opens on ⌘K / Ctrl-K.
  */
+// Only working routes — grows as pillars ship (topology/cost/security later).
 const SUGGESTIONS = [
-  { label: "Show drifted resources in prod", href: "/topology?filter=drifted" },
-  { label: "Where's my spend going?", href: "/cost" },
-  { label: "Open security findings", href: "/security" },
   { label: "Browse the AWS estate", href: "/aws" },
+  { label: "Estate overview", href: "/overview" },
 ];
 
 const ALL_DESTINATIONS = [
