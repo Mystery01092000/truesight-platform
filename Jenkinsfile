@@ -88,13 +88,13 @@ pipeline {
             }
         }
 
-        stage('Health Check') {
-            when { branch 'main' }
-            steps {
-                // ECS-level: running count must equal desired count.
-                cwtHealthCheck(cluster: env.CLUSTER, service: env.SERVICE_NAME)
-            }
-        }
+        // NOTE: no separate ECS Health Check stage. cwtEcsDeploy already waits for
+        // services-stable and verifies running == desired inside the prod account
+        // (assume-role). The library's cwtHealthCheck runs `aws ecs describe-services`
+        // with the agent's management-account creds and cannot see the prod-account
+        // cluster (ClusterNotFoundException), so the application-level Smoke Test below
+        // — an authenticated-independent HTTPS hit to /api/health through the ALB — is
+        // the post-deploy gate.
 
         stage('Smoke Test') {
             when { branch 'main' }
