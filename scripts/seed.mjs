@@ -21,6 +21,7 @@ if (!connectionString) {
 }
 
 const email = process.env.ADMIN_EMAIL ?? "admin";
+const name = process.env.ADMIN_NAME ?? "DevOps Super Admin";
 const passwordHash = process.env.ADMIN_PASSWORD_HASH;
 if (!passwordHash) {
   console.error("[seed] ADMIN_PASSWORD_HASH is not set. Cannot seed admin.");
@@ -30,17 +31,19 @@ if (!passwordHash) {
 const sql = postgres(connectionString, { max: 1 });
 try {
   console.log(`[seed] ensuring admin user "${email}" (role=admin) ...`);
+  // Upsert (DO UPDATE) so re-seeding rotates the name / password hash / role —
+  // the SSM ADMIN_* SecureStrings are the single source of truth for the super
+  // admin, and a re-run reconciles the users row to them.
   const inserted = await sql`
     INSERT INTO users (email, name, password_hash, role)
-    VALUES (${email}, 'DevOps Super Admin', ${passwordHash}, 'admin')
-    ON CONFLICT (email) DO NOTHING
+    VALUES (${email}, ${name}, ${passwordHash}, 'admin')
+    ON CONFLICT (email) DO UPDATE
+      SET name = EXCLUDED.name,
+          password_hash = EXCLUDED.password_hash,
+          role = EXCLUDED.role
     RETURNING id
   `;
-  if (inserted.length > 0) {
-    console.log(`[seed] created admin user "${email}" (id=${inserted[0].id}).`);
-  } else {
-    console.log(`[seed] admin user "${email}" already exists — left unchanged.`);
-  }
+  console.log(`[seed] ensured admin user "${email}" (id=${inserted[0].id}).`);
   await sql.end();
   process.exit(0);
 } catch (err) {

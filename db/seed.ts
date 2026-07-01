@@ -21,29 +21,28 @@ async function main(): Promise<void> {
   }
 
   const email = process.env.ADMIN_EMAIL ?? 'admin';
-  const password = process.env.ADMIN_PASSWORD ?? 'akshatcentricity2026';
-  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+  const name = process.env.ADMIN_NAME ?? 'DevOps Super Admin';
+  // Prefer a pre-computed bcrypt hash (matches prod SSM ADMIN_PASSWORD_HASH and
+  // scripts/seed.mjs); fall back to hashing a raw ADMIN_PASSWORD for local dev.
+  const passwordHash =
+    process.env.ADMIN_PASSWORD_HASH ??
+    (await bcrypt.hash(process.env.ADMIN_PASSWORD ?? 'akshatcentricity2026', BCRYPT_ROUNDS));
 
   const sql = postgres(connectionString, { max: 1 });
   try {
     const db = drizzle(sql);
 
+    // Upsert so re-seeding rotates the super admin to the current env values.
     const inserted = await db
       .insert(users)
-      .values({
-        email,
-        name: 'DevOps Super Admin',
-        role: 'admin',
-        passwordHash,
+      .values({ email, name, role: 'admin', passwordHash })
+      .onConflictDoUpdate({
+        target: users.email,
+        set: { name, role: 'admin', passwordHash },
       })
-      .onConflictDoNothing({ target: users.email })
       .returning({ id: users.id, email: users.email });
 
-    if (inserted.length > 0) {
-      console.log(`[seed] created admin user "${email}" (role=admin, id=${inserted[0].id}).`);
-    } else {
-      console.log(`[seed] admin user "${email}" already exists — left unchanged.`);
-    }
+    console.log(`[seed] ensured admin user "${email}" (role=admin, id=${inserted[0].id}).`);
   } finally {
     await sql.end();
   }
