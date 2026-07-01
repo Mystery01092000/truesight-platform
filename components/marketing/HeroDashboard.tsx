@@ -1,45 +1,48 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils/cn";
 
 /* ────────────────────────────────────────────────────────────────────────── *
  * HeroDashboard — the landing hero centerpiece: a living preview of the Argus
  * estate overview. Window chrome + a "live" scan sweep, four estate metrics, a
- * cross-cloud topology sketch, and the per-provider breakdown. Monochrome with
- * restrained status accents; every number mirrors the real synced estate so the
- * preview reads as the product, not a mockup.
+ * cross-cloud topology sketch, and the per-provider breakdown. Every number is
+ * fetched from the public `/api/landing-stats` endpoint (real synced estate,
+ * short-TTL cached) — so the "· Live" label is honest. While it loads the tiles
+ * show quiet skeletons; if the fetch fails they degrade to a neutral em-dash and
+ * the "· Live" label is dropped. Never a fabricated figure.
  * ────────────────────────────────────────────────────────────────────────── */
 
-type Metric = {
-  label: string;
-  value: string;
-  hint: string;
-  tone?: "ink" | "green" | "red" | "blue";
+type LandingStats = {
+  resources: number;
+  accounts: number;
+  drift: number;
+  coverage: number;
+  providers: { aws: number; azure: number; github: number };
+  updatedAt: string;
 };
 
-const METRICS: Metric[] = [
-  { label: "Resources", value: "3,084", hint: "across both clouds", tone: "ink" },
-  { label: "Accounts · subs", value: "6", hint: "AWS + Azure", tone: "blue" },
-  { label: "Drift", value: "3", hint: "vs Terraform state", tone: "red" },
-  { label: "Compliance", value: "98%", hint: "posture in focus", tone: "green" },
-];
+async function fetchLandingStats(): Promise<LandingStats> {
+  const res = await fetch("/api/landing-stats", { headers: { accept: "application/json" } });
+  if (!res.ok) throw new Error(`landing-stats ${res.status}`);
+  return (await res.json()) as LandingStats;
+}
 
-const TONE_DOT: Record<NonNullable<Metric["tone"]>, string> = {
+const NUMBER_FMT = new Intl.NumberFormat("en-US");
+const fmt = (n: number) => NUMBER_FMT.format(n);
+
+type Tone = "ink" | "green" | "red" | "blue";
+
+const TONE_DOT: Record<Tone, string> = {
   ink: "bg-on-dark",
   green: "bg-accent-green",
   red: "bg-accent-red",
   blue: "bg-accent-blue",
 };
 
-const PROVIDERS = [
-  { name: "AWS", count: "2,557", dot: "bg-accent-yellow" },
-  { name: "Azure", count: "281", dot: "bg-accent-blue" },
-  { name: "GitHub", count: "246", dot: "bg-on-dark" },
-];
-
 /* Cross-cloud topology sketch — fixed integer coordinates so SSR and client
-   emit identical markup (no hydration drift). Node tone hints the provider. */
+   emit identical markup (no hydration drift). Decorative, not data-bearing. */
 const NODES = [
   { x: 34, y: 34, tone: "text-accent-yellow" },
   { x: 118, y: 22, tone: "text-accent-blue" },
@@ -60,6 +63,31 @@ const EDGES: [number, number][] = [
 
 export function HeroDashboard() {
   const reduced = useReducedMotion();
+  const { data, isError } = useQuery({
+    queryKey: ["landing-stats"],
+    queryFn: fetchLandingStats,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    retry: 1,
+  });
+
+  // The fetch has resolved with data → real numbers; the "· Live" badge is earned.
+  const live = !!data;
+  // Fetch settled unsuccessfully with nothing to show → neutral, honest fallback.
+  const failed = isError && !data;
+
+  const metrics: { label: string; hint: string; tone: Tone; value: string | null }[] = [
+    { label: "Resources", hint: "across both clouds", tone: "ink", value: data ? fmt(data.resources) : null },
+    { label: "Accounts · subs", hint: "AWS + Azure", tone: "blue", value: data ? fmt(data.accounts) : null },
+    { label: "Drift", hint: "vs Terraform state", tone: "red", value: data ? fmt(data.drift) : null },
+    { label: "Coverage", hint: "resources present", tone: "green", value: data ? `${data.coverage}%` : null },
+  ];
+
+  const providers: { name: string; dot: string; count: string | null }[] = [
+    { name: "AWS", dot: "bg-accent-yellow", count: data ? fmt(data.providers.aws) : null },
+    { name: "Azure", dot: "bg-accent-blue", count: data ? fmt(data.providers.azure) : null },
+    { name: "GitHub", dot: "bg-on-dark", count: data ? fmt(data.providers.github) : null },
+  ];
 
   return (
     <PanelFrame>
@@ -81,7 +109,9 @@ export function HeroDashboard() {
             <span className="text-[13px] font-medium tracking-[0.2px] text-ink">
               Estate overview
             </span>
-            <span className="text-[12px] tracking-[0.3px] text-mute">· Live</span>
+            {live && (
+              <span className="text-[12px] tracking-[0.3px] text-mute">· Live</span>
+            )}
           </div>
           <div className="flex items-center gap-1.5">
             {[0, 1, 2].map((i) => (
@@ -93,7 +123,7 @@ export function HeroDashboard() {
         <div className="relative z-10 flex flex-col gap-5 p-5">
           {/* metric tiles */}
           <div className="grid grid-cols-2 gap-3">
-            {METRICS.map((m, i) => (
+            {metrics.map((m, i) => (
               <motion.div
                 key={m.label}
                 initial={reduced ? false : { opacity: 0, y: 8 }}
@@ -102,12 +132,10 @@ export function HeroDashboard() {
                 className="flex flex-col gap-1.5 rounded-lg border border-hairline bg-surface p-3.5"
               >
                 <span className="flex items-center gap-1.5 text-[12px] tracking-[0.2px] text-mute">
-                  <span className={cn("size-1.5 rounded-full", TONE_DOT[m.tone ?? "ink"])} />
+                  <span className={cn("size-1.5 rounded-full", TONE_DOT[m.tone])} />
                   {m.label}
                 </span>
-                <span className="text-[26px] font-semibold leading-none tracking-[0.2px] text-ink">
-                  {m.value}
-                </span>
+                <MetricValue value={m.value} failed={failed} />
                 <span className="text-[11px] tracking-[0.2px] text-stone">{m.hint}</span>
               </motion.div>
             ))}
@@ -150,13 +178,13 @@ export function HeroDashboard() {
             </div>
 
             <div className="flex flex-col justify-center gap-2.5 rounded-lg border border-hairline bg-surface p-3.5">
-              {PROVIDERS.map((p) => (
+              {providers.map((p) => (
                 <div key={p.name} className="flex items-center justify-between">
                   <span className="flex items-center gap-2 text-[13px] text-body">
                     <span className={cn("size-2 rounded-full", p.dot)} />
                     {p.name}
                   </span>
-                  <span className="font-mono text-[13px] tabular-nums text-ink">{p.count}</span>
+                  <ProviderCount value={p.count} failed={failed} />
                 </div>
               ))}
             </div>
@@ -164,6 +192,47 @@ export function HeroDashboard() {
         </div>
       </div>
     </PanelFrame>
+  );
+}
+
+/* Metric value — real number once loaded, a quiet skeleton while fetching, and a
+   neutral em-dash (never a fake figure) if the endpoint is unavailable. */
+function MetricValue({ value, failed }: { value: string | null; failed: boolean }) {
+  if (value !== null) {
+    return (
+      <span className="text-[26px] font-semibold leading-none tracking-[0.2px] text-ink">
+        {value}
+      </span>
+    );
+  }
+  if (failed) {
+    return (
+      <span className="text-[26px] font-semibold leading-none tracking-[0.2px] text-stone">—</span>
+    );
+  }
+  return (
+    <span
+      className="h-[26px] w-14 animate-pulse rounded bg-hairline-strong/40"
+      aria-hidden
+      role="presentation"
+    />
+  );
+}
+
+/* Provider tally — same real/loading/failed treatment, in the mono metric voice. */
+function ProviderCount({ value, failed }: { value: string | null; failed: boolean }) {
+  if (value !== null) {
+    return <span className="font-mono text-[13px] tabular-nums text-ink">{value}</span>;
+  }
+  if (failed) {
+    return <span className="font-mono text-[13px] tabular-nums text-stone">—</span>;
+  }
+  return (
+    <span
+      className="h-3.5 w-8 animate-pulse rounded bg-hairline-strong/40"
+      aria-hidden
+      role="presentation"
+    />
   );
 }
 

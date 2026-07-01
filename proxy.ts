@@ -3,7 +3,7 @@ import { verifyEdgeToken } from "@/lib/auth/edge";
 
 const SESSION_COOKIE = "argus_session";
 
-/** Authenticated app segments + API. Public: /, /login, /api/health, /api/auth, assets. */
+/** Authenticated app segments + API. Public: /, /login, /api/health, /api/auth, /api/landing-stats, assets. */
 const PROTECTED_PREFIXES = [
   "/overview",
   "/aws",
@@ -18,7 +18,12 @@ const PROTECTED_PREFIXES = [
 
 function isProtected(pathname: string): boolean {
   if (pathname.startsWith("/api")) {
-    return !pathname.startsWith("/api/health") && !pathname.startsWith("/api/auth");
+    return (
+      !pathname.startsWith("/api/health") &&
+      !pathname.startsWith("/api/auth") &&
+      // Coarse, public, unauthenticated landing stats (no secrets, no detail).
+      !pathname.startsWith("/api/landing-stats")
+    );
   }
   return PROTECTED_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`),
