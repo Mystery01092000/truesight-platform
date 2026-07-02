@@ -326,7 +326,7 @@ variable "enable_readonly_cost_grant" {
 }
 
 variable "kb_embedding_provider" {
-  description = "Active KB embedding provider (openai | bedrock). Flip to bedrock only after the kb:reembed backfill reports 0 remaining."
+  description = "Active KB embedding provider (openai | bedrock). Bedrock-first: the KB launched with Titan v2 embeddings (no OpenAI corpus ever existed to migrate)."
   type        = string
-  default     = "openai"
+  default     = "bedrock"
 }
