@@ -7,6 +7,7 @@ const nextConfig = {
   // Server-only integration SDKs must never be bundled into client chunks.
   serverExternalPackages: [
     "postgres",
+    "ioredis",
     "@aws-sdk/client-sts",
     "@azure/identity",
     "@cdktf/hcl2json",

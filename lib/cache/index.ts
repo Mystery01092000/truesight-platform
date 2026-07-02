@@ -1,15 +1,17 @@
 import "server-only";
 import { serverEnv } from "@/lib/config/env";
+import { RedisCacheDriver } from "./redis";
 
 /**
  * Cache abstraction. A single Fargate task needs no distributed cache, so the default
- * is a real in-process TTL store. When the platform scales to >1 task, set REDIS_URL
- * and swap in a Redis driver — call sites (`cacheable`) never change.
+ * is a real in-process TTL store. When REDIS_URL is set (multi-task scaling), the
+ * Redis driver is selected instead — call sites (`cacheable`) never change.
  */
 export interface CacheDriver {
   get<T>(key: string): Promise<T | null>;
   set<T>(key: string, value: T, ttlSeconds: number): Promise<void>;
   del(key: string): Promise<void>;
+  delPrefix(prefix: string): Promise<void>;
 }
 
 interface Entry {
@@ -37,6 +39,12 @@ class MemoryCacheDriver implements CacheDriver {
   async del(key: string): Promise<void> {
     this.store.delete(key);
   }
+
+  async delPrefix(prefix: string): Promise<void> {
+    for (const key of this.store.keys()) {
+      if (key.startsWith(prefix)) this.store.delete(key);
+    }
+  }
 }
 
 // Persist across HMR / route invocations in a single process.
@@ -44,10 +52,10 @@ const globalForCache = globalThis as unknown as { __argusCache?: CacheDriver };
 
 function driver(): CacheDriver {
   if (!globalForCache.__argusCache) {
-    // REDIS_URL present → a Redis driver would slot in here (requires `ioredis`).
-    // Until multi-task scaling, the in-process driver is the real, correct choice.
-    void serverEnv().REDIS_URL;
-    globalForCache.__argusCache = new MemoryCacheDriver();
+    const redisUrl = serverEnv().REDIS_URL;
+    globalForCache.__argusCache = redisUrl
+      ? new RedisCacheDriver(redisUrl)
+      : new MemoryCacheDriver();
   }
   return globalForCache.__argusCache;
 }
@@ -71,4 +79,9 @@ export async function cacheable<T>(
 
 export async function invalidate(key: string): Promise<void> {
   await driver().del(key);
+}
+
+/** Drop every cached entry whose key starts with `prefix` (e.g. "cost:"). */
+export async function invalidatePrefix(prefix: string): Promise<void> {
+  await driver().delPrefix(prefix);
 }
