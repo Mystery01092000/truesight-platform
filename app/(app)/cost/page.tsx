@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
-import { Wallet } from "lucide-react";
+import { Activity, ArrowLeftRight, Layers, Wallet } from "lucide-react";
 
 import { Surface } from "@/components/ui/Surface";
 import { Reveal } from "@/components/ui/Reveal";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { RollupNumber } from "@/components/ui/RollupNumber";
+import { StatTile } from "@/components/ui/StatTile";
 import { Sparkline } from "@/components/ui/Sparkline";
 import { ProviderChip } from "@/components/ui/ProviderChip";
-import { CostTile } from "@/components/widgets/CostTile";
+import { CostBreakdown } from "@/components/widgets/CostBreakdown";
+import { CostLineItemsTable } from "@/components/widgets/CostLineItemsTable";
 
-import { getCostOverview, resolveCostRange, type CostRangeKey } from "./data";
+import { getCostConsole, type CostRangeKey } from "./data";
 import { CostRangeFilter } from "./CostRangeFilter";
 import { CostSyncButton } from "./CostSyncButton";
 
@@ -17,6 +18,13 @@ export const metadata: Metadata = { title: "Cost & FinOps" };
 export const dynamic = "force-dynamic";
 
 const VALID_RANGES: CostRangeKey[] = ["7d", "30d", "90d", "mtd"];
+
+const RANGE_LABEL: Record<CostRangeKey, string> = {
+  "7d": "7 days",
+  "30d": "30 days",
+  "90d": "90 days",
+  mtd: "month to date",
+};
 
 function normalizeRange(v: string | string[] | undefined): CostRangeKey {
   const s = Array.isArray(v) ? v[0] : v;
@@ -30,13 +38,9 @@ export default async function CostPage({
 }) {
   const sp = await searchParams;
   const range = normalizeRange(sp.range);
-  const cost = await getCostOverview(range);
-  const { endDate } = resolveCostRange(range);
+  const cost = await getCostConsole(range);
 
-  const totalSpark = cost.series.map((p) => p.aws + p.azure);
-  const awsSpark = cost.series.map((p) => p.aws);
-  const azureSpark = cost.series.map((p) => p.azure);
-  const dailySpark = cost.series.map((p) => p.aws + p.azure);
+  const dailyTotals = cost.series.map((p) => p.aws + p.azure);
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -56,8 +60,9 @@ export default async function CostPage({
               Cross-cloud spend, read-only from AWS Cost Explorer and Azure Cost Management.
             </p>
           </div>
-          <div className="hidden shrink-0 sm:block">
+          <div className="hidden shrink-0 items-center gap-3 sm:flex">
             <CostRangeFilter value={range} />
+            {cost.hasData ? <CostSyncButton variant="tertiary" size="sm" label="Re-sync" /> : null}
           </div>
         </header>
       </Reveal>
@@ -67,141 +72,120 @@ export default async function CostPage({
           <EmptyState
             icon={<Wallet size={24} strokeWidth={1.5} />}
             title="Argus hasn't captured cost data yet"
-            description="Run a cost sync to pull actual spend from AWS Cost Explorer and Azure Cost Management — read-only. Spend will appear here grouped by provider and service."
+            description="Run a cost sync to pull actual spend from AWS Cost Explorer and Azure Cost Management — read-only. Spend will appear here grouped by provider, account, service and day."
             action={<CostSyncButton />}
           />
         </Reveal>
       ) : (
         <>
-          {/* Summary stat row */}
+          {/* Stat row — current spend, delta vs previous window, top service, daily burn */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Reveal delay={0 * 0.06}>
-              <CostTile
-                label={`Total spend · ${range}`}
-                amount={cost.total}
-                sparklineData={totalSpark}
-                provider={undefined}
+            <Reveal delay={0}>
+              <StatTile
+                label={`Total spend · ${RANGE_LABEL[range]}`}
+                value={cost.total}
+                prefix="$"
+                decimals={2}
+                icon={<Wallet />}
+                sparkline={
+                  <p className="font-mono text-micro tabular-nums text-ash">
+                    {cost.startDate} → {cost.endDate}
+                  </p>
+                }
               />
             </Reveal>
-            <Reveal delay={1 * 0.06}>
-              <CostTile label="AWS spend" amount={cost.aws} sparklineData={awsSpark} provider="aws" />
-            </Reveal>
-            <Reveal delay={2 * 0.06}>
-              <CostTile
-                label="Azure spend"
-                amount={cost.azure}
-                sparklineData={azureSpark}
-                provider="azure"
+            <Reveal delay={0.04}>
+              <StatTile
+                label="vs previous period"
+                value={cost.prevTotal}
+                prefix="$"
+                decimals={2}
+                icon={<ArrowLeftRight />}
+                delta={cost.deltaPct ?? undefined}
+                deltaInverted
+                deltaSuffix="%"
+                sparkline={
+                  <p className="font-mono text-micro tabular-nums text-ash">
+                    {cost.prevTotal > 0
+                      ? `${cost.prevStartDate} → ${cost.prevEndDate}`
+                      : "no spend captured in the prior window"}
+                  </p>
+                }
               />
             </Reveal>
-            <Reveal delay={3 * 0.06}>
-              <CostTile label="Daily average" amount={cost.dailyAvg} sparklineData={dailySpark} />
+            <Reveal delay={0.08}>
+              <StatTile
+                label="Top service"
+                value={cost.topService?.amount ?? 0}
+                prefix="$"
+                decimals={2}
+                icon={<Layers />}
+                sparkline={
+                  cost.topService ? (
+                    <p className="flex items-center gap-1.5 text-[12px] leading-[1.5] text-mute">
+                      <ProviderChip provider={cost.topService.provider} label={false} />
+                      <span className="truncate">{cost.topService.service}</span>
+                    </p>
+                  ) : (
+                    <p className="text-micro text-ash">no service-level spend recorded</p>
+                  )
+                }
+              />
+            </Reveal>
+            <Reveal delay={0.12}>
+              <StatTile
+                label="Daily burn"
+                value={cost.dailyAvg}
+                prefix="$"
+                decimals={2}
+                icon={<Activity />}
+                sparkline={
+                  dailyTotals.length >= 2 ? (
+                    <Sparkline data={dailyTotals} width={220} height={32} className="w-full" />
+                  ) : (
+                    <p className="text-micro text-ash">not enough daily points to plot yet</p>
+                  )
+                }
+              />
             </Reveal>
           </div>
 
-          {/* Mobile range filter (desktop lives in the header) */}
-          <div className="mt-4 sm:hidden">
+          {/* Mobile controls (desktop lives in the header) */}
+          <div className="mt-4 flex items-center justify-between gap-3 sm:hidden">
             <CostRangeFilter value={range} />
+            <CostSyncButton variant="tertiary" size="sm" label="Re-sync" />
           </div>
 
-          {/* Total trend */}
-          <Reveal delay={0.12}>
+          {/* Breakdown explorer */}
+          <Reveal delay={0.16}>
             <Surface level={1} radius="lg" className="mt-4 p-6">
-              <div className="flex items-baseline justify-between gap-4">
-                <h2 className="text-[16px] font-medium leading-[1.4] text-ink">
-                  Spend trend
-                </h2>
-                <span className="font-display text-[24px] font-medium tabular-nums text-ink">
-                  <RollupNumber value={cost.total} prefix="$" decimals={2} />
+              <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+                <h2 className="text-[16px] font-medium leading-[1.4] text-ink">Spend breakdown</h2>
+                <span className="font-mono text-micro tabular-nums text-ash">
+                  {cost.series.length} daily points · {cost.currency} ·{" "}
+                  {cost.source === "rollups" ? "precomputed rollups" : "snapshot aggregates"}
                 </span>
               </div>
-              <div className="mt-4">
-                {totalSpark.length >= 2 ? (
-                  <Sparkline data={totalSpark} width={900} height={64} strokeWidth={2} className="w-full" />
-                ) : (
-                  <p className="text-[13px] text-mute">
-                    Not enough daily data points to plot a trend yet.
-                  </p>
-                )}
-              </div>
-              <p className="mt-3 text-[12px] text-mute">
-                Window ends {endDate} · {cost.series.length} daily points · {cost.currency}
-              </p>
+              <CostBreakdown groups={cost.breakdowns} awsTotal={cost.aws} azureTotal={cost.azure} />
             </Surface>
           </Reveal>
 
-          {/* Provider breakdown */}
-          <Reveal delay={0.18}>
-            <Surface level={1} radius="lg" className="mt-4 p-6">
-              <h2 className="text-[16px] font-medium leading-[1.4] text-ink">By provider</h2>
-              <div className="mt-4 flex flex-wrap items-center gap-6">
-                <ProviderRow provider="aws" amount={cost.aws} total={cost.total} />
-                <ProviderRow provider="azure" amount={cost.azure} total={cost.total} />
+          {/* Line-item drill-down */}
+          <Reveal delay={0.22}>
+            <section className="mt-4">
+              <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+                <h2 className="text-[16px] font-medium leading-[1.4] text-ink">Line items</h2>
+                <span className="font-mono text-micro tabular-nums text-ash">
+                  {cost.lineItems.length < cost.lineItemsTotal
+                    ? `top ${cost.lineItems.length.toLocaleString("en-US")} of ${cost.lineItemsTotal.toLocaleString("en-US")} rows by recency + spend`
+                    : `${cost.lineItemsTotal.toLocaleString("en-US")} rows · provider / account / service / day grain`}
+                </span>
               </div>
-            </Surface>
-          </Reveal>
-
-          {/* Service breakdown */}
-          <Reveal delay={0.24}>
-            <Surface level={1} radius="lg" className="mt-4 overflow-hidden">
-              <div className="border-b border-hairline px-6 py-4">
-                <h2 className="text-[16px] font-medium leading-[1.4] text-ink">
-                  Cost by service
-                </h2>
-              </div>
-              <div className="divide-y divide-hairline">
-                <div className="grid grid-cols-[1fr_auto_auto] items-center gap-4 px-6 py-2 text-[12px] uppercase tracking-[0.08em] text-mute">
-                  <span>Service</span>
-                  <span className="w-32 text-right">Trend</span>
-                  <span className="w-28 text-right">Amount</span>
-                </div>
-                {cost.byService.map((s) => (
-                  <div
-                    key={`${s.provider}:${s.service}`}
-                    className="grid grid-cols-[1fr_auto_auto] items-center gap-4 px-6 py-3"
-                  >
-                    <div className="flex min-w-0 items-center gap-2.5">
-                      <ProviderChip provider={s.provider} label={false} />
-                      <span className="truncate text-[14px] text-ink">{s.service}</span>
-                    </div>
-                    <div className="w-32">
-                      {s.sparkline.length >= 2 ? (
-                        <Sparkline data={s.sparkline} width={128} height={24} className="ml-auto" />
-                      ) : (
-                        <span className="block text-right text-[12px] text-mute">—</span>
-                      )}
-                    </div>
-                    <span className="w-28 text-right font-mono text-[14px] tabular-nums text-ink">
-                      <RollupNumber value={s.amount} prefix="$" decimals={2} />
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </Surface>
+              <CostLineItemsTable rows={cost.lineItems} facets={cost.facets} />
+            </section>
           </Reveal>
         </>
       )}
-    </div>
-  );
-}
-
-function ProviderRow({
-  provider,
-  amount,
-  total,
-}: {
-  provider: "aws" | "azure";
-  amount: number;
-  total: number;
-}) {
-  const pct = total > 0 ? Math.round((amount / total) * 100) : 0;
-  return (
-    <div className="flex items-center gap-3">
-      <ProviderChip provider={provider} />
-      <span className="font-display text-[22px] font-medium tabular-nums text-ink">
-        <RollupNumber value={amount} prefix="$" decimals={2} />
-      </span>
-      <span className="text-[13px] text-mute">{pct}%</span>
     </div>
   );
 }

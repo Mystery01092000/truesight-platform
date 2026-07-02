@@ -7,6 +7,7 @@ const ITEMS: PillTabItem[] = [
   { value: "7d", label: "7d" },
   { value: "30d", label: "30d" },
   { value: "90d", label: "90d" },
+  { value: "mtd", label: "MTD" },
 ];
 
 /**
