@@ -135,6 +135,27 @@ export const ACCENT_TOKENS = [
 export type AccentToken = (typeof ACCENT_TOKENS)[number];
 
 /**
+ * Alias for the glyph-tint accent — the value `RESOURCE_KIND_ACCENT` resolves to.
+ * Included so consumers (AppIconTile, ResourceNode) import one canonical name
+ * instead of redeclaring a local `Accent`/`AccentToken` subset.
+ */
+export type GlyphAccent = AccentToken;
+
+/**
+ * Drift ring classes keyed to the canonical {@link DriftStatus}. Used by the
+ * topology ResourceNode to render the signature "no blind spots" halo — green
+ * in-sync / yellow drift / red missing / blue unmanaged. `in_sync` is empty so
+ * the default state stays clean.
+ */
+export const DRIFT_RING: Record<DriftStatus, string> = {
+  in_sync: "",
+  drifted: "ring-2 ring-accent-yellow/60",
+  missing_in_cloud: "ring-2 ring-accent-red/70 ring-offset-0",
+  unmanaged: "ring-1 ring-accent-blue/50",
+  unknown: "",
+};
+
+/**
  * Maps a canonical {@link ResourceKind} to a DESIGN.md accent token used to tint
  * the AppIconTile glyph. Blue = infra/compute/network, green = data/storage,
  * red = identity/secrets, yellow = compute-on-demand/AI/monitoring signals,

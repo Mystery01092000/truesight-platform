@@ -14,7 +14,10 @@ export type Action =
   | "sync:trigger"
   | "checklist:write"
   | "dashboard:write"
-  | "settings:write";
+  | "settings:write"
+  | "kb:read"
+  | "kb:admin"
+  | "tickets:admin";
 
 const MATRIX: Record<Role, Action[] | "*"> = {
   // DevOps Super Admin — full platform configurability.
@@ -29,6 +32,9 @@ const MATRIX: Record<Role, Action[] | "*"> = {
     "sync:trigger",
     "checklist:write",
     "dashboard:write",
+    "kb:read",
+    "kb:admin",
+    "tickets:admin",
   ],
   viewer: [
     "estate:read",
@@ -37,6 +43,7 @@ const MATRIX: Record<Role, Action[] | "*"> = {
     "cost:read",
     "security:read",
     "compliance:read",
+    "kb:read",
   ],
 };
 

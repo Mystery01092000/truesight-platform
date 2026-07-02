@@ -40,8 +40,8 @@ export function AzureEstateExplorer({
   resourceGroups: string[];
   services: AzureServiceGroup[];
 }) {
-  const [rg, setRg] = usePersistedState<string>("argus.azure.rg", ALL);
-  const [service, setService] = usePersistedState<string>("argus.azure.service", ALL);
+  const [rg, setRg] = usePersistedState<string>("argus:azure:rg", ALL);
+  const [service, setService] = usePersistedState<string>("argus:azure:service", ALL);
 
   const byRg = useMemo(
     () => (rg === ALL ? services : services.filter((g) => g.resourceGroup === rg)),

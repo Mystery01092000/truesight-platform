@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Command } from "cmdk";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Search, Clock } from "lucide-react";
 import { COMMAND_ROUTES } from "@/lib/nav";
 import { usePersistedState } from "@/lib/hooks/use-persisted-state";
@@ -18,6 +19,8 @@ const SUGGESTIONS = [
   { label: "Browse the AWS estate", href: "/aws" },
   { label: "Browse the Azure estate", href: "/azure" },
   { label: "See the org's top contributors", href: "/github" },
+  { label: "Check cloud spend", href: "/cost" },
+  { label: "Review security findings", href: "/security" },
   { label: "Estate overview", href: "/overview" },
 ];
 
@@ -31,6 +34,7 @@ const labelFor = (href: string) =>
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const reduced = useReducedMotion();
   // Recents persist across sessions (localStorage) — survive reload + re-login.
   const [recent, setRecent] = usePersistedState<string[]>("argus:recent-routes", []);
 
@@ -51,18 +55,29 @@ export function CommandPalette() {
     router.push(href);
   };
 
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 pt-[16vh]"
-      onClick={() => setOpen(false)}
-    >
-      <Command
-        label="Ask Argus"
-        className="w-full max-w-xl overflow-hidden rounded-xl border border-hairline bg-surface"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <AnimatePresence>
+      {open ? (
+        <motion.div
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 pt-[16vh]"
+          onClick={() => setOpen(false)}
+          initial={reduced ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={reduced ? undefined : { opacity: 0 }}
+          transition={reduced ? { duration: 0 } : { duration: 0.15 }}
+        >
+          <motion.div
+            onClick={(e) => e.stopPropagation()}
+            initial={reduced ? false : { opacity: 0, y: -8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={reduced ? undefined : { opacity: 0, y: -8, scale: 0.98 }}
+            transition={reduced ? { duration: 0 } : { type: "spring", stiffness: 320, damping: 32 }}
+            className="w-full max-w-xl"
+          >
+            <Command
+              label="Ask Argus"
+              className="w-full overflow-hidden rounded-xl border border-hairline bg-surface"
+            >
         <div className="flex items-center gap-2 border-b border-hairline px-3">
           <Search size={16} className="text-mute" />
           <Command.Input
@@ -128,7 +143,10 @@ export function CommandPalette() {
             ))}
           </Command.Group>
         </Command.List>
-      </Command>
-    </div>
+        </Command>
+          </motion.div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
   );
 }

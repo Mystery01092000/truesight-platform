@@ -1,3 +1,4 @@
+import type { Severity, DriftStatus, ResourceStatus } from "@/lib/taxonomy";
 import { cn } from "@/lib/utils/cn";
 
 /**
@@ -25,13 +26,15 @@ export function Badge({
 }
 
 /**
- * StatusBadge — maps a Severity or DriftStatus to the accent-soft fill + accent
- * text pair. This is one of the rare, deliberate places saturated color reads on
- * chrome, kept legible via the soft (15% alpha) tint behind accent text.
+ * StatusBadge — maps a Severity, DriftStatus, or ResourceStatus (health) to the
+ * accent-soft fill + accent text pair. This is one of the rare, deliberate
+ * places saturated color reads on chrome, kept legible via the soft (15% alpha)
+ * tint behind accent text.
+ *
+ * Uses the CANONICAL taxonomy enums (underscore drift form: `in_sync`,
+ * `missing_in_cloud`, `unmanaged`) — never a local redefinition.
  */
-export type Severity = "critical" | "high" | "medium" | "low" | "info";
-export type DriftStatus = "in-sync" | "drifted" | "pending" | "unknown";
-export type StatusKind = Severity | DriftStatus;
+export type StatusKind = Severity | DriftStatus | ResourceStatus;
 
 type Tone = "red" | "yellow" | "green" | "blue" | "mute";
 
@@ -40,13 +43,18 @@ const STATUS_TONE: Record<StatusKind, Tone> = {
   critical: "red",
   high: "red",
   medium: "yellow",
-  low: "blue",
+  low: "mute",
   info: "blue",
-  // drift
-  drifted: "red",
-  pending: "yellow",
-  "in-sync": "green",
+  // drift (canonical underscore form)
+  in_sync: "green",
+  drifted: "yellow",
+  missing_in_cloud: "red",
+  unmanaged: "blue",
   unknown: "mute",
+  // health (ResourceStatus)
+  healthy: "green",
+  degraded: "yellow",
+  stopped: "red",
 };
 
 const TONE_CLASS: Record<Tone, { fill: string; dot: string }> = {
@@ -58,7 +66,13 @@ const TONE_CLASS: Record<Tone, { fill: string; dot: string }> = {
 };
 
 const LABELS: Partial<Record<StatusKind, string>> = {
-  "in-sync": "In sync",
+  in_sync: "In sync",
+  drifted: "Drifted",
+  missing_in_cloud: "Missing in cloud",
+  unmanaged: "Unmanaged",
+  healthy: "Healthy",
+  degraded: "Degraded",
+  stopped: "Stopped",
 };
 
 export function StatusBadge({

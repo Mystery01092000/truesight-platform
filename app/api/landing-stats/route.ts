@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
  */
 
 /** Cache key + TTL, shared with the sync route so a sync can bust it eagerly. */
-export const LANDING_STATS_CACHE_KEY = "landing:stats:v1";
+export const LANDING_STATS_CACHE_KEY = "argus:landing:stats:v1";
 const CACHE_TTL_SECONDS = 30;
 
 export type LandingStats = {

@@ -1,7 +1,7 @@
 import * as LucideIcons from "lucide-react";
 import { Box, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import { kindAccent, kindIcon, type ResourceKind } from "@/lib/taxonomy";
+import { kindAccent, kindIcon, type AccentToken, type ResourceKind } from "@/lib/taxonomy";
 
 /**
  * AppIconTile — the ONE surface where saturated accent is allowed. A resource
@@ -10,8 +10,6 @@ import { kindAccent, kindIcon, type ResourceKind } from "@/lib/taxonomy";
  * monochrome. Accent is confined to this tile by design.
  */
 const ICON_SET = LucideIcons as unknown as Record<string, LucideIcon | undefined>;
-
-type AccentToken = "accent-blue" | "accent-green" | "accent-red" | "accent-yellow" | "mute";
 
 const ACCENT_ICON: Record<AccentToken, string> = {
   "accent-blue": "text-accent-blue",
@@ -48,7 +46,7 @@ export type AppIconTileProps = {
 };
 
 export function AppIconTile({ kind, size = 48, className }: AppIconTileProps) {
-  const accent = (kindAccent[kind] ?? "mute") as AccentToken;
+  const accent = kindAccent[kind] ?? "mute";
   const Icon = resolveIcon(kindIcon[kind]);
   const iconPx = size === 64 ? 26 : 22;
 

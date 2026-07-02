@@ -3,7 +3,6 @@ import {
   type ResourceKind,
   type ResourceStatus,
 } from "@/lib/taxonomy";
-import type { StatusKind } from "@/components/ui/Badge";
 
 /**
  * Estate view-models — the plain, serializable shapes the AWS explorer passes
@@ -93,20 +92,21 @@ export function formatLastSeen(iso: string | null): string {
 }
 
 /**
- * Map a resource health status onto the shared {@link StatusBadge} vocabulary
- * (which speaks severity / drift tones), preserving the human label.
+ * Map a resource health status onto the shared {@link StatusBadge} vocabulary.
+ * StatusBadge now has a first-class health domain, so we pass the canonical
+ * ResourceStatus directly — no more borrowing drift tones for health signal.
  */
 export function statusBadge(status: ResourceStatus): {
-  status: StatusKind;
+  status: ResourceStatus;
   label: string;
 } {
   switch (status) {
     case "healthy":
-      return { status: "in-sync", label: "Healthy" };
+      return { status: "healthy", label: "Healthy" };
     case "degraded":
-      return { status: "pending", label: "Degraded" };
+      return { status: "degraded", label: "Degraded" };
     case "stopped":
-      return { status: "drifted", label: "Stopped" };
+      return { status: "stopped", label: "Stopped" };
     default:
       return { status: "unknown", label: "Unknown" };
   }

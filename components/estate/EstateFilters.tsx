@@ -23,8 +23,8 @@ export function EstateFilters({
   accounts: string[];
   services: ServiceGroupData[];
 }) {
-  const [account, setAccount] = usePersistedState<string>("argus.aws.account", ALL);
-  const [service, setService] = usePersistedState<string>("argus.aws.service", ALL);
+  const [account, setAccount] = usePersistedState<string>("argus:aws:account", ALL);
+  const [service, setService] = usePersistedState<string>("argus:aws:service", ALL);
 
   const byAccount = useMemo(
     () => (account === ALL ? services : services.filter((g) => g.account === account)),
