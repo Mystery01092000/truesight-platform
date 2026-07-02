@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Boxes, Cable, GitBranch, ShieldAlert, Wallet } from "lucide-react";
 import { desc, eq, ne, sql, inArray } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 import { db } from "@/db";
@@ -13,7 +14,7 @@ import {
 } from "@/db/schema";
 import { Surface } from "@/components/ui/Surface";
 import { Reveal } from "@/components/ui/Reveal";
-import { RollupNumber } from "@/components/ui/RollupNumber";
+import { StatTile } from "@/components/ui/StatTile";
 import { ProviderChip } from "@/components/ui/ProviderChip";
 
 export const metadata: Metadata = { title: "Overview" };
@@ -71,10 +72,34 @@ export default async function OverviewPage() {
       : "No clouds connected";
 
   const stats = [
-    { label: "Resources discovered", value: resourceCount, hint: providerHint },
-    { label: "Integrations", value: accountCount, hint: "connected cloud accounts" },
-    { label: "Drift findings", value: driftCount, hint: driftCount > 0 ? "needs attention" : "estate in sync" },
-    { label: "Security alerts", value: securityCount, hint: securityCount > 0 ? "critical + high" : "no critical findings" },
+    {
+      label: "Resources discovered",
+      value: resourceCount,
+      hint: providerHint,
+      href: "/topology",
+      icon: Boxes,
+    },
+    {
+      label: "Integrations",
+      value: accountCount,
+      hint: "connected cloud accounts",
+      href: "/aws",
+      icon: Cable,
+    },
+    {
+      label: "Drift findings",
+      value: driftCount,
+      hint: driftCount > 0 ? "needs attention" : "estate in sync",
+      href: "/compliance",
+      icon: GitBranch,
+    },
+    {
+      label: "Security alerts",
+      value: securityCount,
+      hint: securityCount > 0 ? "critical + high" : "no critical findings",
+      href: "/security",
+      icon: ShieldAlert,
+    },
   ];
 
   const formatSyncTime = (iso: string | null) => {
@@ -103,40 +128,37 @@ export default async function OverviewPage() {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {stats.map((s, i) => (
-          <Reveal key={s.label} delay={i * 0.06}>
-            <Surface level={1} radius="lg" className="p-5">
-              <div className="text-[13px] text-mute">{s.label}</div>
-              <RollupNumber
+          <Reveal key={s.label} delay={i * 0.04}>
+            <Link href={s.href} className="block h-full" aria-label={`${s.label} — open`}>
+              <StatTile
+                label={s.label}
                 value={s.value}
-                className="mt-2 block font-display text-[40px] font-medium leading-none tracking-[-0.5px] text-ink"
+                icon={<s.icon strokeWidth={1.75} />}
+                sparkline={
+                  <span className="text-[12px] leading-[1.5] text-mute">{s.hint}</span>
+                }
+                className="h-full transition-colors duration-150 ease-smooth hover:border-hairline-emphasis"
               />
-              <div className="mt-2 text-[12px] text-mute">{s.hint}</div>
-            </Surface>
+            </Link>
           </Reveal>
         ))}
       </div>
 
       {monthlyCost > 0 ? (
-        <Reveal delay={0.24}>
-          <Surface level={1} radius="lg" className="mt-4 p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-[13px] text-mute">Spend this month</div>
-                <RollupNumber
-                  value={monthlyCost}
-                  prefix="$"
-                  decimals={2}
-                  className="mt-1 block font-display text-[28px] font-medium leading-none tracking-[-0.5px] text-ink"
-                />
-              </div>
-              <Link
-                href="/cost"
-                className="text-[13px] text-mute transition-colors hover:text-on-dark"
-              >
-                View breakdown →
-              </Link>
-            </div>
-          </Surface>
+        <Reveal delay={0.16}>
+          <Link href="/cost" className="mt-4 block" aria-label="Spend this month — open cost analysis">
+            <StatTile
+              label="Spend this month"
+              value={monthlyCost}
+              prefix="$"
+              decimals={2}
+              icon={<Wallet strokeWidth={1.75} />}
+              sparkline={
+                <span className="text-[12px] leading-[1.5] text-mute">View breakdown →</span>
+              }
+              className="transition-colors duration-150 ease-smooth hover:border-hairline-emphasis"
+            />
+          </Link>
         </Reveal>
       ) : null}
 

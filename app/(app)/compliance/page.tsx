@@ -11,7 +11,7 @@ import { FRAMEWORKS } from "@/lib/governance/frameworks";
 import { Surface } from "@/components/ui/Surface";
 import { Reveal } from "@/components/ui/Reveal";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { RollupNumber } from "@/components/ui/RollupNumber";
+import { StatTile } from "@/components/ui/StatTile";
 import {
   VerifiedChecklist,
   type ChecklistEntry,
@@ -114,57 +114,74 @@ export default async function CompliancePage({
           {/* ── Overview stat row ──────────────────────────────────────── */}
           <Reveal delay={0.05}>
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-              <Surface level={1} radius="lg" className="p-5">
-                <div className="flex items-center gap-1.5 text-[13px] text-mute">
-                  <CheckCircle2 size={14} />
-                  Controls verified
-                </div>
-                <div className="mt-2 font-display text-[32px] font-medium leading-none tracking-[-0.5px] text-ink tabular-nums">
-                  <RollupNumber value={summary.passed} />{" "}
-                  <span className="text-[18px] text-mute">
-                    / {summary.totalControls}
+              <StatTile
+                label="Controls verified"
+                value={summary.passed}
+                suffix={` / ${summary.totalControls}`}
+                icon={<CheckCircle2 strokeWidth={1.75} />}
+                className="h-full"
+                sparkline={
+                  <span className="text-[12px] leading-[1.5] text-mute">
+                    <span className={summary.failed > 0 ? "text-critical" : undefined}>
+                      {summary.failed} failing
+                    </span>
+                    {" · "}
+                    <span className={summary.warned > 0 ? "text-warning" : undefined}>
+                      {summary.warned} warnings
+                    </span>
                   </span>
-                </div>
-                <div className="mt-2 text-[12px] text-mute">
-                  {summary.failed} failing · {summary.warned} warnings
-                </div>
-              </Surface>
+                }
+              />
 
-              <Surface level={1} radius="lg" className="p-5">
-                <div className="flex items-center gap-1.5 text-[13px] text-mute">
-                  <GitBranch size={14} />
-                  Drift findings
-                </div>
-                <div className="mt-2 font-display text-[32px] font-medium leading-none tracking-[-0.5px] text-ink tabular-nums">
-                  <RollupNumber value={summary.driftCount} />
-                </div>
-                <div className="mt-2 text-[12px] text-mute">
-                  state vs. live cloud
-                </div>
-              </Surface>
+              <StatTile
+                label="Drift findings"
+                value={summary.driftCount}
+                icon={<GitBranch strokeWidth={1.75} />}
+                className="h-full"
+                sparkline={
+                  <span className="text-[12px] leading-[1.5] text-mute">
+                    state vs. live cloud
+                  </span>
+                }
+              />
 
-              <Surface level={1} radius="lg" className="p-5">
-                <div className="flex items-center gap-1.5 text-[13px] text-mute">
-                  <ShieldAlert size={14} />
-                  Security findings
-                </div>
-                <div className="mt-2 font-display text-[32px] font-medium leading-none tracking-[-0.5px] text-ink tabular-nums">
-                  <RollupNumber value={summary.securityCount} />
-                </div>
-                <div className="mt-2 text-[12px] text-mute">
-                  {summary.securityCritical} critical · {summary.securityHigh} high
-                </div>
-              </Surface>
+              <StatTile
+                label="Security findings"
+                value={summary.securityCount}
+                icon={<ShieldAlert strokeWidth={1.75} />}
+                className="h-full"
+                sparkline={
+                  <span className="text-[12px] leading-[1.5] text-mute">
+                    <span className={summary.securityCritical > 0 ? "text-critical" : undefined}>
+                      {summary.securityCritical} critical
+                    </span>
+                    {" · "}
+                    <span className={summary.securityHigh > 0 ? "text-warning" : undefined}>
+                      {summary.securityHigh} high
+                    </span>
+                  </span>
+                }
+              />
 
-              <Surface level={1} radius="lg" className="p-5">
-                <div className="text-[13px] text-mute">Posture score</div>
-                <div className="mt-2 font-display text-[32px] font-medium leading-none tracking-[-0.5px] text-ink tabular-nums">
-                  <RollupNumber value={summary.postureScore} suffix="%" />
-                </div>
-                <div className="mt-2 text-[12px] text-mute">
-                  {postureLabel(summary.postureScore)}
-                </div>
-              </Surface>
+              <StatTile
+                label="Posture score"
+                value={summary.postureScore}
+                suffix="%"
+                className="h-full"
+                sparkline={
+                  <span
+                    className={`text-[12px] leading-[1.5] ${
+                      summary.postureScore >= 70
+                        ? "text-positive"
+                        : summary.postureScore >= 50
+                          ? "text-warning"
+                          : "text-critical"
+                    }`}
+                  >
+                    {postureLabel(summary.postureScore)}
+                  </span>
+                }
+              />
             </div>
           </Reveal>
 

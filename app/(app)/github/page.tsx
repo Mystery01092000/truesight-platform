@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
-import { Users, ChevronRight, Star } from "lucide-react";
+import { Activity, ChevronRight, FolderGit2, UserRound, Users } from "lucide-react";
 
 import { getGithubInsights, type GithubTeamView } from "@/lib/github/query";
 import { Surface } from "@/components/ui/Surface";
 import { Reveal } from "@/components/ui/Reveal";
 import { AppIconTile } from "@/components/ui/AppIconTile";
 import { Badge } from "@/components/ui/Badge";
+import { StatTile } from "@/components/ui/StatTile";
+import { ReposTable, type RepoRow } from "./ReposTable";
 
 export const metadata: Metadata = { title: "GitHub" };
 export const dynamic = "force-dynamic";
@@ -49,36 +51,51 @@ export default async function GithubPage() {
     );
   }
 
-  const { org, counts, teams, topContributors, topRepos, languages, lastSync } = insights;
+  const { org, counts, teams, topContributors, repos, languages, lastSync } = insights;
   const syncLine =
     lastSync?.startedAt != null
       ? `Last sync ${fmtDate(lastSync.startedAt)} · ${lastSync.status}`
       : "Org insights — Team → Member → Repo, read-only.";
 
   const stats = [
-    { label: "Teams", value: counts.teams },
-    { label: "Members", value: counts.members },
-    { label: "Repositories", value: counts.repos },
-    { label: "Contributions", value: counts.contributions },
+    { label: "Teams", value: counts.teams, icon: Users },
+    { label: "Members", value: counts.members, icon: UserRound },
+    { label: "Repositories", value: counts.repos, icon: FolderGit2 },
+    { label: "Contributions", value: counts.contributions, icon: Activity },
   ];
 
   const maxContrib = Math.max(1, ...topContributors.map((m) => m.contributions));
   const maxLang = Math.max(1, ...languages.map((l) => l.count));
 
+  const repoRows: RepoRow[] = [...repos]
+    .sort((a, b) => b.totalContributions - a.totalContributions)
+    .map((r) => ({
+      urn: r.urn,
+      name: r.name,
+      language: r.language,
+      stars: r.stars,
+      totalContributions: r.totalContributions,
+      contributorCount: r.contributorCount,
+      pushedAt: r.pushedAt,
+      htmlUrl: r.htmlUrl,
+      archived: r.archived,
+      visibility: r.visibility,
+    }));
+
   return (
     <div className="mx-auto max-w-6xl">
       <Header org={org} sub={syncLine} />
 
-      {/* Org overview — hero numerals in the display voice. */}
+      {/* Org overview — the standard KPI row. */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {stats.map((s, i) => (
-          <Reveal key={s.label} delay={i * 0.05}>
-            <Surface level={1} radius="lg" className="p-5">
-              <div className="text-[13px] text-mute">{s.label}</div>
-              <div className="mt-2 font-display text-[40px] font-medium leading-none tracking-[-0.5px] text-ink tabular-nums">
-                {nf.format(s.value)}
-              </div>
-            </Surface>
+          <Reveal key={s.label} delay={i * 0.04}>
+            <StatTile
+              label={s.label}
+              value={s.value}
+              icon={<s.icon strokeWidth={1.75} />}
+              className="h-full"
+            />
           </Reveal>
         ))}
       </div>
@@ -87,10 +104,8 @@ export default async function GithubPage() {
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Reveal delay={0.05} className="lg:col-span-2">
           <Surface level={1} radius="lg" className="p-5">
-            <div className="flex items-center justify-between">
-              <h2 className="text-[15px] font-medium leading-[1.4] tracking-[0.2px] text-ink">
-                Top contributors
-              </h2>
+            <div className="flex items-baseline justify-between">
+              <h2 className="font-display text-title text-ink">Top contributors</h2>
               <span className="text-[12px] text-mute">by contribution count</span>
             </div>
             <ol className="mt-4 flex flex-col gap-1">
@@ -124,9 +139,7 @@ export default async function GithubPage() {
 
         <Reveal delay={0.1}>
           <Surface level={1} radius="lg" className="p-5">
-            <h2 className="text-[15px] font-medium leading-[1.4] tracking-[0.2px] text-ink">
-              Languages
-            </h2>
+            <h2 className="font-display text-title text-ink">Languages</h2>
             <div className="mt-4 flex flex-col gap-2.5">
               {languages.slice(0, 8).map((l) => (
                 <div key={l.language} className="flex items-center gap-3">
@@ -152,55 +165,21 @@ export default async function GithubPage() {
         </Reveal>
       </div>
 
-      {/* Most active repositories. */}
+      {/* Repository inventory — sortable, paginated drill-down. */}
       <Reveal delay={0.05}>
-        <div className="mt-8 mb-3 flex items-center gap-2">
-          <h2 className="text-[15px] font-medium leading-[1.4] tracking-[0.2px] text-ink">
-            Most active repositories
-          </h2>
-          <span className="text-[12px] text-mute">by contributions</span>
+        <div className="mt-8 mb-3 flex items-baseline gap-2">
+          <h2 className="font-display text-title text-ink">Repositories</h2>
+          <span className="font-mono text-[12px] text-mute tabular-nums">{repoRows.length}</span>
         </div>
       </Reveal>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {topRepos.map((r, i) => (
-          <Reveal key={r.urn} delay={0.03 * i}>
-            <Surface level={1} radius="lg" className="flex h-full flex-col p-4">
-              <div className="flex items-start gap-3">
-                <AppIconTile kind="repo" />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-mono text-[13px] text-ink">{r.name}</div>
-                  <div className="mt-0.5 flex items-center gap-2 text-[12px] text-mute">
-                    <span className="font-mono">{r.language ?? "—"}</span>
-                    <span aria-hidden>·</span>
-                    <span className="inline-flex items-center gap-1 font-mono tabular-nums">
-                      <Star size={11} strokeWidth={1.75} /> {r.stars}
-                    </span>
-                    {r.archived && <Badge className="ml-auto">Archived</Badge>}
-                  </div>
-                </div>
-              </div>
-              {r.description && (
-                <p className="mt-2.5 line-clamp-2 text-[12px] leading-[1.5] text-body">
-                  {r.description}
-                </p>
-              )}
-              <div className="mt-3 flex items-center justify-between border-t border-hairline pt-2.5 text-[12px] text-mute">
-                <span className="font-mono tabular-nums">
-                  {nf.format(r.totalContributions)} commits · {r.contributorCount} contrib
-                </span>
-                <span className="font-mono">{fmtDate(r.pushedAt)}</span>
-              </div>
-            </Surface>
-          </Reveal>
-        ))}
-      </div>
+      <Reveal delay={0.08}>
+        <ReposTable repos={repoRows} />
+      </Reveal>
 
       {/* Team explorer — Team → members → repos, drill-down secondary. */}
       <Reveal delay={0.05}>
-        <div className="mt-8 mb-3 flex items-center gap-2">
-          <h2 className="text-[15px] font-medium leading-[1.4] tracking-[0.2px] text-ink">
-            Teams
-          </h2>
+        <div className="mt-8 mb-3 flex items-baseline gap-2">
+          <h2 className="font-display text-title text-ink">Teams</h2>
           <span className="font-mono text-[12px] text-mute tabular-nums">{teams.length}</span>
         </div>
       </Reveal>
@@ -270,7 +249,7 @@ function TeamCard({ team }: { team: GithubTeamView }) {
         </summary>
 
         <div className="border-t border-hairline px-4 pb-4 pt-3">
-          <div className="text-[11px] uppercase tracking-[0.6px] text-ash">Members</div>
+          <div className="text-micro uppercase text-ash">Members</div>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {previewMembers.map((m) => (
               <span
@@ -288,7 +267,7 @@ function TeamCard({ team }: { team: GithubTeamView }) {
             {team.members.length === 0 && <span className="text-[12px] text-mute">—</span>}
           </div>
 
-          <div className="mt-3 text-[11px] uppercase tracking-[0.6px] text-ash">Repositories</div>
+          <div className="mt-3 text-micro uppercase text-ash">Repositories</div>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {previewRepos.map((r) => (
               <span

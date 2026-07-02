@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { BookOpen } from "lucide-react";
 
-import { Surface } from "@/components/ui/Surface";
 import { Reveal } from "@/components/ui/Reveal";
+import { KbAskPanel } from "@/components/kb/KbAskPanel";
 import { KbSearch } from "@/components/kb/KbSearch";
 import { KbStatusCards } from "@/components/kb/KbStatusCards";
 import { KbDocumentList } from "@/components/kb/KbDocumentList";
@@ -35,7 +35,13 @@ export default function KbPage() {
 
       <KbStatusCards />
 
-      <Reveal delay={0.1}>
+      <Reveal delay={0.08}>
+        <div className="mt-4">
+          <KbAskPanel />
+        </div>
+      </Reveal>
+
+      <Reveal delay={0.12}>
         <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <KbSearch />

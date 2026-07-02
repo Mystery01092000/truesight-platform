@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, CheckCircle2 } from "lucide-react";
-import { cn } from "@/lib/utils/cn";
+import { StatusBadge, type StatusKind } from "@/components/ui/Badge";
 import { GuidedFlow, type GuidedStep, type StepStatus } from "@/components/ui/GuidedFlow";
 import { GUIDED_FLOWS } from "@/lib/governance/flows";
 import type { DriftDetail, SecurityDetail } from "@/lib/governance/types";
@@ -19,11 +19,35 @@ import type { DriftDetail, SecurityDetail } from "@/lib/governance/types";
  * inline and linked to the topology canvas.
  */
 
-const CLASSIFICATION_LABEL: Record<string, string> = {
-  drifted: "Drifted",
-  missing_in_cloud: "Missing in cloud",
-  unmanaged: "Unmanaged",
-};
+/** Canonical StatusBadge keys — everything else falls back to a mute chip. */
+const STATUS_KEYS = new Set([
+  "critical",
+  "high",
+  "medium",
+  "low",
+  "info",
+  "in_sync",
+  "drifted",
+  "missing_in_cloud",
+  "unmanaged",
+  "unknown",
+  "healthy",
+  "degraded",
+  "stopped",
+]);
+
+/** Semantic severity/classification chip resolved from the canonical taxonomy. */
+function StatusChip({ value }: { value: string | null | undefined }) {
+  if (!value) return null;
+  if (STATUS_KEYS.has(value)) {
+    return <StatusBadge status={value as StatusKind} dot={false} className="shrink-0" />;
+  }
+  return (
+    <span className="shrink-0 rounded-xs bg-surface-elevated px-1.5 py-0.5 text-[11px] text-mute">
+      {value}
+    </span>
+  );
+}
 
 /** Build GuidedStep[] from a flow def, marking all done if the estate is clean. */
 function buildSteps(
@@ -56,13 +80,17 @@ function StepBody({ children }: { children: React.ReactNode }) {
 
 function FindingRow({
   urn,
-  label,
+  status,
   badge,
+  exposed = false,
   href,
 }: {
   urn: string;
-  label: string;
+  /** Canonical severity / drift classification, rendered as a semantic chip. */
+  status?: string | null;
   badge?: string;
+  /** Publicly exposed — earns the one critical-soft warning tag. */
+  exposed?: boolean;
   href?: string;
 }) {
   const content = (
@@ -73,7 +101,12 @@ function FindingRow({
           {badge}
         </span>
       ) : null}
-      <span className="shrink-0 text-[11px] text-mute">{label}</span>
+      {exposed ? (
+        <span className="shrink-0 rounded-xs bg-critical-soft px-1.5 py-0.5 text-[11px] text-critical">
+          Exposed
+        </span>
+      ) : null}
+      <StatusChip value={status} />
     </>
   );
 
@@ -147,7 +180,7 @@ export function RemediationFlows({
                 <FindingRow
                   key={`${f.urn}-${i}`}
                   urn={f.urn}
-                  label={CLASSIFICATION_LABEL[f.classification] ?? f.classification}
+                  status={f.classification}
                   badge={f.env ?? undefined}
                 />
               ))}
@@ -163,7 +196,7 @@ export function RemediationFlows({
                 <FindingRow
                   key={`${f.urn}-${i}`}
                   urn={f.urn}
-                  label={CLASSIFICATION_LABEL[f.classification] ?? f.classification}
+                  status={f.classification}
                   href={`/topology`}
                 />
               ))}
@@ -218,8 +251,8 @@ export function RemediationFlows({
                 <FindingRow
                   key={`${f.urn ?? "n/a"}-${i}`}
                   urn={f.urn ?? f.title ?? "Unknown"}
-                  label={(f.severity ?? "—").toUpperCase()}
-                  badge={f.exposed ? "EXPOSED" : undefined}
+                  status={f.severity}
+                  exposed={f.exposed}
                 />
               ))}
             </div>
@@ -234,7 +267,7 @@ export function RemediationFlows({
                 <FindingRow
                   key={`${f.urn ?? "n/a"}-${i}`}
                   urn={f.urn ?? f.title ?? "Unknown"}
-                  label={(f.severity ?? "—").toUpperCase()}
+                  status={f.severity}
                   href={`/topology`}
                 />
               ))}
