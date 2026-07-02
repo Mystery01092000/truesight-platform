@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { desc, sql } from "drizzle-orm";
-import { ShieldAlert } from "lucide-react";
+import { sql } from "drizzle-orm";
+import { AlertOctagon, Clock3, ScanSearch, ShieldAlert } from "lucide-react";
 
 import { db } from "@/db";
-import { securityPosture } from "@/db/schema";
+import { securityPosture, vulnerabilityFindings } from "@/db/schema";
 import { Surface } from "@/components/ui/Surface";
 import { Reveal } from "@/components/ui/Reveal";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { StatTile } from "@/components/ui/StatTile";
 import { ProviderChip } from "@/components/ui/ProviderChip";
 import { VulnCounter } from "@/components/widgets/VulnCounter";
 import { SecurityFindingsView } from "./findings-view";
@@ -15,63 +15,66 @@ import { SEVERITIES, type CloudProvider, type Severity } from "@/lib/taxonomy";
 export const metadata: Metadata = { title: "Security & Vulnerabilities" };
 export const dynamic = "force-dynamic";
 
-/** Order severities critical→info for the counter row + DB ordering. */
-function severityWeight() {
-  return sql<number>`case ${securityPosture.severity}
-    when 'critical' then 5
-    when 'high' then 4
-    when 'medium' then 3
-    when 'low' then 2
-    when 'info' then 1
-    else 0
-  end`;
+/** Coerce a raw SQL aggregate (Date from node-postgres, string elsewhere) to Date. */
+function toDate(value: Date | string | null | undefined): Date | null {
+  if (!value) return null;
+  const d = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
 }
 
-export interface FindingView {
-  id: string;
-  urn: string | null;
-  provider: CloudProvider | null;
-  category: string | null;
-  title: string | null;
-  severity: Severity | null;
-  exposed: boolean;
-  score: number | null;
-  details: {
-    resourceLink?: string | null;
-    remediation?: string | null;
-    description?: string | null;
-  } | null;
-  capturedAt: Date;
+function timeAgo(d: Date): string {
+  const s = Math.max(0, Math.floor((Date.now() - d.getTime()) / 1000));
+  if (s < 60) return "just now";
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const days = Math.floor(h / 24);
+  if (days < 30) return `${days}d ago`;
+  return d.toLocaleDateString();
 }
 
 export default async function SecurityPage() {
-  const rows = await db
-    .select()
-    .from(securityPosture)
-    .orderBy(desc(severityWeight()), desc(securityPosture.capturedAt));
-
-  const findings: FindingView[] = rows.map((r) => ({
-    id: r.id,
-    urn: r.urn,
-    provider: (r.provider ?? null) as CloudProvider | null,
-    category: r.category,
-    title: r.title,
-    severity: (r.severity ?? null) as Severity | null,
-    exposed: r.exposed,
-    score: r.score,
-    details: (r.details ?? null) as FindingView["details"],
-    capturedAt: r.capturedAt,
-  }));
+  const [[vulnAgg], sevRows, provRows, [postureAgg]] = await Promise.all([
+    db
+      .select({
+        open: sql<number>`count(*) filter (where ${vulnerabilityFindings.status} = 'open')::int`,
+        critical: sql<number>`count(*) filter (where ${vulnerabilityFindings.status} = 'open' and ${vulnerabilityFindings.severity} = 'critical')::int`,
+        sources: sql<number>`count(distinct ${vulnerabilityFindings.source})::int`,
+        lastSeen: sql<Date | string | null>`max(${vulnerabilityFindings.lastSeen})`,
+      })
+      .from(vulnerabilityFindings),
+    db
+      .select({ severity: securityPosture.severity, n: sql<number>`count(*)::int` })
+      .from(securityPosture)
+      .groupBy(securityPosture.severity),
+    db
+      .select({ provider: securityPosture.provider, n: sql<number>`count(*)::int` })
+      .from(securityPosture)
+      .groupBy(securityPosture.provider),
+    db
+      .select({
+        total: sql<number>`count(*)::int`,
+        lastCaptured: sql<Date | string | null>`max(${securityPosture.capturedAt})`,
+      })
+      .from(securityPosture),
+  ]);
 
   const bySeverity = new Map<Severity, number>();
+  for (const r of sevRows) if (r.severity) bySeverity.set(r.severity as Severity, r.n);
   const byProvider = new Map<CloudProvider, number>();
-  for (const f of findings) {
-    if (f.severity) bySeverity.set(f.severity, (bySeverity.get(f.severity) ?? 0) + 1);
-    if (f.provider) byProvider.set(f.provider, (byProvider.get(f.provider) ?? 0) + 1);
+  for (const r of provRows) {
+    if (r.provider) byProvider.set(r.provider as CloudProvider, r.n);
   }
+  const postureTotal = postureAgg?.total ?? 0;
 
-  const total = findings.length;
-  const lastScan = findings[0]?.capturedAt ?? null;
+  // "Last scan" is the newest write across both scan-fed tables — the posture
+  // snapshot (what GET /api/security reports) and the durable findings feed.
+  const scanDates = [toDate(vulnAgg?.lastSeen), toDate(postureAgg?.lastCaptured)].filter(
+    (d): d is Date => d !== null,
+  );
+  const lastScan =
+    scanDates.length > 0 ? new Date(Math.max(...scanDates.map((d) => d.getTime()))) : null;
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -90,78 +93,119 @@ export default async function SecurityPage() {
             <p className="mt-1 text-[14px] leading-[1.6] text-mute">
               Argus watches your estate read-only — Inspector2, Security Hub, ECR, Defender for
               Cloud, Dependabot and CodeQL.
-              {lastScan ? (
-                <>
-                  <span className="mx-1.5" aria-hidden>·</span>
-                  Last scan {lastScan.toLocaleString()}
-                </>
-              ) : null}
             </p>
           </div>
         </header>
       </Reveal>
 
-      {/* Severity counter row */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        {SEVERITIES.map((sev, i) => (
-          <Reveal key={sev} delay={i * 0.05}>
-            <VulnCounter severity={sev} count={bySeverity.get(sev) ?? 0} />
-          </Reveal>
-        ))}
-      </div>
-
-      {/* Provider breakdown */}
-      <Reveal delay={0.1}>
-        <Surface level={1} radius="lg" className="mt-4 p-5">
-          <div className="flex items-center justify-between">
-            <h2 className="text-[15px] font-medium leading-[1.4] tracking-[0.2px] text-ink">
-              By provider
-            </h2>
-            <span className="font-mono text-[12px] text-mute tabular-nums">{total} findings</span>
-          </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            {byProvider.size === 0 ? (
-              <span className="text-[13px] text-mute">No findings yet.</span>
+      {/* Scanner console header — live counts from the durable findings feed */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Reveal>
+          <StatTile
+            label="Open findings"
+            value={vulnAgg?.open ?? 0}
+            icon={<ShieldAlert strokeWidth={1.75} />}
+            className="h-full"
+          />
+        </Reveal>
+        <Reveal delay={0.04}>
+          <StatTile
+            label="Critical open"
+            value={vulnAgg?.critical ?? 0}
+            icon={<AlertOctagon strokeWidth={1.75} />}
+            className="h-full"
+          />
+        </Reveal>
+        <Reveal delay={0.08}>
+          <StatTile
+            label="Sources scanned"
+            value={vulnAgg?.sources ?? 0}
+            icon={<ScanSearch strokeWidth={1.75} />}
+            className="h-full"
+          />
+        </Reveal>
+        <Reveal delay={0.12}>
+          {/* Time reads as prose, not a RollupNumber — a local tile in StatTile's clothes. */}
+          <div className="h-full rounded-lg border border-hairline bg-surface p-4">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[13px] font-medium leading-[1.5] tracking-[0.015em] text-mute">
+                Last scan
+              </span>
+              <span className="text-ash [&>svg]:size-4" aria-hidden>
+                <Clock3 strokeWidth={1.75} />
+              </span>
+            </div>
+            <div className="mt-2 font-mono text-[22px] font-medium leading-[1.2] text-ink">
+              {lastScan ? timeAgo(lastScan) : "—"}
+            </div>
+            {lastScan ? (
+              <div className="mt-1 text-[12px] leading-[1.5] text-mute">
+                {lastScan.toLocaleString()}
+              </div>
             ) : (
-              [...byProvider.entries()].map(([provider, count]) => (
-                <span
-                  key={provider}
-                  className="inline-flex items-center gap-2 rounded-full bg-surface-elevated px-2.5 py-1"
-                >
-                  <ProviderChip provider={provider} />
-                  <span className="font-mono text-[12px] text-ink tabular-nums">{count}</span>
-                </span>
-              ))
+              <div className="mt-1 text-[12px] leading-[1.5] text-mute">No scans recorded</div>
             )}
           </div>
-        </Surface>
-      </Reveal>
+        </Reveal>
+      </div>
 
-      {/* Findings list — filterable (client) */}
-      <Reveal delay={0.15}>
+      {/* Posture snapshot — severity + provider breakdown from security_posture */}
+      {postureTotal > 0 ? (
+        <>
+          <Reveal delay={0.12}>
+            <div className="mt-8 mb-3 flex items-center gap-2">
+              <h2 className="text-[15px] font-medium leading-[1.4] tracking-[0.2px] text-ink">
+                Posture snapshot
+              </h2>
+              <span className="font-mono text-[12px] text-mute tabular-nums">
+                {postureTotal}
+              </span>
+            </div>
+          </Reveal>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+            {SEVERITIES.map((sev, i) => (
+              <Reveal key={sev} delay={0.12 + i * 0.04}>
+                <VulnCounter severity={sev} count={bySeverity.get(sev) ?? 0} />
+              </Reveal>
+            ))}
+          </div>
+          <Reveal delay={0.16}>
+            <Surface level={1} radius="lg" className="mt-4 p-5">
+              <div className="flex items-center justify-between">
+                <h3 className="text-[15px] font-medium leading-[1.4] tracking-[0.2px] text-ink">
+                  By provider
+                </h3>
+                <span className="font-mono text-[12px] text-mute tabular-nums">
+                  {postureTotal} findings
+                </span>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {[...byProvider.entries()].map(([provider, count]) => (
+                  <span
+                    key={provider}
+                    className="inline-flex items-center gap-2 rounded-full bg-surface-elevated px-2.5 py-1"
+                  >
+                    <ProviderChip provider={provider} />
+                    <span className="font-mono text-[12px] text-ink tabular-nums">{count}</span>
+                  </span>
+                ))}
+              </div>
+            </Surface>
+          </Reveal>
+        </>
+      ) : null}
+
+      {/* Findings explorer — the interactive scanner console (client island) */}
+      <Reveal delay={0.16}>
         <div className="mt-8 mb-3 flex items-center gap-2">
           <h2 className="text-[15px] font-medium leading-[1.4] tracking-[0.2px] text-ink">
             Findings
           </h2>
-          <span className="font-mono text-[12px] text-mute tabular-nums">{total}</span>
         </div>
       </Reveal>
-
-      {total === 0 ? (
-        <Reveal delay={0.2}>
-          <EmptyState
-            icon={<ShieldAlert size={24} strokeWidth={1.5} />}
-            title={lastScan ? "Argus hasn't found any vulnerabilities" : "No security data yet"}
-            description={
-              lastScan
-                ? "The last scan came back clean. New findings will surface here as soon as they appear."
-                : "Run a scan to capture vulnerabilities and security findings across AWS, Azure and GitHub."
-            }
-          />
-        </Reveal>
-      ) : (
-        <SecurityFindingsView findings={findings} />
-      )}
+      <Reveal delay={0.2}>
+        <SecurityFindingsView />
+      </Reveal>
     </div>
   );
 }
