@@ -13,7 +13,11 @@ const PROTECTED_PREFIXES = [
   "/cost",
   "/security",
   "/compliance",
+  "/plans",
   "/settings",
+  "/developers",
+  "/tickets",
+  "/kb",
 ];
 
 function isProtected(pathname: string): boolean {
