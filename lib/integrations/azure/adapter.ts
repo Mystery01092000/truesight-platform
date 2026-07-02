@@ -52,6 +52,22 @@ export interface AzureIntegrationAdapter extends IntegrationAdapter {
 const KQL =
   "Resources | project id, name, type, location, resourceGroup, subscriptionId, tags, sku, kind, properties";
 
+/**
+ * Legacy data-estate types (SQL servers/databases/managed instances, Databricks,
+ * Data Factory) pulled through a second, explicit KQL scope so they are always
+ * present even when the broad inventory pull partially fails. Rows returned by
+ * both scopes dedupe by ARM id before graph construction.
+ */
+const LEGACY_ESTATE_TYPES = [
+  "microsoft.sql/servers",
+  "microsoft.sql/servers/databases",
+  "microsoft.sql/managedinstances",
+  "microsoft.databricks/workspaces",
+  "microsoft.datafactory/factories",
+] as const;
+
+const LEGACY_KQL = `Resources | where type in~ (${LEGACY_ESTATE_TYPES.map((t) => `'${t}'`).join(", ")}) | project id, name, type, location, resourceGroup, subscriptionId, tags, sku, kind, properties`;
+
 export function createAzureAdapter(cfg: AzureAdapterConfig): AzureIntegrationAdapter {
   const { subscriptionId, subscriptionName, label, credential, resourceGroup } = cfg;
 
@@ -86,18 +102,32 @@ export function createAzureAdapter(cfg: AzureAdapterConfig): AzureIntegrationAda
       const client = createResourceGraphClient(credential);
       const errors: AdapterError[] = [];
 
-      // One logical scope (the paged Resource Graph pull). Wrapped in
-      // Promise.allSettled so a failure yields a partial result instead of
-      // throwing, and so the structure extends cleanly to more scopes later.
+      // Two logical scopes (broad inventory + explicit legacy data estate), each
+      // a paged Resource Graph pull. Wrapped in Promise.allSettled so a failure
+      // yields a partial result instead of throwing.
       const scopes: Array<[string, () => Promise<AzureRow[]>]> = [
-        [`resourcegraph:${subscriptionId}`, () => queryAllRows(client, subscriptionId)],
+        [`resourcegraph:${subscriptionId}`, () => queryAllRows(client, subscriptionId, KQL)],
+        [
+          `resourcegraph:legacy:${subscriptionId}`,
+          () => queryAllRows(client, subscriptionId, LEGACY_KQL),
+        ],
       ];
       const settled = await Promise.allSettled(scopes.map(([, fn]) => fn()));
 
+      // Merge scopes, deduping by ARM id (legacy rows overlap the broad pull).
       const rows: AzureRow[] = [];
+      const seenIds = new Set<string>();
       settled.forEach((res, i) => {
-        if (res.status === "fulfilled") rows.push(...res.value);
-        else errors.push(toAdapterError(scopes[i][0], res.reason));
+        if (res.status === "fulfilled") {
+          for (const row of res.value) {
+            const key = row.id.toLowerCase();
+            if (seenIds.has(key)) continue;
+            seenIds.add(key);
+            rows.push(row);
+          }
+        } else {
+          errors.push(toAdapterError(scopes[i][0], res.reason));
+        }
       });
 
       const { resources, edges } = buildGraph(rows, subscriptionId);
@@ -130,14 +160,18 @@ interface AzureRow {
   properties?: Record<string, unknown> | null;
 }
 
-async function queryAllRows(client: ResourceGraphClient, subscriptionId: string): Promise<AzureRow[]> {
+async function queryAllRows(
+  client: ResourceGraphClient,
+  subscriptionId: string,
+  query: string,
+): Promise<AzureRow[]> {
   const out: AzureRow[] = [];
   let skipToken: string | undefined;
 
   do {
     const resp = await client.resources({
       subscriptions: [subscriptionId],
-      query: KQL,
+      query,
       options: { resultFormat: "objectArray", top: 1000, skipToken },
     });
     const data = resp.data;

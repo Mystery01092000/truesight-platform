@@ -56,6 +56,15 @@ export async function runSync(opts: RunSyncOptions): Promise<SyncSummary[]> {
   // scheduled Fargate sync task's writes reach the web tasks too. Best-effort — a
   // NOTIFY failure must never fail the sync itself.
   await notifyEstateChanged(db, opts.trigger, summaries).catch(() => {});
+  // Bust this task's warm read caches directly (cross-task busting rides the NOTIFY
+  // above via the cache invalidation subscriber). Lazily imported because `@/lib/cache`
+  // is `server-only` and this module is also consumed by standalone sync CLIs.
+  try {
+    const { invalidatePrefix } = await import("@/lib/cache");
+    await Promise.all(["estate:", "topology:"].map((p) => invalidatePrefix(p)));
+  } catch {
+    // best-effort — TTLs cover a missed invalidation
+  }
   return summaries;
 }
 

@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { getSession } from "@/lib/auth/session";
 import { can } from "@/lib/auth/rbac";
+import { cacheable, invalidate } from "@/lib/cache";
 import {
   getChecklistState,
   getComplianceSummary,
@@ -34,12 +35,16 @@ export async function GET() {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
-  const [summary, checklist] = await Promise.all([
-    getComplianceSummary(),
-    getChecklistState(),
-  ]);
+  // `security:` prefix so a security/estate sync invalidation busts this too.
+  const payload = await cacheable("security:compliance:summary", 300, async () => {
+    const [summary, checklist] = await Promise.all([
+      getComplianceSummary(),
+      getChecklistState(),
+    ]);
+    return { summary, checklist };
+  });
 
-  return NextResponse.json({ ok: true, summary, checklist });
+  return NextResponse.json({ ok: true, ...payload });
 }
 
 const PUT_BODY = z.object({
@@ -72,5 +77,6 @@ export async function PUT(request: Request) {
   }
 
   await setChecklistItemDone(parsed.data.id, parsed.data.done);
+  await invalidate("security:compliance:summary");
   return NextResponse.json({ ok: true });
 }

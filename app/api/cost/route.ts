@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { costSnapshots } from "@/db/schema";
 import { getSession } from "@/lib/auth/session";
 import { can } from "@/lib/auth/rbac";
+import { cacheable } from "@/lib/cache";
 import { runCostSync } from "@/lib/integrations/sync/cost-sync";
 import type { CloudProvider } from "@/lib/taxonomy";
 
@@ -79,138 +80,145 @@ export async function GET(req: Request): Promise<Response> {
   const url = new URL(req.url);
   const rangeParam = (url.searchParams.get("range") ?? "30d") as RangeKey;
   const groupBy = (url.searchParams.get("groupBy") ?? "service") as GroupKey;
-  const { startDate, endDate } = resolveRange(rangeParam);
 
-  const start = new Date(startDate);
-  const end = new Date(`${endDate}T23:59:59Z`);
+  // Cached per (range, groupBy) so a warm read skips every aggregate query.
+  const data = await cacheable(
+    `cost:summary:${rangeParam}:${groupBy}`,
+    300,
+    async (): Promise<CostResponse["data"]> => {
+      const { startDate, endDate } = resolveRange(rangeParam);
 
-  // Daily series per provider — SUM(amount) grouped by periodStart, pivoted into the
-  // { date, aws, azure } shape the Sparkline/area chart wants.
-  const seriesRows = await db
-    .select({
-      date: sql<string>`to_char(${costSnapshots.periodStart} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`,
-      provider: costSnapshots.provider,
-      amount: sql<number>`coalesce(sum(${costSnapshots.amount}::numeric), 0)::float`,
-    })
-    .from(costSnapshots)
-    .where(and(gte(costSnapshots.periodStart, start), lte(costSnapshots.periodStart, end)))
-    .groupBy(
-      sql`to_char(${costSnapshots.periodStart} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`,
-      costSnapshots.provider,
-    )
-    .orderBy(sql`1`);
+      const start = new Date(startDate);
+      const end = new Date(`${endDate}T23:59:59Z`);
 
-  const seriesMap = new Map<string, SeriesPoint>();
-  for (const row of seriesRows) {
-    let pt = seriesMap.get(row.date);
-    if (!pt) {
-      pt = { date: row.date, aws: 0, azure: 0 };
-      seriesMap.set(row.date, pt);
-    }
-    if (row.provider === "aws") pt.aws += row.amount;
-    else if (row.provider === "azure") pt.azure += row.amount;
-  }
-  const series = [...seriesMap.values()].sort((a, b) => a.date.localeCompare(b.date));
-
-  // Totals per provider across the window.
-  const totalRows = await db
-    .select({
-      provider: costSnapshots.provider,
-      amount: sql<number>`coalesce(sum(${costSnapshots.amount}::numeric), 0)::float`,
-    })
-    .from(costSnapshots)
-    .where(and(gte(costSnapshots.periodStart, start), lte(costSnapshots.periodStart, end)))
-    .groupBy(costSnapshots.provider);
-
-  let awsTotal = 0;
-  let azureTotal = 0;
-  for (const row of totalRows) {
-    if (row.provider === "aws") awsTotal += row.amount;
-    else if (row.provider === "azure") azureTotal += row.amount;
-  }
-  const allTotal = awsTotal + azureTotal;
-  const dayCount = Math.max(1, series.length);
-
-  // Breakdown by the requested dimension. `tag` uses tagProduct, `service` uses service,
-  // `account` uses account. Each row carries its provider + a sparkline of its daily sum.
-  const dimension =
-    groupBy === "tag"
-      ? costSnapshots.tagProduct
-      : groupBy === "account"
-        ? costSnapshots.account
-        : costSnapshots.service;
-
-  const breakdown = await db
-    .select({
-      key: sql<string>`coalesce(${dimension}, 'Other')`,
-      provider: costSnapshots.provider,
-      amount: sql<number>`coalesce(sum(${costSnapshots.amount}::numeric), 0)::float`,
-    })
-    .from(costSnapshots)
-    .where(and(gte(costSnapshots.periodStart, start), lte(costSnapshots.periodStart, end)))
-    .groupBy(sql`coalesce(${dimension}, 'Other')`, costSnapshots.provider)
-    .orderBy(sql`coalesce(sum(${costSnapshots.amount}::numeric), 0) DESC`);
-
-  // Sparklines per (key+provider): daily amounts within the window, in date order.
-  const sparkKeys = new Set(breakdown.map((b) => `${b.key}|${b.provider}`));
-  const sparkRows = sparkKeys.size
-    ? await db
+      // Daily series per provider — SUM(amount) grouped by periodStart, pivoted into the
+      // { date, aws, azure } shape the Sparkline/area chart wants.
+      const seriesRows = await db
         .select({
-          key: sql<string>`coalesce(${dimension}, 'Other')`,
-          provider: costSnapshots.provider,
           date: sql<string>`to_char(${costSnapshots.periodStart} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`,
+          provider: costSnapshots.provider,
           amount: sql<number>`coalesce(sum(${costSnapshots.amount}::numeric), 0)::float`,
         })
         .from(costSnapshots)
         .where(and(gte(costSnapshots.periodStart, start), lte(costSnapshots.periodStart, end)))
         .groupBy(
-          sql`coalesce(${dimension}, 'Other')`,
-          costSnapshots.provider,
           sql`to_char(${costSnapshots.periodStart} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`,
+          costSnapshots.provider,
         )
-        .orderBy(sql`3`)
-    : [];
+        .orderBy(sql`1`);
 
-  const sparkMap = new Map<string, { date: string; amount: number }[]>();
-  for (const row of sparkRows) {
-    const k = `${row.key}|${row.provider}`;
-    let arr = sparkMap.get(k);
-    if (!arr) {
-      arr = [];
-      sparkMap.set(k, arr);
-    }
-    arr.push({ date: row.date, amount: row.amount });
-  }
+      const seriesMap = new Map<string, SeriesPoint>();
+      for (const row of seriesRows) {
+        let pt = seriesMap.get(row.date);
+        if (!pt) {
+          pt = { date: row.date, aws: 0, azure: 0 };
+          seriesMap.set(row.date, pt);
+        }
+        if (row.provider === "aws") pt.aws += row.amount;
+        else if (row.provider === "azure") pt.azure += row.amount;
+      }
+      const series = [...seriesMap.values()].sort((a, b) => a.date.localeCompare(b.date));
 
-  const byService: ServiceBreakdown[] = breakdown.map((b) => ({
-    service: b.key,
-    amount: b.amount,
-    provider: (b.provider as CloudProvider) ?? "aws",
-    sparkline: (sparkMap.get(`${b.key}|${b.provider}`) ?? []).map((p) => p.amount),
-  }));
+      // Totals per provider across the window.
+      const totalRows = await db
+        .select({
+          provider: costSnapshots.provider,
+          amount: sql<number>`coalesce(sum(${costSnapshots.amount}::numeric), 0)::float`,
+        })
+        .from(costSnapshots)
+        .where(and(gte(costSnapshots.periodStart, start), lte(costSnapshots.periodStart, end)))
+        .groupBy(costSnapshots.provider);
 
-  const byProvider = totalRows.map((r) => ({
-    provider: (r.provider as CloudProvider) ?? "aws",
-    amount: r.amount,
-  }));
+      let awsTotal = 0;
+      let azureTotal = 0;
+      for (const row of totalRows) {
+        if (row.provider === "aws") awsTotal += row.amount;
+        else if (row.provider === "azure") azureTotal += row.amount;
+      }
+      const allTotal = awsTotal + azureTotal;
+      const dayCount = Math.max(1, series.length);
 
-  const body: CostResponse = {
-    ok: true,
-    data: {
-      series,
-      totals: {
-        aws: awsTotal,
-        azure: azureTotal,
-        all: allTotal,
-        currency: "USD",
-        dailyAvg: allTotal / dayCount,
-      },
-      byService,
-      byProvider,
-      range: rangeParam,
-      groupBy,
+      // Breakdown by the requested dimension. `tag` uses tagProduct, `service` uses service,
+      // `account` uses account. Each row carries its provider + a sparkline of its daily sum.
+      const dimension =
+        groupBy === "tag"
+          ? costSnapshots.tagProduct
+          : groupBy === "account"
+            ? costSnapshots.account
+            : costSnapshots.service;
+
+      const breakdown = await db
+        .select({
+          key: sql<string>`coalesce(${dimension}, 'Other')`,
+          provider: costSnapshots.provider,
+          amount: sql<number>`coalesce(sum(${costSnapshots.amount}::numeric), 0)::float`,
+        })
+        .from(costSnapshots)
+        .where(and(gte(costSnapshots.periodStart, start), lte(costSnapshots.periodStart, end)))
+        .groupBy(sql`coalesce(${dimension}, 'Other')`, costSnapshots.provider)
+        .orderBy(sql`coalesce(sum(${costSnapshots.amount}::numeric), 0) DESC`);
+
+      // Sparklines per (key+provider): daily amounts within the window, in date order.
+      const sparkKeys = new Set(breakdown.map((b) => `${b.key}|${b.provider}`));
+      const sparkRows = sparkKeys.size
+        ? await db
+            .select({
+              key: sql<string>`coalesce(${dimension}, 'Other')`,
+              provider: costSnapshots.provider,
+              date: sql<string>`to_char(${costSnapshots.periodStart} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`,
+              amount: sql<number>`coalesce(sum(${costSnapshots.amount}::numeric), 0)::float`,
+            })
+            .from(costSnapshots)
+            .where(and(gte(costSnapshots.periodStart, start), lte(costSnapshots.periodStart, end)))
+            .groupBy(
+              sql`coalesce(${dimension}, 'Other')`,
+              costSnapshots.provider,
+              sql`to_char(${costSnapshots.periodStart} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`,
+            )
+            .orderBy(sql`3`)
+        : [];
+
+      const sparkMap = new Map<string, { date: string; amount: number }[]>();
+      for (const row of sparkRows) {
+        const k = `${row.key}|${row.provider}`;
+        let arr = sparkMap.get(k);
+        if (!arr) {
+          arr = [];
+          sparkMap.set(k, arr);
+        }
+        arr.push({ date: row.date, amount: row.amount });
+      }
+
+      const byService: ServiceBreakdown[] = breakdown.map((b) => ({
+        service: b.key,
+        amount: b.amount,
+        provider: (b.provider as CloudProvider) ?? "aws",
+        sparkline: (sparkMap.get(`${b.key}|${b.provider}`) ?? []).map((p) => p.amount),
+      }));
+
+      const byProvider = totalRows.map((r) => ({
+        provider: (r.provider as CloudProvider) ?? "aws",
+        amount: r.amount,
+      }));
+
+      return {
+        series,
+        totals: {
+          aws: awsTotal,
+          azure: azureTotal,
+          all: allTotal,
+          currency: "USD",
+          dailyAvg: allTotal / dayCount,
+        },
+        byService,
+        byProvider,
+        range: rangeParam,
+        groupBy,
+      };
     },
-  };
+  );
+
+  const body: CostResponse = { ok: true, data };
   return NextResponse.json(body);
 }
 

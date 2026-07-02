@@ -6,6 +6,7 @@ import { getSession } from "@/lib/auth/session";
 import { can } from "@/lib/auth/rbac";
 import { db } from "@/db";
 import { resources } from "@/db/schema";
+import { cacheable, invalidate } from "@/lib/cache";
 import { getOrgLOCSummary, invalidateLOCCache } from "@/lib/integrations/github/loc";
 
 export const runtime = "nodejs";
@@ -31,23 +32,24 @@ export async function GET() {
   }
 
   try {
-    const [summary, [repoRow]] = await Promise.all([
-      getOrgLOCSummary(),
-      db
-        .select({ n: sql<number>`count(*)::int` })
-        .from(resources)
-        .where(
-          and(
-            eq(resources.provider, "github"),
-            eq(resources.type, "repo"),
-            eq(resources.present, true),
+    // Shared cache (Redis when configured) so every task serves the same warm
+    // summary; POST below busts this key after a manual refresh.
+    const data = await cacheable("developers:summary", 3600, async () => {
+      const [summary, [repoRow]] = await Promise.all([
+        getOrgLOCSummary(),
+        db
+          .select({ n: sql<number>`count(*)::int` })
+          .from(resources)
+          .where(
+            and(
+              eq(resources.provider, "github"),
+              eq(resources.type, "repo"),
+              eq(resources.present, true),
+            ),
           ),
-        ),
-    ]);
+      ]);
 
-    return NextResponse.json({
-      ok: true,
-      data: {
+      return {
         totalLOC: summary.totalLOC,
         totalAdditions: summary.totalAdditions,
         totalDeletions: summary.totalDeletions,
@@ -61,8 +63,10 @@ export async function GET() {
         locTrend: summary.locTrend,
         partial: summary.partial,
         generatedAt: summary.generatedAt,
-      },
+      };
     });
+
+    return NextResponse.json({ ok: true, data });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[api/developers] failed:", err);
@@ -81,6 +85,7 @@ export async function POST() {
 
   try {
     await invalidateLOCCache();
+    await invalidate("developers:summary");
     const summary = await getOrgLOCSummary();
     revalidatePath("/developers", "page");
 

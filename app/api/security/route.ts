@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { securityPosture } from "@/db/schema";
 import { getSession } from "@/lib/auth/session";
 import { can } from "@/lib/auth/rbac";
+import { cacheable } from "@/lib/cache";
 import { runSecurityScan } from "@/lib/integrations/sync/security-sync";
 import type { CloudProvider, Severity } from "@/lib/taxonomy";
 
@@ -24,30 +25,34 @@ export async function GET() {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
-  const rows = await db
-    .select()
-    .from(securityPosture)
-    .orderBy(desc(severityWeight()), desc(securityPosture.capturedAt))
-    .limit(500);
+  const payload = await cacheable("security:posture:list", 300, async () => {
+    const rows = await db
+      .select()
+      .from(securityPosture)
+      .orderBy(desc(severityWeight()), desc(securityPosture.capturedAt))
+      .limit(500);
 
-  const bySeverity: Record<Severity, number> = {
-    critical: 0,
-    high: 0,
-    medium: 0,
-    low: 0,
-    info: 0,
-  };
-  const byProvider: Partial<Record<CloudProvider, number>> = {};
-  for (const r of rows) {
-    if (r.severity) bySeverity[r.severity]++;
-    if (r.provider) byProvider[r.provider] = (byProvider[r.provider] ?? 0) + 1;
-  }
+    const bySeverity: Record<Severity, number> = {
+      critical: 0,
+      high: 0,
+      medium: 0,
+      low: 0,
+      info: 0,
+    };
+    const byProvider: Partial<Record<CloudProvider, number>> = {};
+    for (const r of rows) {
+      if (r.severity) bySeverity[r.severity]++;
+      if (r.provider) byProvider[r.provider] = (byProvider[r.provider] ?? 0) + 1;
+    }
 
-  return NextResponse.json({
-    findings: rows,
-    counts: { bySeverity, byProvider, total: rows.length },
-    lastScan: rows[0]?.capturedAt ?? null,
+    return {
+      findings: rows,
+      counts: { bySeverity, byProvider, total: rows.length },
+      lastScan: rows[0]?.capturedAt ?? null,
+    };
   });
+
+  return NextResponse.json(payload);
 }
 
 /**

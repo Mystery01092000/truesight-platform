@@ -4,7 +4,8 @@ import { sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 import * as schema from "@/db/schema";
-import { costSnapshots } from "@/db/schema";
+import { costRollups, costSnapshots } from "@/db/schema";
+import { invalidatePrefix } from "@/lib/cache";
 
 import { getAwsCosts, toCostSnapshots as awsToSnapshots } from "@/lib/integrations/aws/cost";
 import {
@@ -102,6 +103,7 @@ export async function runCostSync(opts?: {
         sql`${costSnapshots.periodStart} >= ${new Date(range.startDate)} AND ${costSnapshots.periodEnd} <= ${new Date(range.endDate + "T23:59:59Z")}`,
       );
     await db.insert(costSnapshots).values(rows);
+    await recomputeCostRollups(db);
   }
 
   const finishedAt = new Date();
@@ -119,6 +121,34 @@ export async function runCostSync(opts?: {
     providers,
     totalRows: rows.length,
   };
+}
+
+/**
+ * Recompute the precomputed `cost_rollups` aggregate (provider/account/service/day)
+ * from `cost_snapshots`, atomically (delete+insert in one tx) so cost reads never
+ * observe a half-written table. Best-effort: the snapshots are already persisted, so
+ * a rollup failure degrades to stale aggregates (next sync repairs) rather than
+ * failing the whole sync.
+ */
+async function recomputeCostRollups(db: Db): Promise<void> {
+  try {
+    await db.transaction(async (tx) => {
+      await tx.delete(costRollups);
+      await tx.execute(sql`
+        insert into cost_rollups (provider, account, service, day, amount, currency)
+        select provider, account, service,
+               date_trunc('day', period_start at time zone 'UTC') at time zone 'UTC' as day,
+               sum(amount::numeric),
+               min(currency)
+        from cost_snapshots
+        group by provider, account, service, 4
+      `);
+    });
+    // Warm cost: reads are now stale — drop them (TTL covers any failure here).
+    await invalidatePrefix("cost:");
+  } catch (err) {
+    console.warn("[cost-sync] rollup recompute failed:", (err as Error)?.message ?? err);
+  }
 }
 
 function summarizeProvider(

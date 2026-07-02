@@ -54,7 +54,7 @@ const AZURE_NAMESPACE_MAP: Record<string, { kind: ResourceKind; category: Servic
   'microsoft.classicstorage': { kind: 'storage', category: 'storage' },
   'microsoft.netapp': { kind: 'storage', category: 'storage' },
 
-  // Databases
+  // Databases (microsoft.sql covers servers, servers/databases, managedinstances)
   'microsoft.sql': { kind: 'database', category: 'database' },
   'microsoft.documentdb': { kind: 'database', category: 'database' }, // Cosmos DB
   'microsoft.cache': { kind: 'database', category: 'database' }, // Redis
@@ -71,10 +71,14 @@ const AZURE_NAMESPACE_MAP: Record<string, { kind: ResourceKind; category: Servic
   // Secrets / crypto
   'microsoft.keyvault': { kind: 'secret', category: 'security' },
 
-  // AI / ML
+  // AI / ML / analytics
   'microsoft.cognitiveservices': { kind: 'ai', category: 'ai-ml' },
   'microsoft.machinelearningservices': { kind: 'ai', category: 'ai-ml' },
   'microsoft.search': { kind: 'ai', category: 'ai-ml' },
+  'microsoft.databricks': { kind: 'ai', category: 'ai-ml' }, // Databricks workspaces
+
+  // Data movement / ETL
+  'microsoft.datafactory': { kind: 'queue', category: 'integration' }, // Data Factory pipelines
 
   // Monitoring / observability
   'microsoft.insights': { kind: 'monitoring', category: 'observability' },

@@ -1,11 +1,11 @@
 import "server-only";
 
 import pLimit from "p-limit";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
-import { resources } from "@/db/schema";
-import { cacheable, invalidate } from "@/lib/cache";
+import { developerStats, resources, type NewDeveloperStat } from "@/db/schema";
+import { cacheable, invalidatePrefix } from "@/lib/cache";
 
 import { createGithubClient } from "./client";
 
@@ -172,7 +172,7 @@ export async function analyzeRepoLOC(
   owner: string,
   repo: string,
 ): Promise<RepoLOCAnalysis> {
-  return cacheable(`argus:github:loc:repo:${owner}/${repo}`, CACHE_TTL_SECONDS, async () => {
+  return cacheable(`developers:loc:repo:${owner}/${repo}`, CACHE_TTL_SECONDS, async () => {
     const base: RepoLOCAnalysis = {
       owner,
       repo,
@@ -231,7 +231,7 @@ export async function getContributorStats(
   owner: string,
   repo: string,
 ): Promise<ContributorStatResult> {
-  return cacheable(`argus:github:loc:contrib:${owner}/${repo}`, CACHE_TTL_SECONDS, async () => {
+  return cacheable(`developers:loc:contrib:${owner}/${repo}`, CACHE_TTL_SECONDS, async () => {
     const base: ContributorStatResult = {
       owner,
       repo,
@@ -296,7 +296,7 @@ export async function getRepoLanguages(
   owner: string,
   repo: string,
 ): Promise<Record<string, number>> {
-  return cacheable(`argus:github:loc:lang:${owner}/${repo}`, CACHE_TTL_SECONDS, async () => {
+  return cacheable(`developers:loc:lang:${owner}/${repo}`, CACHE_TTL_SECONDS, async () => {
     try {
       const client = createGithubClient({ org: owner });
       const resp = await client.rest.repos.listLanguages({ owner, repo });
@@ -339,7 +339,7 @@ export async function getOrgLOCSummary(): Promise<OrgLOCSummary> {
 
   const org = discovered[0]!.owner || "centricitywealthtech";
 
-  return cacheable(`argus:github:loc:summary:${org}`, CACHE_TTL_SECONDS, async () => {
+  return cacheable(`developers:loc:summary:${org}`, CACHE_TTL_SECONDS, async () => {
     const limit = pLimit(CONCURRENCY);
     let partial = false;
 
@@ -426,6 +426,15 @@ export async function getOrgLOCSummary(): Promise<OrgLOCSummary> {
       .slice(-TREND_WEEKS)
       .map(([, net]) => net);
 
+    // Materialize per-developer/per-repo rollups for sub-100ms developer reads.
+    // Best-effort: a write failure degrades to stale rows, never a blank summary.
+    await upsertDeveloperStats(perRepo).catch((err) =>
+      console.warn(
+        "[github/loc] developer_stats upsert failed:",
+        (err as Error)?.message ?? err,
+      ),
+    );
+
     return {
       org,
       totalLOC: totalAdditions - totalDeletions,
@@ -444,18 +453,86 @@ export async function getOrgLOCSummary(): Promise<OrgLOCSummary> {
   });
 }
 
-/** Bust every LOC cache (summary + per-repo) for the org — used by the admin
- *  refresh trigger. Reads the current repo set so per-repo keys are exact. */
-export async function invalidateLOCCache(org?: string): Promise<void> {
-  const discovered = await readDiscoveredRepos();
-  const targetOrg = org ?? discovered[0]?.owner ?? "centricitywealthtech";
-  const keys = [`argus:github:loc:summary:${targetOrg}`];
-  for (const r of discovered) {
-    keys.push(
-      `argus:github:loc:repo:${r.owner}/${r.name}`,
-      `argus:github:loc:contrib:${r.owner}/${r.name}`,
-      `argus:github:loc:lang:${r.owner}/${r.name}`,
+/** Bust every LOC cache (summary + per-repo) — used by the admin refresh trigger. */
+export async function invalidateLOCCache(): Promise<void> {
+  await invalidatePrefix("developers:loc:");
+}
+
+/* --------------------------- developer_stats rollup ----------------------- */
+
+/** login → primary team slug, derived from discovered `member` resources whose
+ *  attributes carry the team slugs the GitHub adapter resolved per member. */
+async function readMemberTeams(): Promise<Map<string, string>> {
+  const rows = await db
+    .select({ name: resources.name, attributes: resources.attributes })
+    .from(resources)
+    .where(
+      and(
+        eq(resources.provider, "github"),
+        eq(resources.type, "member"),
+        eq(resources.present, true),
+      ),
     );
+
+  const out = new Map<string, string>();
+  for (const r of rows) {
+    const a = (r.attributes ?? {}) as Attrs;
+    const login = strOrNull(a, "login") ?? r.name;
+    const teams = Array.isArray(a.teams)
+      ? (a.teams as unknown[]).filter((t): t is string => typeof t === "string")
+      : [];
+    if (login && teams[0]) out.set(login, teams[0]);
   }
-  await Promise.all(keys.map((k) => invalidate(k)));
+  return out;
+}
+
+/** Upsert one `developer_stats` row per (login, repo) from the freshly computed
+ *  per-repo contributor stats, keyed on the table's (login, repo) uniqueness. */
+async function upsertDeveloperStats(
+  perRepo: {
+    meta: { name: string; owner: string; fullName: string };
+    contribs: ContributorStatResult;
+    langs: Record<string, number>;
+  }[],
+): Promise<void> {
+  const teamOf = await readMemberTeams();
+  const now = new Date();
+
+  const rows: NewDeveloperStat[] = [];
+  for (const { meta, contribs, langs } of perRepo) {
+    if (!contribs.ok) continue; // never overwrite good rows with zeroed failures
+    const repo = meta.fullName || `${meta.owner}/${meta.name}`;
+    for (const c of contribs.contributors) {
+      rows.push({
+        login: c.login,
+        team: teamOf.get(c.login) ?? null,
+        repo,
+        loc: c.netLOC,
+        additions: c.additions,
+        deletions: c.deletions,
+        commits: c.commits,
+        languages: langs,
+        computedAt: now,
+      });
+    }
+  }
+  if (rows.length === 0) return;
+
+  for (let i = 0; i < rows.length; i += 500) {
+    await db
+      .insert(developerStats)
+      .values(rows.slice(i, i + 500))
+      .onConflictDoUpdate({
+        target: [developerStats.login, developerStats.repo],
+        set: {
+          team: sql`excluded.team`,
+          loc: sql`excluded.loc`,
+          additions: sql`excluded.additions`,
+          deletions: sql`excluded.deletions`,
+          commits: sql`excluded.commits`,
+          languages: sql`excluded.languages`,
+          computedAt: sql`excluded.computed_at`,
+        },
+      });
+  }
 }
