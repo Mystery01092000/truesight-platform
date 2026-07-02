@@ -44,6 +44,22 @@ try {
     RETURNING id
   `;
   console.log(`[seed] ensured admin user "${email}" (id=${inserted[0].id}).`);
+
+  // PLATFORM-ADMINS allowlist (db/seed.ts mirror) — role source of truth for
+  // SSO logins. DO NOTHING so operator edits made in /settings survive re-runs.
+  const platformAdmins = [
+    { email: "devops@centricity.co.in", note: "Akshat Mukhriya — DevOps Super Admin" },
+    { email: "rishabh.arya@centricity.co.in", note: "Rishabh Arya — Maintainer" },
+  ];
+  for (const admin of platformAdmins) {
+    await sql`
+      INSERT INTO platform_admins (email, role, note)
+      VALUES (${admin.email}, 'admin', ${admin.note})
+      ON CONFLICT (email) DO NOTHING
+    `;
+    console.log(`[seed] ensured platform admin "${admin.email}" (role=admin).`);
+  }
+
   await sql.end();
   process.exit(0);
 } catch (err) {
