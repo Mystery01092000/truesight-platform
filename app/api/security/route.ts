@@ -6,7 +6,7 @@ import { db } from "@/db";
 import { securityPosture } from "@/db/schema";
 import { getSession } from "@/lib/auth/session";
 import { can } from "@/lib/auth/rbac";
-import { cacheable } from "@/lib/cache";
+import { cacheable, invalidatePrefix } from "@/lib/cache";
 import { runSecurityScan } from "@/lib/integrations/sync/security-sync";
 import type { CloudProvider, Severity } from "@/lib/taxonomy";
 
@@ -69,7 +69,9 @@ export async function POST() {
 
   const summary = await runSecurityScan();
 
-  // Reflect the fresh posture immediately on the security screen.
+  // Reflect the fresh posture immediately everywhere — bust the cached reads
+  // (security screen, compliance summary, overview tiles) before revalidating.
+  await invalidatePrefix("security:");
   revalidatePath("/security", "page");
 
   return NextResponse.json({ ok: true, summary });

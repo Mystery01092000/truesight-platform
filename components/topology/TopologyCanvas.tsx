@@ -301,7 +301,10 @@ function CanvasInner({ graph, ambient }: { graph: TopoGraph; ambient: boolean })
             maxZoom={1.8}
             proOptions={{ hideAttribution: true }}
             fitView
-            fitViewOptions={{ padding: 0.15, maxZoom: 1 }}
+            // minZoom floor keeps the initial fit legible on large estates —
+            // node cards must never open at a few px tall; users can still
+            // zoom out manually to the canvas minZoom.
+            fitViewOptions={{ padding: 0.1, maxZoom: 1, minZoom: 0.45 }}
             className="!bg-transparent"
           >
             <Background
@@ -310,7 +313,8 @@ function CanvasInner({ graph, ambient }: { graph: TopoGraph; ambient: boolean })
               size={1.2}
               color="var(--color-stone)"
             />
-            <Controls showInteractive={false} className="topo-controls" position="bottom-right" />
+            {/* bottom-left keeps the zoom cluster clear of the minimap */}
+            <Controls showInteractive={false} className="topo-controls" position="bottom-left" />
             <MiniMap
               pannable
               zoomable

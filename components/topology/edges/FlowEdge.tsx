@@ -23,13 +23,13 @@ export type FlowFlowEdge = Edge<{ kind: EdgeKind }, "flow">;
  */
 const KIND_STYLE: Record<
   EdgeKind,
-  { stroke: string; width: number; dash?: string; opacity: number; label: string }
+  { stroke: string; width: number; dash?: string; opacity: number; label: string; drift?: boolean }
 > = {
-  contains: { stroke: "var(--color-stone)", width: 1, opacity: 0.55, label: "contains" },
-  uses: { stroke: "var(--color-iris)", width: 1.4, opacity: 0.55, label: "uses" },
-  "routes-to": { stroke: "var(--color-info)", width: 1.4, opacity: 0.5, label: "routes to" },
-  "depends-on": { stroke: "var(--color-mute)", width: 1.2, dash: "3 5", opacity: 0.45, label: "depends on" },
-  "deployed-from": { stroke: "var(--color-positive)", width: 1.5, dash: "3 5", opacity: 0.6, label: "deployed from" },
+  contains: { stroke: "var(--color-stone)", width: 1, opacity: 0.6, label: "contains" },
+  uses: { stroke: "var(--color-iris)", width: 1.6, opacity: 0.7, label: "uses", drift: true },
+  "routes-to": { stroke: "var(--color-info)", width: 1.6, opacity: 0.65, label: "routes to", drift: true },
+  "depends-on": { stroke: "var(--color-mute)", width: 1.3, dash: "3 5", opacity: 0.55, label: "depends on" },
+  "deployed-from": { stroke: "var(--color-positive)", width: 1.7, dash: "3 5", opacity: 0.7, label: "deployed from", drift: true },
 };
 
 function FlowEdgeImpl({
@@ -66,15 +66,16 @@ function FlowEdgeImpl({
         id={id}
         path={path}
         markerEnd={markerEnd}
-        // `topo-edge-flow` (globals) animates the dash — applied ONLY while
-        // active so nothing moves at idle.
-        className={active ? "topo-edge-flow" : undefined}
+        // Directional service paths carry a slow ambient dash-drift so the map
+        // reads as a LIVE system; activation (selection/hover) switches to the
+        // faster `topo-edge-flow`. Both respect prefers-reduced-motion.
+        className={active ? "topo-edge-flow" : base.drift ? "topo-edge-drift" : undefined}
         style={{
           stroke: focus.edges.has(id) ? "var(--color-iris-bright)" : base.stroke,
           strokeWidth: active ? 2 : base.width,
-          strokeDasharray: active ? undefined : base.dash,
+          strokeDasharray: active || base.drift ? undefined : base.dash,
           opacity: dimmed ? 0.08 : active ? 1 : base.opacity,
-          transition: "opacity 150ms var(--ease-smooth), stroke-width 150ms var(--ease-smooth)",
+          transition: "opacity 150ms var(--ease-smooth)",
         }}
       />
       {/* invisible wide hit path so hover works on a 1px stroke */}

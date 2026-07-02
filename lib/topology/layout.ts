@@ -109,8 +109,34 @@ export async function layoutGraph(
       maxY = NODE_H;
     }
 
-    const localW = maxX - minX;
-    const localH = maxY - minY;
+    // Compact the band: ELK's force spread scales its area superlinearly with
+    // node count, which pushes fitView below legibility (nodes render at a few
+    // px). Scale the block toward a grid-density target so the whole weave
+    // stays readable at the initial fit — force still decides the STRUCTURE
+    // (hubs central, satellites around), we only tighten the spread.
+    const n = Math.max(1, kids.length);
+    const cols = Math.ceil(Math.sqrt(n * 1.8));
+    const targetW = cols * (NODE_W + 110);
+    const targetH = Math.ceil(n / cols) * (NODE_H + 130);
+    const rawW = maxX - minX;
+    const rawH = maxY - minY;
+    const scaleX = rawW > targetW ? targetW / rawW : 1;
+    const scaleY = rawH > targetH ? targetH / rawH : 1;
+    for (const k of kids) {
+      k.x = minX + ((k.x ?? 0) - minX) * scaleX;
+      k.y = minY + ((k.y ?? 0) - minY) * scaleY;
+    }
+
+    // Recompute bounds after scaling — node dimensions don't scale, so the
+    // trailing card can extend past rawW * scaleX.
+    let sMaxX = -Infinity;
+    let sMaxY = -Infinity;
+    for (const k of kids) {
+      sMaxX = Math.max(sMaxX, (k.x ?? 0) + (k.width ?? NODE_W));
+      sMaxY = Math.max(sMaxY, (k.y ?? 0) + (k.height ?? NODE_H));
+    }
+    const localW = Number.isFinite(sMaxX) ? sMaxX - minX : NODE_W;
+    const localH = Number.isFinite(sMaxY) ? sMaxY - minY : NODE_H;
     const span = Math.max(1, localW);
     const offX = GROUP_PAD_X - minX;
     const offY = cursorY + GROUP_PAD_TOP - minY;

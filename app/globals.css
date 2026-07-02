@@ -336,9 +336,21 @@ h4 {
   stroke-dasharray: 5 7;
   animation: topo-flow 0.9s linear infinite;
 }
+/* Ambient service-path drift — the calm always-on variant for directional
+   edges (uses / routes-to / deployed-from): same flow, ~4× slower. */
+.topo-edge-drift {
+  stroke-dasharray: 4 9;
+  animation: topo-flow 3.2s linear infinite;
+}
 @keyframes topo-flow {
   to {
-    stroke-dashoffset: -24;
+    stroke-dashoffset: -26;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .topo-edge-flow,
+  .topo-edge-drift {
+    animation: none;
   }
 }
 /* React Flow chrome, themed to the Argus surface ladder. */
