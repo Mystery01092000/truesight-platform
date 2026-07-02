@@ -36,6 +36,7 @@ import {
 
 import { mapAwsType } from "@/lib/taxonomy/aws";
 import type { ResourceStatus } from "@/lib/taxonomy";
+import { normalizeEnvironment } from "@/lib/taxonomy";
 import type {
   AdapterError,
   AdapterHealth,
@@ -889,7 +890,7 @@ function normalizeTags(list?: TagLike[] | null): Record<string, string> {
 
 function envFromTags(tags: Record<string, string>): string | undefined {
   for (const k of ["Environment", "environment", "env", "Env", "Stage", "stage"]) {
-    if (tags[k]) return tags[k];
+    if (tags[k]) return normalizeEnvironment(tags[k]);
   }
   return undefined;
 }

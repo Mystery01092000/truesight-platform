@@ -224,3 +224,16 @@ export const zServiceCategory = z.enum(SERVICE_CATEGORIES);
 export const zPipelineStageKind = z.enum(PIPELINE_STAGE_KINDS);
 export const zEdgeKind = z.enum(EDGE_KINDS);
 export const zAccentToken = z.enum(ACCENT_TOKENS);
+
+/**
+ * Canonicalize a free-form environment tag ("Production", "PROD", "Dev",
+ * "Staging", …) into one stable facet value so estate filters never split the
+ * same environment across tag-case variants.
+ */
+export function normalizeEnvironment(raw: string): string {
+  const v = raw.trim().toLowerCase();
+  if (v === "production" || v === "prd") return "prod";
+  if (v === "development") return "dev";
+  if (v === "staging" || v === "stg") return "stage";
+  return v;
+}

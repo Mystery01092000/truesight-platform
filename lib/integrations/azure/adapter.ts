@@ -3,6 +3,7 @@ import type { ResourceGraphClient } from "@azure/arm-resourcegraph";
 
 import { mapAzureType } from "@/lib/taxonomy/azure";
 import type { ResourceStatus } from "@/lib/taxonomy";
+import { normalizeEnvironment } from "@/lib/taxonomy";
 import type {
   AdapterError,
   AdapterHealth,
@@ -433,7 +434,7 @@ function normalizeAzureTags(tags?: Record<string, unknown> | null): Record<strin
 
 function envFromTags(tags: Record<string, string>): string | undefined {
   for (const k of ["Environment", "environment", "env", "Env", "Stage", "stage"]) {
-    if (tags[k]) return tags[k];
+    if (tags[k]) return normalizeEnvironment(tags[k]);
   }
   return undefined;
 }
