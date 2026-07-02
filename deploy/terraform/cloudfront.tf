@@ -65,46 +65,17 @@ resource "aws_cloudfront_cache_policy" "assets_1d" {
   }
 }
 
-# Dynamic SSR/API traffic — never cached (CachingDisabled equivalent).
-resource "aws_cloudfront_cache_policy" "no_cache" {
-  name        = "${local.name_prefix}-no-cache"
-  comment     = "No caching for SSR pages and API routes"
-  default_ttl = 0
-  max_ttl     = 0
-  min_ttl     = 0
-
-  parameters_in_cache_key_and_forwarded_to_origin {
-    cookies_config {
-      cookie_behavior = "none"
-    }
-    headers_config {
-      header_behavior = "none"
-    }
-    query_strings_config {
-      query_string_behavior = "none"
-    }
-    enable_accept_encoding_brotli = true
-    enable_accept_encoding_gzip   = true
-  }
+# Dynamic SSR/API traffic — never cached. AWS-managed policies: a custom
+# TTL-0 policy cannot enable gzip/brotli flags (API rejects it), and the
+# managed pair is the canonical dynamic-passthrough configuration.
+data "aws_cloudfront_cache_policy" "caching_disabled" {
+  name = "Managed-CachingDisabled"
 }
 
 # Forward the complete viewer request (headers/cookies/queries) to the ALB —
 # required for Next.js auth cookies, Host-based routing and API routes.
-resource "aws_cloudfront_origin_request_policy" "all_viewer" {
-  name    = "${local.name_prefix}-all-viewer"
-  comment = "Forward all viewer headers/cookies/query strings to the ALB"
-
-  cookies_config {
-    cookie_behavior = "all"
-  }
-
-  headers_config {
-    header_behavior = "allViewer"
-  }
-
-  query_strings_config {
-    query_string_behavior = "all"
-  }
+data "aws_cloudfront_origin_request_policy" "all_viewer" {
+  name = "Managed-AllViewer"
 }
 
 # -----------------------------------------------------------------------------
@@ -147,8 +118,8 @@ resource "aws_cloudfront_distribution" "argus" {
     viewer_protocol_policy = "redirect-to-https"
     compress               = true
 
-    cache_policy_id          = aws_cloudfront_cache_policy.no_cache.id
-    origin_request_policy_id = aws_cloudfront_origin_request_policy.all_viewer.id
+    cache_policy_id          = data.aws_cloudfront_cache_policy.caching_disabled.id
+    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer.id
   }
 
   # Content-hashed Next.js build output — immutable.

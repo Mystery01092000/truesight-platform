@@ -16,41 +16,21 @@ resource "aws_security_group" "alb" {
   tags        = { Name = "${local.name_prefix}-alb-sg" }
 }
 
-resource "aws_vpc_security_group_ingress_rule" "alb_https" {
+# CloudFront hardening (ENABLED at cutover): :443 accepts only CloudFront's
+# origin-facing IP ranges via the AWS-managed prefix list; the previous open
+# 0.0.0.0/0 rules on :443/:80 were removed (CloudFront terminates :80 itself).
+data "aws_ec2_managed_prefix_list" "cloudfront_origin_facing" {
+  name = "com.amazonaws.global.cloudfront.origin-facing"
+}
+
+resource "aws_vpc_security_group_ingress_rule" "alb_https_from_cloudfront" {
   security_group_id = aws_security_group.alb.id
   from_port         = 443
   to_port           = 443
   ip_protocol       = "tcp"
-  cidr_ipv4         = "0.0.0.0/0"
-  tags              = { Name = "${local.name_prefix}-alb-https" }
+  prefix_list_id    = data.aws_ec2_managed_prefix_list.cloudfront_origin_facing.id
+  tags              = { Name = "${local.name_prefix}-alb-https-cloudfront" }
 }
-
-resource "aws_vpc_security_group_ingress_rule" "alb_http" {
-  security_group_id = aws_security_group.alb.id
-  from_port         = 80
-  to_port           = 80
-  ip_protocol       = "tcp"
-  cidr_ipv4         = "0.0.0.0/0"
-  tags              = { Name = "${local.name_prefix}-alb-http" }
-}
-
-# CUTOVER (CloudFront hardening — enable AFTER argus-infraspace DNS points at
-# the distribution): restrict :443 to CloudFront's origin-facing IP ranges via
-# the AWS-managed prefix list, then REMOVE the open alb_https + alb_http rules
-# above (CloudFront terminates :80 itself; the ALB no longer needs it).
-#
-# data "aws_ec2_managed_prefix_list" "cloudfront_origin_facing" {
-#   name = "com.amazonaws.global.cloudfront.origin-facing"
-# }
-#
-# resource "aws_vpc_security_group_ingress_rule" "alb_https_from_cloudfront" {
-#   security_group_id = aws_security_group.alb.id
-#   from_port         = 443
-#   to_port           = 443
-#   ip_protocol       = "tcp"
-#   prefix_list_id    = data.aws_ec2_managed_prefix_list.cloudfront_origin_facing.id
-#   tags              = { Name = "${local.name_prefix}-alb-https-cloudfront" }
-# }
 
 resource "aws_vpc_security_group_egress_rule" "alb_egress" {
   security_group_id = aws_security_group.alb.id

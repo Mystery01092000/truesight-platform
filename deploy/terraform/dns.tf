@@ -4,6 +4,10 @@
 # record is created through the aws.management provider. Aliases the ALB.
 # =============================================================================
 
+# CUT OVER to CloudFront (verified against the distribution domain: health,
+# SSR, immutable static hits, 25s SSE heartbeats < 60s origin_read_timeout).
+# Rollback: restore the ALB alias (aws_lb.this.dns_name / aws_lb.this.zone_id,
+# evaluate_target_health = true) — the distribution can stay deployed.
 resource "aws_route53_record" "argus" {
   provider = aws.management
 
@@ -12,22 +16,11 @@ resource "aws_route53_record" "argus" {
   type    = "A"
 
   alias {
-    name                   = aws_lb.this.dns_name
-    zone_id                = aws_lb.this.zone_id
-    evaluate_target_health = true
+    name                   = aws_cloudfront_distribution.argus.domain_name
+    zone_id                = aws_cloudfront_distribution.argus.hosted_zone_id # always Z2FDTNDATAQYW2
+    evaluate_target_health = false
   }
 }
-
-# CUTOVER (CloudFront): once the distribution is deployed and verified against
-# its *.cloudfront.net domain, replace the alias block above with the one below
-# so argus-infraspace serves through CloudFront, then enable the origin-facing
-# SG rule + X-Origin-Verify listener hardening (security-groups.tf / alb.tf).
-#
-#   alias {
-#     name                   = aws_cloudfront_distribution.argus.domain_name
-#     zone_id                = aws_cloudfront_distribution.argus.hosted_zone_id # always Z2FDTNDATAQYW2
-#     evaluate_target_health = false
-#   }
 
 # Origin-facing hostname CloudFront dials the ALB through. Stays on the ALB
 # permanently (the wildcard *.centricitywealth.tech ALB cert covers it).
