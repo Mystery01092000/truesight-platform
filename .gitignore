@@ -50,3 +50,4 @@ deploy/terraform/*.tfstate.*
 # NOTE: .terraform.lock.hcl is intentionally NOT ignored — the provider lock
 # file must be committed so every environment resolves identical provider
 # versions (reproducible, drift-free plans).
+deploy/terraform/tfplan*

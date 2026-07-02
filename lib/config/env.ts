@@ -28,6 +28,8 @@ const schema = z.object({
   AWS_MGMT_ACCOUNT_ID: z.string().optional(),
   AWS_PROD_ACCOUNT_ID: z.string().optional(),
   AWS_DEV_ACCOUNT_ID: z.string().optional(),
+  AWS_PROD_ACCESS_KEY_ID: z.string().optional(),
+  AWS_PROD_SECRET_ACCESS_KEY: z.string().optional(),
   AWS_READONLY_ROLE_NAME: z.string().default("argus-readonly"),
 
   // Azure
@@ -43,6 +45,20 @@ const schema = z.object({
 
   // Terraform state (read-only)
   TERRAFORM_STATE_BUCKET: z.string().default("terraform-iac-data"),
+
+  // Knowledge Base (semantic search)
+  OPENAI_API_KEY: z.string().min(1).optional(),
+  KB_BUCKET_NAME: z.string().default("argus-prod-kb-backend"),
+  KB_EMBEDDING_MODEL: z.string().default("text-embedding-3-small"),
+  KB_SYNC_SCHEDULE: z.string().optional(), // cron expression, e.g. "rate(10 minutes)"
+
+  // Ticketing — Teams webhook + SMTP (optional, graceful no-op when unset)
+  TEAMS_WEBHOOK_URL: z.string().url().optional(),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.string().default("587"),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().optional(),
 });
 
 export type ServerEnv = z.infer<typeof schema>;
@@ -66,6 +82,8 @@ export function serverEnv(): ServerEnv {
     AWS_MGMT_ACCOUNT_ID: process.env.AWS_MGMT_ACCOUNT_ID,
     AWS_PROD_ACCOUNT_ID: process.env.AWS_PROD_ACCOUNT_ID,
     AWS_DEV_ACCOUNT_ID: process.env.AWS_DEV_ACCOUNT_ID,
+    AWS_PROD_ACCESS_KEY_ID: process.env.AWS_PROD_ACCESS_KEY_ID,
+    AWS_PROD_SECRET_ACCESS_KEY: process.env.AWS_PROD_SECRET_ACCESS_KEY,
     AWS_READONLY_ROLE_NAME: process.env.AWS_READONLY_ROLE_NAME,
     AZURE_CLIENT_ID: process.env.AZURE_CLIENT_ID,
     AZURE_CLIENT_SECRET: process.env.AZURE_CLIENT_SECRET,
@@ -75,6 +93,16 @@ export function serverEnv(): ServerEnv {
     GITHUB_ORG: process.env.GITHUB_ORG,
     GITHUB_PAT: process.env.GITHUB_PAT,
     TERRAFORM_STATE_BUCKET: process.env.TERRAFORM_STATE_BUCKET,
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    KB_BUCKET_NAME: process.env.KB_BUCKET_NAME,
+    KB_EMBEDDING_MODEL: process.env.KB_EMBEDDING_MODEL,
+    KB_SYNC_SCHEDULE: process.env.KB_SYNC_SCHEDULE,
+    TEAMS_WEBHOOK_URL: process.env.TEAMS_WEBHOOK_URL,
+    SMTP_HOST: process.env.SMTP_HOST,
+    SMTP_PORT: process.env.SMTP_PORT,
+    SMTP_USER: process.env.SMTP_USER,
+    SMTP_PASS: process.env.SMTP_PASS,
+    SMTP_FROM: process.env.SMTP_FROM,
   };
   // Treat empty-string values as unset so Zod `.default()`/`.optional()` apply.
   // Next.js inlines NEXT_PUBLIC_* at BUILD time; when a build arg is missing the value
