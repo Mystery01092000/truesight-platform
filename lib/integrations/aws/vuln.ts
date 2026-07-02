@@ -79,6 +79,10 @@ interface Inspector2Finding {
   remediation?: { recommendation?: { url?: string; text?: string } };
   status?: string;
   networkReachability?: { protocol?: string; portRange?: { begin?: number } };
+  packageVulnerabilityDetails?: {
+    vulnerabilityId?: string;
+    vulnerablePackages?: Array<{ name?: string; version?: string; fixedInVersion?: string }>;
+  };
 }
 
 async function scanInspector2(factory: AwsClientFactory): Promise<SecurityFinding[]> {
@@ -107,6 +111,7 @@ function mapInspector2(f: Inspector2Finding, accountId: string): SecurityFinding
   const resourceArn = f.resources?.[0]?.id ?? arn;
   const rec = f.remediation?.recommendation;
   const exposed = Boolean(f.networkReachability?.portRange?.begin);
+  const pkgVuln = f.packageVulnerabilityDetails;
   return {
     urn: urnFor("aws", accountId, arn),
     provider: "aws",
@@ -124,6 +129,8 @@ function mapInspector2(f: Inspector2Finding, accountId: string): SecurityFinding
       resourceArn,
       resourceType: f.resources?.[0]?.type ?? undefined,
       recommendationUrl: rec?.url ?? undefined,
+      cveId: pkgVuln?.vulnerabilityId ?? undefined,
+      package: pkgVuln?.vulnerablePackages?.[0]?.name ?? undefined,
       source: "inspector2",
     },
   };

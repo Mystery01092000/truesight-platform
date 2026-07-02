@@ -1,7 +1,8 @@
+import { and, eq, inArray, lt, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 import * as schema from "@/db/schema";
-import { securityPosture } from "@/db/schema";
+import { securityPosture, vulnerabilityFindings, type NewVulnerabilityFinding } from "@/db/schema";
 import type { SecurityFinding, VulnScanResult } from "@/lib/integrations/security";
 import { serverEnv } from "@/lib/config/env";
 
@@ -90,6 +91,12 @@ export async function runSecurityScan(
   });
 
   await persistFindings(db, findings, capturedAt);
+  await persistVulnerabilityFindings(
+    db,
+    findings,
+    resolveScannedSources(scanTasks, settled, errors),
+    capturedAt,
+  );
 
   return {
     ok: errors.length === 0,
@@ -146,4 +153,126 @@ async function persistFindings(
 function stripMeta(details: SecurityFinding["details"]): Record<string, unknown> {
   const { resourceLink, remediation, description, ...rest } = details;
   return rest;
+}
+
+/* -------------------------------------------------------------------------- */
+/* vulnerability_findings — durable per-finding lifecycle                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Source labels each provider's adapter stamps into `details.source`, paired
+ * with the error-scope prefixes that signal that stream did NOT fully scan.
+ * A source is only eligible for the "not seen ⇒ fixed" sweep when every scope
+ * belonging to it succeeded — otherwise a transient API failure would falsely
+ * mark its open findings as fixed.
+ */
+const PROVIDER_SOURCES: Record<string, Array<{ source: string; scopePrefixes: string[] }>> = {
+  aws: [
+    { source: "inspector2", scopePrefixes: ["inspector2", "aws:scan"] },
+    { source: "securityhub", scopePrefixes: ["securityhub", "aws:scan"] },
+    { source: "ecr-image-scan", scopePrefixes: ["ecr-scans", "aws:scan"] },
+  ],
+  azure: [{ source: "defender", scopePrefixes: ["azure"] }],
+  github: [
+    { source: "dependabot", scopePrefixes: ["github:dependabot", "github:scan"] },
+    { source: "codeql", scopePrefixes: ["github:codeql", "github:scan"] },
+  ],
+};
+
+function resolveScannedSources(
+  scanTasks: Array<{ provider: string }>,
+  settled: Array<VulnScanResult | null>,
+  errors: SecurityScanSummary["errors"],
+): string[] {
+  const scanned = new Set<string>();
+  settled.forEach((res, i) => {
+    if (res === null) return; // adapter threw wholesale — nothing scanned
+    for (const { source } of PROVIDER_SOURCES[scanTasks[i].provider] ?? []) scanned.add(source);
+  });
+  for (const [provider, sources] of Object.entries(PROVIDER_SOURCES)) {
+    for (const { source, scopePrefixes } of sources) {
+      const failed = errors.some(
+        (e) => e.provider === provider && scopePrefixes.some((p) => e.scope.startsWith(p)),
+      );
+      if (failed) scanned.delete(source);
+    }
+  }
+  return [...scanned];
+}
+
+/**
+ * Upsert this run's findings into `vulnerability_findings` keyed on
+ * (source, externalId) — unlike `security_posture` this table keeps history:
+ * rows re-seen get `lastSeen` bumped (and re-open if previously fixed), while
+ * open rows from a fully-scanned source that did NOT resurface flip to `fixed`.
+ */
+async function persistVulnerabilityFindings(
+  db: Db,
+  findings: SecurityFinding[],
+  scannedSources: string[],
+  capturedAt: string,
+): Promise<void> {
+  const seenAt = new Date(capturedAt);
+
+  // Dedupe on the conflict key so ON CONFLICT never updates a row twice in one batch.
+  const byKey = new Map<string, NewVulnerabilityFinding>();
+  for (const f of findings) {
+    const source = typeof f.details.source === "string" ? f.details.source : f.provider;
+    byKey.set(`${source} ${f.urn}`, {
+      source,
+      externalId: f.urn,
+      urn: f.urn,
+      severity: f.severity,
+      title: f.title,
+      description: f.details.description ?? null,
+      mitigation: f.details.remediation ?? null,
+      packageName: typeof f.details.package === "string" ? f.details.package : null,
+      cve: typeof f.details.cveId === "string" ? f.details.cveId : null,
+      resourceLink: f.details.resourceLink ?? null,
+      status: "open",
+      lastSeen: seenAt,
+      metadata: {
+        provider: f.provider,
+        category: f.category,
+        exposed: f.exposed,
+        score: f.score ?? null,
+      },
+    });
+  }
+  const rows = [...byKey.values()];
+
+  for (let i = 0; i < rows.length; i += 500) {
+    await db
+      .insert(vulnerabilityFindings)
+      .values(rows.slice(i, i + 500))
+      .onConflictDoUpdate({
+        target: [vulnerabilityFindings.source, vulnerabilityFindings.externalId],
+        set: {
+          urn: sql`excluded.urn`,
+          severity: sql`excluded.severity`,
+          title: sql`excluded.title`,
+          description: sql`excluded.description`,
+          mitigation: sql`excluded.mitigation`,
+          packageName: sql`excluded.package_name`,
+          cve: sql`excluded.cve`,
+          resourceLink: sql`excluded.resource_link`,
+          status: sql`excluded.status`,
+          lastSeen: sql`excluded.last_seen`,
+          metadata: sql`excluded.metadata`,
+        },
+      });
+  }
+
+  if (scannedSources.length > 0) {
+    await db
+      .update(vulnerabilityFindings)
+      .set({ status: "fixed" })
+      .where(
+        and(
+          inArray(vulnerabilityFindings.source, scannedSources),
+          eq(vulnerabilityFindings.status, "open"),
+          lt(vulnerabilityFindings.lastSeen, seenAt),
+        ),
+      );
+  }
 }

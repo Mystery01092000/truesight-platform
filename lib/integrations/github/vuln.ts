@@ -72,6 +72,7 @@ interface DependabotAlertRow {
   severity?: string;
   security_advisory?: {
     ghsa_id?: string;
+    cve_id?: string | null;
     summary?: string;
     description?: string;
     severity?: string;
@@ -115,6 +116,7 @@ function mapDependabot(a: DependabotAlertRow, org: string): SecurityFinding | nu
       package: pkg,
       ecosystem: a.dependency?.package?.ecosystem ?? undefined,
       ghsaId: advisory.ghsa_id ?? undefined,
+      cveId: advisory.cve_id ?? undefined,
       advisoryUrl,
       repository: repo,
       source: "dependabot",
