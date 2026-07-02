@@ -20,3 +20,15 @@ export const TopoFocusContext = createContext<TopoFocus>({
   neighbors: new Set(),
   edges: new Set(),
 });
+
+/**
+ * Entrance gate. Nodes hold at opacity 0 (`hidden`) until the discovery SSE
+ * stream emits `done` (or the fallback timer fires), then stagger in once
+ * (`revealing`). After the choreography resolves the canvas flips to `settled`
+ * so nodes remounted later (onlyRenderVisibleElements re-mounts on pan/zoom)
+ * enter instantly instead of replaying the staggered entrance. Defaults to
+ * `settled` so nodes render immediately outside the canvas provider.
+ */
+export type TopoRevealPhase = "hidden" | "revealing" | "settled";
+
+export const TopoRevealedContext = createContext<TopoRevealPhase>("settled");

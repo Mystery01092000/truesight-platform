@@ -3,75 +3,66 @@
 import { memo, useContext } from "react";
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
 import { motion, useReducedMotion } from "motion/react";
-import * as LucideIcons from "lucide-react";
-import { Box, Layers, type LucideIcon } from "lucide-react";
-import { kindAccent, kindIcon, type AccentToken, type ResourceStatus, DRIFT_RING, type DriftStatus } from "@/lib/taxonomy";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { AppIconTile } from "@/components/ui/AppIconTile";
+import { DRIFT_RING, type ResourceStatus, type DriftStatus } from "@/lib/taxonomy";
 import { cn } from "@/lib/utils/cn";
-import type { TopoNodeData } from "@/lib/topology/types";
-import { TopoFocusContext } from "../focus";
+import { NODE_W, NODE_H, type TopoNodeData } from "@/lib/topology/types";
+import { TopoFocusContext, TopoRevealedContext } from "../focus";
 
 export type ResourceFlowNode = Node<TopoNodeData, "resource">;
 
-const ICON_SET = LucideIcons as unknown as Record<string, LucideIcon | undefined>;
-const resolveIcon = (name: string): LucideIcon => ICON_SET[name] ?? Box;
-
-const ACCENT_ICON: Record<AccentToken, string> = {
-  "accent-blue": "text-accent-blue",
-  "accent-green": "text-accent-green",
-  "accent-red": "text-accent-red",
-  "accent-yellow": "text-accent-yellow",
-  mute: "text-mute",
-};
-const ACCENT_TINT: Record<AccentToken, string> = {
-  "accent-blue": "bg-accent-blue-soft",
-  "accent-green": "bg-accent-green-soft",
-  "accent-red": "bg-accent-red-soft",
-  "accent-yellow": "bg-accent-yellow-soft",
-  mute: "bg-white/5",
-};
-
-const STATUS_RAIL: Record<ResourceStatus, string> = {
-  healthy: "bg-accent-green",
-  degraded: "bg-accent-yellow",
-  stopped: "bg-accent-red",
+/** Status dot fill — semantic tokens only. */
+const STATUS_DOT: Record<ResourceStatus, string> = {
+  healthy: "bg-positive",
+  degraded: "bg-warning",
+  stopped: "bg-critical",
   unknown: "bg-stone",
 };
 
-/** Border tint for the one-shot drift pulse halo — keyed to the same canonical
- *  {@link DriftStatus} as the ring. `in_sync`/`unknown` emit no halo. */
-const DRIFT_HALO: Record<DriftStatus, string> = {
-  in_sync: "",
-  drifted: "border-accent-yellow/50",
-  missing_in_cloud: "border-accent-red/60",
-  unmanaged: "border-accent-blue/40",
-  unknown: "",
-};
-
-/** A single resource in the weave — a surface-card tile, kind-tinted glyph, a
- *  left status rail, and near-invisible handles so edges attach L→R. */
+/**
+ * A single resource in the weave — a surface-card tile carrying the full
+ * identity read: kind-tinted AppIconTile glyph, name, `service · nativeType`
+ * in mono micro, status dot (pulsing ONLY while actively degraded), drift ring
+ * when drifted, and a region chip. Entrance is gated on TopoRevealedContext so
+ * the whole canvas choreographs once, after the discovery stream resolves.
+ * Cluster summary nodes wear a stacked-card shadow and an expand affordance.
+ */
 function ResourceNodeImpl({ data, selected }: NodeProps<ResourceFlowNode>) {
   const reduce = useReducedMotion();
   const focus = useContext(TopoFocusContext);
-  const accent = kindAccent[data.kind] ?? "mute";
-  const Icon = data.isCluster ? Layers : resolveIcon(kindIcon[data.kind]);
+  const revealed = useContext(TopoRevealedContext);
 
   const isFocused = focus.selected === data.urn;
   const isNeighbor = focus.neighbors.has(data.urn);
   const dimmed = focus.selected !== null && !isFocused && !isNeighbor;
+  const show = revealed !== "hidden" || !!reduce;
+  // Staggered delay plays only during the one reveal choreography; nodes
+  // remounted afterwards (viewport culling re-mounts on pan) enter instantly.
+  // Cluster members keep their small grid stagger — they mount on expand.
+  const delay =
+    revealed === "revealing" || data.isClusterMember ? data.appearDelay : 0;
 
   const handleStyle = { width: 7, height: 7, opacity: 0, border: "none" } as const;
+  const subline = data.isCluster
+    ? `${data.clusterCount} collapsed · ${data.service}`
+    : data.nativeType
+      ? `${data.service} · ${data.nativeType}`
+      : data.service;
 
   return (
+    // Outer layer: entrance only (runs once when the canvas reveals).
+    // Inner layer: selection dimming at 150ms so focus feedback stays instant.
     <motion.div
-      initial={reduce ? false : { opacity: 0, scale: 0.94, y: 6 }}
-      animate={{ opacity: dimmed ? 0.28 : 1, scale: 1, y: 0 }}
+      initial={reduce ? false : { opacity: 0, scale: 0.96 }}
+      animate={show ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.96 }}
       transition={
         reduce
           ? { duration: 0 }
-          : { opacity: { duration: 0.45, delay: data.appearDelay }, scale: { type: "spring", stiffness: 220, damping: 24, delay: data.appearDelay }, y: { type: "spring", stiffness: 220, damping: 24, delay: data.appearDelay } }
+          : { duration: 0.25, delay, ease: [0.22, 1, 0.36, 1] }
       }
       className="group relative"
-      style={{ width: 216 }}
+      style={{ width: NODE_W, height: NODE_H }}
     >
       <Handle type="target" position={Position.Left} style={handleStyle} isConnectable={false} />
       {/* focus spotlight — a soft aperture glow behind the selected node */}
@@ -81,19 +72,8 @@ function ResourceNodeImpl({ data, selected }: NodeProps<ResourceFlowNode>) {
           className="pointer-events-none absolute -inset-2 z-0 rounded-2xl bg-iris-soft blur-lg"
         />
       ) : null}
-      {/* one-shot drift pulse halo — announces the "no blind spots" ring once
-       *  the entrance settles, then goes quiet (driven by .topo-pulse on the canvas). */}
-      {DRIFT_HALO[data.drift as DriftStatus] && !data.isCluster ? (
-        <span
-          aria-hidden
-          className={cn(
-            "topo-drift-halo pointer-events-none absolute inset-0 z-[5] rounded-lg border-2 opacity-0",
-            DRIFT_HALO[data.drift as DriftStatus],
-          )}
-        />
-      ) : null}
       {/* stacked-card shadow — signals a collapsed group of resources */}
-      {data.isCluster ? (
+      {data.isCluster && !data.expanded ? (
         <span
           aria-hidden
           className="absolute left-1.5 right-1.5 top-1.5 h-full rounded-lg border border-hairline bg-surface-card/60"
@@ -102,7 +82,7 @@ function ResourceNodeImpl({ data, selected }: NodeProps<ResourceFlowNode>) {
       ) : null}
       <div
         className={cn(
-          "relative z-10 flex items-center gap-2.5 overflow-hidden rounded-lg border bg-surface-card px-2.5 py-2 transition-colors duration-150",
+          "relative z-10 flex h-full items-center gap-3 overflow-hidden rounded-lg border bg-surface-card px-3 transition-colors duration-150 ease-smooth",
           "hover:border-hairline-strong hover:bg-surface-elevated",
           data.isCluster && "border-dashed",
           DRIFT_RING[data.drift as DriftStatus] ?? "",
@@ -112,32 +92,47 @@ function ResourceNodeImpl({ data, selected }: NodeProps<ResourceFlowNode>) {
               ? "border-hairline-strong"
               : "border-hairline",
         )}
+        style={{ opacity: dimmed ? 0.25 : 1, transition: "opacity 150ms var(--ease-smooth)" }}
       >
-        {/* status rail */}
-        <span className={cn("absolute inset-y-0 left-0 w-[3px]", STATUS_RAIL[data.status])} aria-hidden />
-        {/* kind glyph */}
-        <div className="relative grid size-9 shrink-0 place-items-center overflow-hidden rounded-md border border-hairline bg-surface">
-          <span className={cn("absolute inset-0", ACCENT_TINT[accent])} aria-hidden />
-          <Icon size={17} strokeWidth={1.75} className={cn("relative", ACCENT_ICON[accent])} />
-        </div>
-        {/* labels */}
+        {/* kind glyph on the card surface */}
+        <AppIconTile kind={data.kind} />
+        {/* identity column */}
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[12.5px] font-medium leading-tight text-ink" title={data.name}>
-            {data.name}
-          </div>
-          <div className="mt-0.5 flex items-center gap-1.5 text-[11px] leading-none text-mute">
-            <span className="uppercase tracking-[0.04em]">
-              {data.isCluster ? "grouped" : data.service}
+          <div className="flex items-center gap-1.5">
+            <span
+              className="min-w-0 flex-1 truncate text-[13px] font-medium leading-[1.35] text-ink"
+              title={data.name}
+            >
+              {data.name}
             </span>
-            {data.region ? <span className="text-stone">·</span> : null}
-            {data.region ? <span className="truncate font-mono">{data.region}</span> : null}
+            {/* status dot — pulses ONLY while actively degraded (sanctioned loop) */}
+            <span className="relative grid size-2.5 shrink-0 place-items-center" aria-hidden>
+              {data.status === "degraded" && !reduce ? (
+                <span className="absolute inset-0 animate-pulse-ring rounded-full bg-warning" />
+              ) : null}
+              <span className={cn("relative size-1.5 rounded-full", STATUS_DOT[data.status])} />
+            </span>
+          </div>
+          <div
+            className="mt-0.5 truncate font-mono text-[10.5px] leading-[1.4] tracking-[0.02em] text-mute"
+            title={subline}
+          >
+            {subline}
+          </div>
+          <div className="mt-1 flex items-center gap-1.5">
+            {data.region ? (
+              <span className="truncate rounded-xs border border-hairline-soft bg-surface px-1.5 py-px font-mono text-[9.5px] leading-[1.5] text-ash">
+                {data.region}
+              </span>
+            ) : null}
+            {data.isCluster ? (
+              <span className="inline-flex items-center gap-1 rounded-xs border border-hairline-soft bg-surface px-1.5 py-px font-mono text-[9.5px] leading-[1.5] tabular-nums text-ash">
+                {data.expanded ? <ChevronUp size={9} /> : <ChevronDown size={9} />}
+                {data.expanded ? "collapse" : `expand ${data.clusterCount}`}
+              </span>
+            ) : null}
           </div>
         </div>
-        {data.isCluster ? (
-          <span className="shrink-0 rounded-full border border-hairline bg-surface px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-mute">
-            {data.clusterCount}
-          </span>
-        ) : null}
       </div>
       <Handle type="source" position={Position.Right} style={handleStyle} isConnectable={false} />
     </motion.div>

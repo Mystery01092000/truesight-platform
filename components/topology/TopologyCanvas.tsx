@@ -9,27 +9,33 @@ import {
   BackgroundVariant,
   Controls,
   MiniMap,
-  Panel,
   MarkerType,
   type Node,
   type Edge,
   type NodeMouseHandler,
 } from "@xyflow/react";
-import { motion, AnimatePresence, useReducedMotion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { ResourceNode } from "./nodes/ResourceNode";
-import { GroupNode } from "./nodes/GroupNode";
+import { GroupNode, type GroupNodeData } from "./nodes/GroupNode";
 import { FlowEdge } from "./edges/FlowEdge";
 import { FlowField } from "./FlowField";
-import { TopoFocusContext, type TopoFocus } from "./focus";
+import {
+  TopoFocusContext,
+  TopoRevealedContext,
+  type TopoFocus,
+  type TopoRevealPhase,
+} from "./focus";
 import { DetailPanel, type Relation } from "./DetailPanel";
-import { Legend } from "./Legend";
-import { kindAccent, type EdgeKind } from "@/lib/taxonomy";
+import { useExpandCluster } from "./useExpandCluster";
+import { kindAccent, type CloudProvider, type EdgeKind } from "@/lib/taxonomy";
+import { PROVIDER_LABEL } from "@/components/ui/ProviderChip";
 import { cn } from "@/lib/utils/cn";
 import type { TopoGraph, TopoNodeData } from "@/lib/topology/types";
 
 const nodeTypes = { resource: ResourceNode, group: GroupNode };
 const edgeTypes = { flow: FlowEdge };
 
+/** Minimap node tints — hex mirrors of the accent tokens (SVG fill needs raw color). */
 const ACCENT_HEX: Record<string, string> = {
   "accent-blue": "#57c1ff",
   "accent-green": "#59d499",
@@ -38,42 +44,48 @@ const ACCENT_HEX: Record<string, string> = {
   mute: "#5a5b5c",
 };
 
-/** Arrowhead markers for directional edges. Color matches the edge stroke so
- *  directionality reads without competing with the flowing data packets. */
-const ARROW_MARKER: Partial<Record<EdgeKind, { color: string }>> = {
-  "deployed-from": { color: "#6fe5b0" },
-  "depends-on": { color: "#9c9c9d" },
+/** Subtle arrowheads on directional edges, color-matched to FlowEdge's token
+ *  strokes (hex because SVG marker fills can't resolve CSS vars reliably). */
+const EDGE_MARKER: Partial<Record<EdgeKind, string>> = {
+  uses: "#7c8dff", // iris
+  "routes-to": "#57c1ff", // info
+  "depends-on": "#a4a6ad", // mute
+  "deployed-from": "#59d499", // positive
 };
 
-function CanvasInner({ graph }: { graph: TopoGraph }) {
+/** Height a collapsed account band folds down to (header row + padding). */
+const COLLAPSED_BAND_H = 64;
+
+const isProvider = (p: string): p is CloudProvider => p in PROVIDER_LABEL;
+
+function CanvasInner({ graph, ambient }: { graph: TopoGraph; ambient: boolean }) {
   const reduce = useReducedMotion();
   const [selected, setSelected] = useState<string | null>(null);
-  const [revealed, setRevealed] = useState(false);
-  const [pulseRings, setPulseRings] = useState(false);
+  const [phase, setPhase] = useState<TopoRevealPhase>("hidden");
+  const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(new Set());
   const sseRef = useRef<EventSource | null>(null);
 
-  // Entrance choreography driven by the discovery SSE stream — the aperture
-  // "watches" as each stage resolves, then the weave reveals. Falls back to a
-  // fixed timer if the stream is unavailable so the canvas never hangs.
+  const { expanded, toggleCluster, memberNodes, memberEdges, memberDataByUrn } =
+    useExpandCluster(graph);
+
+  // Entrance choreography driven by the discovery SSE stream — the canvas fades
+  // in immediately, nodes hold until the stream's `done` event then stagger in
+  // once (≤900ms total), after which the phase settles so viewport-culled nodes
+  // remount instantly. Falls back to a fixed timer so the canvas never hangs.
   useEffect(() => {
     if (reduce) {
-      setRevealed(true);
+      setPhase("settled");
       return;
     }
 
-    let settled = false;
+    let done = false;
+    let settleTimer: ReturnType<typeof setTimeout> | null = null;
     const reveal = () => {
-      if (settled) return;
-      settled = true;
-      setRevealed(true);
-      // After the nodes settle, pulse the drift rings once — the "no blind
-      // spots" halo announces itself, then goes quiet.
-      const pulse = setTimeout(() => {
-        setPulseRings(true);
-        const clear = setTimeout(() => setPulseRings(false), 1100);
-        return () => clearTimeout(clear);
-      }, 900);
-      return () => clearTimeout(pulse);
+      if (done) return;
+      done = true;
+      setPhase("revealing");
+      // Max stagger (450ms) + entrance (250ms) + slack — then go quiet.
+      settleTimer = setTimeout(() => setPhase("settled"), 900);
     };
 
     // Timer fallback — fires if the SSE stream never sends a `done` event.
@@ -96,55 +108,104 @@ function CanvasInner({ graph }: { graph: TopoGraph }) {
 
     return () => {
       clearTimeout(fallback);
+      if (settleTimer) clearTimeout(settleTimer);
       sseRef.current?.close();
       sseRef.current = null;
     };
   }, [reduce, graph.stats.scope]);
 
+  const toggleGroup = useCallback((account: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(account)) next.delete(account);
+      else next.add(account);
+      return next;
+    });
+  }, []);
+
+  // Dominant provider per account band (null when the band mixes providers).
+  const providerByAccount = useMemo(() => {
+    const m = new Map<string, CloudProvider | null>();
+    for (const n of graph.nodes) {
+      const p = isProvider(n.data.provider) ? n.data.provider : null;
+      if (!m.has(n.group)) m.set(n.group, p);
+      else if (m.get(n.group) !== p) m.set(n.group, null);
+    }
+    return m;
+  }, [graph.nodes]);
+
+  // Node id → account, for hiding edges attached to a collapsed band.
+  const accountOf = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const n of graph.nodes) m.set(n.id, n.group);
+    for (const [urn, d] of memberDataByUrn) m.set(urn, d.account);
+    return m;
+  }, [graph.nodes, memberDataByUrn]);
+
   const rfNodes = useMemo<Node[]>(() => {
-    const groupNodes: Node[] = graph.groups.map((g) => ({
-      id: g.id,
-      type: "group",
-      position: g.position,
-      draggable: false,
-      selectable: false,
-      focusable: false,
-      zIndex: 0,
-      data: {
+    const groupNodes: Node[] = graph.groups.map((g) => {
+      const collapsed = collapsedGroups.has(g.account);
+      const data: GroupNodeData = {
         label: g.label,
         account: g.account,
         count: graph.stats.accounts.find((a) => a.account === g.account)?.n ?? 0,
-      },
-      style: { width: g.width, height: g.height },
-    }));
+        provider: providerByAccount.get(g.account) ?? null,
+        collapsed,
+        onToggle: () => toggleGroup(g.account),
+      };
+      return {
+        id: g.id,
+        type: "group",
+        position: g.position,
+        draggable: false,
+        selectable: false,
+        focusable: false,
+        zIndex: 0,
+        data,
+        style: { width: g.width, height: collapsed ? COLLAPSED_BAND_H : g.height },
+      };
+    });
     const resNodes: Node[] = graph.nodes.map((n) => ({
       id: n.id,
       type: "resource",
       position: n.position,
-      data: n.data,
+      data: n.data.isCluster ? { ...n.data, expanded: expanded.has(n.id) } : n.data,
       draggable: false,
+      hidden: collapsedGroups.has(n.group),
       zIndex: 1,
     }));
-    return [...groupNodes, ...resNodes];
-  }, [graph]);
+    const members: Node[] = memberNodes.map((n) => ({
+      ...n,
+      hidden: collapsedGroups.has((n.data as TopoNodeData).account),
+    }));
+    return [...groupNodes, ...resNodes, ...members];
+  }, [graph, collapsedGroups, providerByAccount, toggleGroup, expanded, memberNodes]);
 
-  const rfEdges = useMemo<Edge[]>(
-    () =>
-      graph.edges.map((e) => {
-        const marker = ARROW_MARKER[e.kind];
-        return {
-          id: e.id,
-          source: e.source,
-          target: e.target,
-          type: "flow",
-          data: { kind: e.kind },
-          markerEnd: marker
-            ? { type: MarkerType.ArrowClosed, width: 16, height: 16, color: marker.color }
-            : undefined,
-        };
-      }),
-    [graph],
-  );
+  const rfEdges = useMemo<Edge[]>(() => {
+    const hiddenEnd = (id: string) => {
+      const acct = accountOf.get(id);
+      return acct != null && collapsedGroups.has(acct);
+    };
+    const graphEdges: Edge[] = graph.edges.map((e) => {
+      const marker = EDGE_MARKER[e.kind];
+      return {
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        type: "flow",
+        data: { kind: e.kind },
+        hidden: hiddenEnd(e.source) || hiddenEnd(e.target),
+        markerEnd: marker
+          ? { type: MarkerType.ArrowClosed, width: 14, height: 14, color: marker }
+          : undefined,
+      };
+    });
+    const expandEdges: Edge[] = memberEdges.map((e) => ({
+      ...e,
+      hidden: hiddenEnd(e.source) || hiddenEnd(e.target),
+    }));
+    return [...graphEdges, ...expandEdges];
+  }, [graph.edges, memberEdges, accountOf, collapsedGroups]);
 
   const focus = useMemo<TopoFocus>(() => {
     if (!selected) return { selected: null, neighbors: new Set(), edges: new Set() };
@@ -162,10 +223,12 @@ function CanvasInner({ graph }: { graph: TopoGraph }) {
     return { selected, neighbors, edges };
   }, [selected, graph.edges]);
 
-  const selectedNode = useMemo(
-    () => graph.nodes.find((n) => n.id === selected)?.data ?? null,
-    [selected, graph.nodes],
-  );
+  const selectedNode = useMemo<TopoNodeData | null>(() => {
+    if (!selected) return null;
+    return (
+      graph.nodes.find((n) => n.id === selected)?.data ?? memberDataByUrn.get(selected) ?? null
+    );
+  }, [selected, graph.nodes, memberDataByUrn]);
 
   const relations = useMemo<Relation[]>(() => {
     if (!selected) return [];
@@ -183,104 +246,120 @@ function CanvasInner({ graph }: { graph: TopoGraph }) {
     return rels;
   }, [selected, graph.nodes, graph.edges]);
 
-  const onNodeClick = useCallback<NodeMouseHandler>((_, node) => {
-    if (node.type === "resource") setSelected(node.id);
-  }, []);
+  const onNodeClick = useCallback<NodeMouseHandler>(
+    (_, node) => {
+      if (node.type !== "resource") return;
+      // Clusters expand/collapse in place; plain resources open the detail sheet.
+      if ((node.data as TopoNodeData).isCluster) toggleCluster(node.id);
+      else setSelected(node.id);
+    },
+    [toggleCluster],
+  );
   const onPaneClick = useCallback(() => setSelected(null), []);
 
   return (
-    <TopoFocusContext.Provider value={focus}>
-      <div
-        className={cn(
-          "topo-canvas relative h-full w-full",
-          revealed && "topo-revealed",
-          pulseRings && "topo-pulse",
-        )}
-      >
-        {/* WebGL data-nebula — cinematic depth behind the weave */}
-        <FlowField className="pointer-events-none absolute inset-0 z-0 h-full w-full" />
-        <ReactFlow
-          nodes={rfNodes}
-          edges={rfEdges}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          onNodeClick={onNodeClick}
-          onPaneClick={onPaneClick}
-          nodesDraggable={false}
-          nodesConnectable={false}
-          elementsSelectable
-          minZoom={0.12}
-          maxZoom={1.8}
-          proOptions={{ hideAttribution: true }}
-          fitView
-          fitViewOptions={{ padding: 0.1, maxZoom: 1.1 }}
-          className="!bg-transparent"
+    <TopoRevealedContext.Provider value={phase}>
+      <TopoFocusContext.Provider value={focus}>
+        <motion.div
+          initial={reduce ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={reduce ? { duration: 0 } : { duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className={cn(
+            "topo-canvas relative h-full w-full",
+            phase !== "hidden" && "topo-revealed",
+          )}
         >
-          <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#212327" />
-          <Controls showInteractive={false} className="topo-controls" position="bottom-right" />
-          <MiniMap
-            pannable
-            zoomable
-            nodeStrokeWidth={0}
-            bgColor="#0b0c0d"
-            maskColor="rgba(7,8,10,0.66)"
-            maskStrokeColor="#2a2d2e"
-            maskStrokeWidth={2}
-            className="topo-minimap"
-            nodeColor={(n) =>
-              n.type === "group"
-                ? "transparent"
-                : ACCENT_HEX[kindAccent[(n.data as TopoNodeData).kind] ?? "mute"]
-            }
+          {/* Static ambience — the iris bloom (.topo-canvas::before in globals)
+              plus a second faint radial. Zero runtime cost, no rAF at idle. */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 z-0"
+            style={{
+              background:
+                "radial-gradient(55% 42% at 82% 82%, rgba(87, 193, 255, 0.035), transparent 70%)",
+            }}
           />
-          <Panel position="top-left">
-            <Legend />
-          </Panel>
-        </ReactFlow>
-
-        {/* Scanning sweep — the aperture "watching" state, replayed once per scope. */}
-        <AnimatePresence>
-          {!revealed && !reduce ? (
-            <motion.div
-              key="scan"
-              className="pointer-events-none absolute inset-0 z-10 overflow-hidden"
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4 }}
-            >
-              <motion.div
-                initial={{ x: "-25%" }}
-                animate={{ x: "125%" }}
-                transition={{ duration: 1.05, ease: [0.4, 0, 0.2, 1] }}
-                className="absolute inset-y-0 w-1/3"
-                style={{
-                  background:
-                    "linear-gradient(90deg, transparent, rgba(87,193,255,0.05) 55%, rgba(87,193,255,0.13))",
-                }}
-              />
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {selectedNode ? (
-            <DetailPanel
-              node={selectedNode}
-              relations={relations}
-              onClose={() => setSelected(null)}
-              onSelect={setSelected}
+          {/* Opt-in WebGL nebula still — renders ONE frame, no animation loop. */}
+          {ambient ? (
+            <FlowField
+              ambient
+              className="pointer-events-none absolute inset-0 z-0 h-full w-full"
             />
           ) : null}
-        </AnimatePresence>
-      </div>
-    </TopoFocusContext.Provider>
+          <ReactFlow
+            nodes={rfNodes}
+            edges={rfEdges}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            onNodeClick={onNodeClick}
+            onPaneClick={onPaneClick}
+            nodesDraggable={false}
+            nodesConnectable={false}
+            elementsSelectable
+            onlyRenderVisibleElements
+            minZoom={0.12}
+            maxZoom={1.8}
+            proOptions={{ hideAttribution: true }}
+            fitView
+            fitViewOptions={{ padding: 0.15, maxZoom: 1 }}
+            className="!bg-transparent"
+          >
+            <Background
+              variant={BackgroundVariant.Dots}
+              gap={26}
+              size={1.2}
+              color="var(--color-stone)"
+            />
+            <Controls showInteractive={false} className="topo-controls" position="bottom-right" />
+            <MiniMap
+              pannable
+              zoomable
+              nodeStrokeWidth={0}
+              bgColor="#0b0c0d"
+              maskColor="rgba(7,8,10,0.66)"
+              maskStrokeColor="#2a2d2e"
+              maskStrokeWidth={2}
+              className="topo-minimap"
+              nodeColor={(n) =>
+                n.type === "group"
+                  ? "transparent"
+                  : ACCENT_HEX[kindAccent[(n.data as TopoNodeData).kind] ?? "mute"]
+              }
+            />
+          </ReactFlow>
+
+          <DetailPanel
+            node={selectedNode}
+            relations={relations}
+            onClose={() => setSelected(null)}
+            onSelect={setSelected}
+          />
+        </motion.div>
+      </TopoFocusContext.Provider>
+    </TopoRevealedContext.Provider>
   );
 }
 
-export function TopologyCanvas({ graph }: { graph: TopoGraph }) {
-  // Remount per scope so a scope switch replays the entrance and refits the view.
+export function TopologyCanvas({
+  graph,
+  ambient = false,
+  remountKey,
+}: {
+  graph: TopoGraph;
+  /** Opt-in WebGL ambience (single still frame). Default OFF — CSS only. */
+  ambient?: boolean;
+  /** Extra key material (e.g. layout mode) forcing a remount + refit. */
+  remountKey?: string;
+}) {
+  // Remount per scope/provider (and layout via remountKey) so a switch replays
+  // the entrance once and refits the viewport.
   return (
     <ReactFlowProvider>
-      <CanvasInner key={graph.stats.scope} graph={graph} />
+      <CanvasInner
+        key={`${graph.stats.scope}:${graph.stats.provider}:${remountKey ?? ""}`}
+        graph={graph}
+        ambient={ambient}
+      />
     </ReactFlowProvider>
   );
 }

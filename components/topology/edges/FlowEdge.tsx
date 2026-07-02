@@ -1,33 +1,36 @@
 "use client";
 
-import { memo, useContext } from "react";
-import { BaseEdge, getBezierPath, type EdgeProps, type Edge } from "@xyflow/react";
+import { memo, useContext, useState } from "react";
+import {
+  BaseEdge,
+  EdgeLabelRenderer,
+  getBezierPath,
+  type EdgeProps,
+  type Edge,
+} from "@xyflow/react";
 import type { EdgeKind } from "@/lib/taxonomy";
 import { TopoFocusContext } from "../focus";
 
 export type FlowFlowEdge = Edge<{ kind: EdgeKind }, "flow">;
 
-/** Base style per edge semantic. `uses`/`routes-to` are the live data paths
- *  (accent, flowing dashes); `deployed-from` is the hero lineage — always
- *  flowing, brighter, arrowed; `contains` is a near-invisible structural
- *  hairline; `depends-on` is a dashed dependency line with an arrowhead. */
-const KIND_BASE: Record<
+/**
+ * Edge semantics rendered from the token vocabulary — iris for live data paths
+ * (`uses`), info for routing, positive for deploy lineage, mute for logical
+ * dependencies, stone hairline for structure. Nothing animates at idle: the
+ * flowing dash plays ONLY while the edge is active (an endpoint is selected)
+ * or hovered, and a small kind label surfaces on hover. Arrowheads are set by
+ * the canvas per kind, color-matched to the stroke.
+ */
+const KIND_STYLE: Record<
   EdgeKind,
-  { stroke: string; dash?: string; width: number; flow: boolean; opacity: number; arrow?: boolean }
+  { stroke: string; width: number; dash?: string; opacity: number; label: string }
 > = {
-  contains: { stroke: "var(--color-stone)", width: 0.8, flow: false, opacity: 0.28 },
-  uses: { stroke: "var(--color-iris)", width: 1.6, flow: true, opacity: 0.5 },
-  "routes-to": { stroke: "var(--color-iris)", width: 1.4, flow: true, opacity: 0.5 },
-  "depends-on": { stroke: "var(--color-mute)", dash: "2 5", width: 1.1, flow: false, opacity: 0.42, arrow: true },
-  "deployed-from": { stroke: "#6fe5b0", dash: "2 5", width: 1.8, flow: true, opacity: 0.6, arrow: true },
+  contains: { stroke: "var(--color-stone)", width: 1, opacity: 0.55, label: "contains" },
+  uses: { stroke: "var(--color-iris)", width: 1.4, opacity: 0.55, label: "uses" },
+  "routes-to": { stroke: "var(--color-info)", width: 1.4, opacity: 0.5, label: "routes to" },
+  "depends-on": { stroke: "var(--color-mute)", width: 1.2, dash: "3 5", opacity: 0.45, label: "depends on" },
+  "deployed-from": { stroke: "var(--color-positive)", width: 1.5, dash: "3 5", opacity: 0.6, label: "deployed from" },
 };
-
-/** Deterministic 0..1 phase from the edge id so packets don't all pulse in unison. */
-function phaseOf(id: string): number {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) & 0xffff;
-  return (h % 1000) / 1000;
-}
 
 function FlowEdgeImpl({
   id,
@@ -41,7 +44,8 @@ function FlowEdgeImpl({
   data,
 }: EdgeProps<FlowFlowEdge>) {
   const focus = useContext(TopoFocusContext);
-  const [path] = getBezierPath({
+  const [hovered, setHovered] = useState(false);
+  const [path, labelX, labelY] = getBezierPath({
     sourceX,
     sourceY,
     targetX,
@@ -52,13 +56,9 @@ function FlowEdgeImpl({
   });
 
   const kind: EdgeKind = data?.kind ?? "uses";
-  const base = KIND_BASE[kind];
-  const active = focus.edges.has(id);
-  const dimmed = focus.selected !== null && !active;
-  const flowing = (base.flow || active) && !dimmed;
-  const stroke = active ? "var(--color-iris-bright)" : base.stroke;
-  const begin = `-${(phaseOf(id) * 2.2).toFixed(2)}s`;
-  const dur = active ? "1.3s" : "2.2s";
+  const base = KIND_STYLE[kind];
+  const active = focus.edges.has(id) || hovered;
+  const dimmed = focus.selected !== null && !focus.edges.has(id) && !hovered;
 
   return (
     <>
@@ -66,24 +66,38 @@ function FlowEdgeImpl({
         id={id}
         path={path}
         markerEnd={markerEnd}
+        // `topo-edge-flow` (globals) animates the dash — applied ONLY while
+        // active so nothing moves at idle.
+        className={active ? "topo-edge-flow" : undefined}
         style={{
-          stroke,
+          stroke: focus.edges.has(id) ? "var(--color-iris-bright)" : base.stroke,
           strokeWidth: active ? 2 : base.width,
-          strokeDasharray: base.dash,
+          strokeDasharray: active ? undefined : base.dash,
           opacity: dimmed ? 0.08 : active ? 1 : base.opacity,
-          transition: "opacity .25s ease, stroke-width .2s ease",
+          transition: "opacity 150ms var(--ease-smooth), stroke-width 150ms var(--ease-smooth)",
         }}
       />
-      {/* Glowing data packet travelling the dependency path — the "living system". */}
-      {flowing ? (
-        <g className="topo-flow-dot">
-          <circle r={active ? 4 : 3} fill={stroke} opacity={0.2}>
-            <animateMotion dur={dur} begin={begin} repeatCount="indefinite" path={path} />
-          </circle>
-          <circle r={active ? 1.9 : 1.5} fill={stroke}>
-            <animateMotion dur={dur} begin={begin} repeatCount="indefinite" path={path} />
-          </circle>
-        </g>
+      {/* invisible wide hit path so hover works on a 1px stroke */}
+      <path
+        d={path}
+        fill="none"
+        stroke="transparent"
+        strokeWidth={14}
+        style={{ pointerEvents: "stroke" }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      />
+      {hovered ? (
+        <EdgeLabelRenderer>
+          <div
+            style={{
+              transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+            }}
+            className="pointer-events-none absolute z-10 rounded-xs border border-hairline bg-surface-elevated px-1.5 py-0.5 font-mono text-[10px] leading-[1.4] tracking-[0.04em] text-mute"
+          >
+            {base.label}
+          </div>
+        </EdgeLabelRenderer>
       ) : null}
     </>
   );

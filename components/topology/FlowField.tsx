@@ -4,11 +4,13 @@ import { useEffect, useRef } from "react";
 
 /**
  * FlowField — a GPU fragment-shader "data nebula" rendered on raw WebGL (no
- * dependency). Domain-warped fbm noise drifts in the Argus iris palette with an
- * aperture radial falloff, so the topology weave floats over a living field of
- * light rather than flat black. Cinematic, but tuned dark + low so it never
- * competes with the data. Honors prefers-reduced-motion (renders one static
- * frame) and tears down its GL context on unmount.
+ * dependency). OPT-IN ambience: the canvas defaults to static CSS radials, and
+ * this component only mounts when the parent passes `ambient`. Even then it
+ * renders exactly ONE frame (a fixed-time still of the domain-warped fbm field)
+ * and stops — no requestAnimationFrame loop, no idle GPU/CPU burn. Redraws
+ * happen only on resize, and are skipped entirely while the tab is hidden or
+ * the canvas is scrolled out of view (IntersectionObserver + visibilitychange).
+ * Tears down its GL context on unmount.
  */
 
 const VERT = `
@@ -61,16 +63,25 @@ void main() {
 }
 `;
 
-export function FlowField({ className }: { className?: string }) {
+/** Fixed shader time for the single still frame — chosen for even filaments. */
+const STILL_TIME = 42.0;
+
+export function FlowField({
+  className,
+  ambient = false,
+}: {
+  className?: string;
+  /** Enable the WebGL still. Default OFF — the canvas uses CSS ambience. */
+  ambient?: boolean;
+}) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
+    if (!ambient) return;
     const canvas = ref.current;
     if (!canvas) return;
     const gl = canvas.getContext("webgl", { antialias: false, alpha: true });
     if (!gl) return;
-
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const compile = (type: number, src: string) => {
       const s = gl.createShader(type);
@@ -98,7 +109,17 @@ export function FlowField({ className }: { className?: string }) {
     const uRes = gl.getUniformLocation(prog, "uRes");
     const uTime = gl.getUniformLocation(prog, "uTime");
 
-    const resize = () => {
+    // Visibility gates — never draw while the tab is hidden or the canvas is
+    // out of the viewport. A pending flag redraws once we become visible again.
+    let inView = true;
+    let pending = false;
+
+    const drawFrame = () => {
+      if (document.hidden || !inView) {
+        pending = true;
+        return;
+      }
+      pending = false;
       const dpr = Math.min(1.5, window.devicePixelRatio || 1);
       const w = Math.max(1, Math.floor(canvas.clientWidth * dpr));
       const h = Math.max(1, Math.floor(canvas.clientHeight * dpr));
@@ -108,26 +129,35 @@ export function FlowField({ className }: { className?: string }) {
       }
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.uniform2f(uRes, canvas.width, canvas.height);
-    };
-
-    let raf = 0;
-    const start = performance.now();
-    const render = () => {
-      resize();
-      gl.uniform1f(uTime, (performance.now() - start) / 1000);
+      gl.uniform1f(uTime, STILL_TIME);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
-      if (!reduce) raf = requestAnimationFrame(render);
+      // ONE frame, then stop — no rAF loop. The field is a still, not a video.
     };
-    render();
 
-    const onResize = () => resize();
+    const io = new IntersectionObserver(([entry]) => {
+      inView = entry?.isIntersecting ?? true;
+      if (inView && pending) drawFrame();
+    });
+    io.observe(canvas);
+
+    const onVisibility = () => {
+      if (!document.hidden && pending) drawFrame();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    const onResize = () => drawFrame();
     window.addEventListener("resize", onResize);
+
+    drawFrame();
+
     return () => {
-      cancelAnimationFrame(raf);
+      io.disconnect();
+      document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("resize", onResize);
       gl.getExtension("WEBGL_lose_context")?.loseContext();
     };
-  }, []);
+  }, [ambient]);
 
+  if (!ambient) return null;
   return <canvas ref={ref} className={className} aria-hidden />;
 }

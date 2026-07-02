@@ -9,14 +9,18 @@ import {
   type EdgeKind,
   type DriftStatus,
 } from "@/lib/taxonomy";
+import { cacheable } from "@/lib/cache";
 import { clusterGraph } from "./cluster";
 import { layoutGraph } from "./layout";
+import { topologyContentHash } from "./hash";
 import type {
   TopoEnvScope,
   TopoLayoutMode,
+  TopoProvider,
   TopoNode,
   TopoEdge,
   TopoGraph,
+  TopoGroup,
   TopoStats,
 } from "./types";
 
@@ -83,8 +87,10 @@ async function loadDriftByUrn(
 export async function getTopology(
   scope: TopoEnvScope,
   layout: TopoLayoutMode = "layered",
+  provider: TopoProvider = "all",
 ): Promise<TopoGraph> {
   const scopeAll = scope === "all";
+  const providerAll = provider === "all";
   const like = `${scope}%`;
 
   const accountRows = await db.select().from(integrationAccounts);
@@ -105,6 +111,7 @@ export async function getTopology(
       from connected c
       join resources r on r.urn = c.urn and r.present = true
       where ${scopeAll ? sql`true` : sql`lower(coalesce(r.environment, '')) like ${like}`}
+        and ${providerAll ? sql`true` : sql`r.provider = ${provider}`}
     ),
     rel_edges as (
       select e.source_urn, e.target_urn
@@ -169,48 +176,105 @@ export async function getTopology(
   });
 
   // Collapse low-signal fan-out (same-kind structural leaves) into cluster nodes
-  // for a mind-map-clean canvas, then lay out and derive stats from what is
-  // actually rendered (header ↔ canvas stay consistent; the cluster nodes
-  // themselves state the collapsed counts).
-  const clustered = clusterGraph({
-    nodes,
+  // for a mind-map-clean canvas, then lay out. The cluster+layout pass is pure
+  // in graph identity (URNs + edge triples + mode + scope + provider), so its
+  // output is cached under a content hash — the per-request ELK cost is paid
+  // once per estate shape. The sync orchestrator busts the `topology:` prefix,
+  // so a re-discovered estate re-lays-out on the next request.
+  const layoutKey = topologyContentHash({
+    urns: nodeUrns,
     edges,
-    groups: [],
-    stats: {
-      scope,
-      nodes: nodes.length,
-      edges: edges.length,
-      accounts: [],
-      byKind: [],
-      drifted: 0,
-    },
+    mode: layout,
+    scope,
+    provider,
   });
-  const { nodes: laidOut, groups } = await layoutGraph(
-    clustered.nodes,
-    clustered.edges,
-    layout,
+  let cacheHit = true;
+  const t0 = Date.now();
+  // v2 = 264×84 node box; bump when node geometry changes so a persisted
+  // (Redis) cache never serves layouts computed for the old card size.
+  const laid = await cacheable<{
+    nodes: TopoNode[];
+    groups: TopoGroup[];
+    edges: TopoEdge[];
+  }>(`topology:layout:v2:${layoutKey}`, 3600, async () => {
+    cacheHit = false;
+    const clustered = clusterGraph({
+      nodes,
+      edges,
+      groups: [],
+      stats: {
+        scope,
+        provider,
+        nodes: nodes.length,
+        edges: edges.length,
+        accounts: [],
+        byKind: [],
+        drifted: 0,
+      },
+    });
+    const { nodes: laidOut, groups } = await layoutGraph(
+      clustered.nodes,
+      clustered.edges,
+      layout,
+    );
+    return { nodes: laidOut, groups, edges: clustered.edges };
+  });
+  console.debug(
+    `[topology] layout cache ${cacheHit ? "hit" : "miss"} key=${layoutKey} scope=${scope} provider=${provider} mode=${layout} in ${Date.now() - t0}ms`,
   );
 
+  // The cache stores geometry keyed by graph IDENTITY — mutable per-node fields
+  // (status, drift) are refreshed from this request's rows so a cache hit never
+  // serves stale health while positions stay stable.
+  const liveByUrn = new Map(
+    nodeRows.map((r) => [
+      r.urn,
+      { status: asStatus(r.status), drift: driftByUrn.get(r.urn) ?? ("unknown" as DriftStatus) },
+    ]),
+  );
+  const finalNodes: TopoNode[] = laid.nodes.map((n) => {
+    if (n.data.isCluster) {
+      // Cluster summaries render neutral themselves, but their member payloads
+      // (expanded client-side) carry status/drift — refresh those too so an
+      // expanded cluster never shows cached health.
+      const members = n.data.clusterMemberNodes;
+      if (!members) return n;
+      return {
+        ...n,
+        data: {
+          ...n.data,
+          clusterMemberNodes: members.map((m) => {
+            const live = liveByUrn.get(m.urn);
+            return live ? { ...m, status: live.status, drift: live.drift } : m;
+          }),
+        },
+      };
+    }
+    const live = liveByUrn.get(n.id);
+    return live ? { ...n, data: { ...n.data, status: live.status, drift: live.drift } } : n;
+  });
+
   const kindCounts = new Map<ResourceKind, number>();
-  for (const n of clustered.nodes) kindCounts.set(n.data.kind, (kindCounts.get(n.data.kind) ?? 0) + 1);
+  for (const n of finalNodes) kindCounts.set(n.data.kind, (kindCounts.get(n.data.kind) ?? 0) + 1);
   const byKind = [...kindCounts.entries()]
     .map(([kind, n]) => ({ kind, n }))
     .sort((a, b) => b.n - a.n);
 
   const acctCounts = new Map<string, number>();
-  for (const n of clustered.nodes) acctCounts.set(n.data.account, (acctCounts.get(n.data.account) ?? 0) + 1);
+  for (const n of finalNodes) acctCounts.set(n.data.account, (acctCounts.get(n.data.account) ?? 0) + 1);
   const accounts = [...acctCounts.entries()]
     .map(([account, n]) => ({ account, label: labelFor(account), n }))
     .sort((a, b) => b.n - a.n);
 
   const stats: TopoStats = {
     scope,
-    nodes: clustered.nodes.length,
-    edges: clustered.edges.length,
+    provider,
+    nodes: finalNodes.length,
+    edges: laid.edges.length,
     accounts,
     byKind,
-    drifted: clustered.nodes.filter((n) => n.data.drift !== "in_sync" && n.data.drift !== "unknown").length,
+    drifted: finalNodes.filter((n) => n.data.drift !== "in_sync" && n.data.drift !== "unknown").length,
   };
 
-  return { nodes: laidOut, groups, edges: clustered.edges, stats };
+  return { nodes: finalNodes, groups: laid.groups, edges: laid.edges, stats };
 }

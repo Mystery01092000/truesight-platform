@@ -120,11 +120,12 @@ export async function layoutGraph(
     }
 
     // Entrance cascade: nodes on earlier layers (smaller x) resolve first,
-    // each account band staggered slightly after the previous.
+    // each account band staggered slightly after the previous. Capped at 450ms
+    // so the whole choreography (canvas fade + node entrances) stays ≤900ms.
     for (const n of accNodes) {
       const p = positioned.get(n.id);
       const normX = p ? Math.min(1, Math.max(0, (p.x - GROUP_PAD_X) / span)) : 0;
-      n.data.appearDelay = accountIndex * 0.12 + normX * 0.5;
+      n.data.appearDelay = Math.min(0.45, accountIndex * 0.06 + normX * 0.3);
     }
 
     groups.push({

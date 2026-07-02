@@ -24,6 +24,16 @@ export const TOPO_SCOPE_LABEL: Record<TopoEnvScope, string> = {
   all: "All environments",
 };
 
+/** Cloud providers the canvas can be filtered to. `all` = the whole estate. */
+export const TOPO_PROVIDERS = ["all", "aws", "azure"] as const;
+export type TopoProvider = (typeof TOPO_PROVIDERS)[number];
+
+export const TOPO_PROVIDER_LABEL: Record<TopoProvider, string> = {
+  all: "All",
+  aws: "AWS",
+  azure: "Azure",
+};
+
 /** Layout algorithms the canvas can render in. `layered` = the default force
  *  band layout; `organic` = stress-majorization for a constellation read. */
 export const TOPO_LAYOUT_MODES = ["layered", "organic"] as const;
@@ -57,6 +67,13 @@ export type TopoNodeData = {
   clusterCount?: number;
   /** Names of the collapsed members, surfaced in the detail panel. */
   clusterMembers?: string[];
+  /** Full member payloads so the client can expand a cluster in place —
+   *  progressive disclosure without a server round-trip. */
+  clusterMemberNodes?: TopoNodeData[];
+  /** True on client-materialized nodes revealed by expanding a cluster. */
+  isClusterMember?: boolean;
+  /** Render-time flag set by the canvas when this cluster is expanded. */
+  expanded?: boolean;
 };
 
 export type TopoNode = {
@@ -88,6 +105,7 @@ export type TopoEdge = {
 
 export type TopoStats = {
   scope: TopoEnvScope;
+  provider: TopoProvider;
   nodes: number;
   edges: number;
   accounts: { account: string; label: string; n: number }[];
@@ -103,6 +121,7 @@ export type TopoGraph = {
   stats: TopoStats;
 };
 
-/** Fixed node box used by both the layout engine and the rendered card. */
-export const NODE_W = 216;
-export const NODE_H = 66;
+/** Fixed node box used by both the layout engine and the rendered card. Sized
+ *  for the richer card: 48px icon tile + name / service·type / region rows. */
+export const NODE_W = 264;
+export const NODE_H = 84;

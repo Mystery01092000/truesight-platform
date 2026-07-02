@@ -14,8 +14,10 @@ import type { TopoGraph, TopoNode, TopoEdge } from "./types";
  * remains visible. Pure structural leaves collapse; the dependency graph reads.
  */
 
-/** Minimum same-kind children under one parent before they collapse into a cluster. */
-const CLUSTER_THRESHOLD = 6;
+/** Minimum same-kind children under one parent before they collapse into a
+ *  cluster. 11 = groups only cluster when they have MORE than 10 members;
+ *  anything smaller reads fine as individual cards. */
+const CLUSTER_THRESHOLD = 11;
 
 const pushInto = (m: Map<string, string[]>, k: string, v: string) => {
   const a = m.get(k);
@@ -104,6 +106,12 @@ export function clusterGraph(graph: TopoGraph): TopoGraph {
         isCluster: true,
         clusterCount: childIds.length,
         clusterMembers: childIds.map((c) => byId.get(c)?.data.name ?? c).sort(),
+        // Full member payloads ride along so the client can expand the cluster
+        // in place (progressive disclosure) without another server round-trip.
+        clusterMemberNodes: childIds
+          .map((c) => byId.get(c)?.data)
+          .filter((d): d is NonNullable<typeof d> => d != null)
+          .sort((a, b) => a.name.localeCompare(b.name)),
       },
     });
   }
