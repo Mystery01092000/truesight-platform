@@ -11,12 +11,43 @@ import { accessTickets, ticketResources, ticketApprovals, ticketStatusLog } from
 import { Surface } from "@/components/ui/Surface";
 import { Reveal } from "@/components/ui/Reveal";
 import { buttonClass } from "@/components/ui/Button";
+import { Timeline, type TimelineItem } from "@/components/ui/Timeline";
 import { TicketStatusBadge } from "@/components/ticketing/TicketStatusBadge";
-import { StatusTimeline, type TimelineEntry } from "@/components/ticketing/StatusTimeline";
 import { TicketActions } from "@/components/ticketing/TicketActions";
 import { TOOL_LABELS, STATUS_LABELS, type TicketStatus } from "@/lib/ticketing/types";
 
 export const dynamic = "force-dynamic";
+
+/** Semantic rail-dot color per resulting status (matches TicketStatusBadge). */
+const STATUS_DOT: Record<TicketStatus, string> = {
+  pending: "bg-warning",
+  peeyush_review: "bg-info",
+  kamal_review: "bg-info",
+  approved: "bg-positive",
+  declined: "bg-critical",
+  done: "bg-positive",
+};
+
+function transitionText(fromStatus: string | null, toStatus: string): string {
+  const to = STATUS_LABELS[toStatus as TicketStatus] ?? toStatus;
+  if (!fromStatus) return `Ticket opened at ${to}.`;
+  const from = STATUS_LABELS[fromStatus as TicketStatus] ?? fromStatus;
+  return `Moved from ${from} to ${to}.`;
+}
+
+const DECISION_TONE: Record<string, string> = {
+  approved: "bg-positive-soft text-positive",
+  declined: "bg-critical-soft text-critical",
+  need_more_info: "bg-warning-soft text-warning",
+  pending: "bg-surface-elevated text-mute",
+};
+
+const DECISION_LABEL: Record<string, string> = {
+  approved: "Approved",
+  declined: "Declined",
+  need_more_info: "More info",
+  pending: "Pending",
+};
 
 export async function generateMetadata({
   params,
@@ -66,12 +97,29 @@ export default async function TicketDetailPage({
   ]);
 
   const status = ticket.status as TicketStatus;
-  const timeline: TimelineEntry[] = statusLog.map((l) => ({
-    fromStatus: l.fromStatus,
-    toStatus: l.toStatus,
-    actor: l.actor,
-    at: l.at,
-  }));
+  const timelineItems: TimelineItem[] = statusLog.map((l, i) => {
+    const at = l.at instanceof Date ? l.at : new Date(l.at);
+    return {
+      id: i,
+      marker: (
+        <span
+          className={`block size-2.5 rounded-full border-2 border-surface ${
+            STATUS_DOT[l.toStatus as TicketStatus] ?? "bg-hairline-strong"
+          }`}
+        />
+      ),
+      title: (
+        <>
+          <TicketStatusBadge status={l.toStatus as TicketStatus} />
+          <span className="font-mono text-[12px] text-ash">
+            {l.actor ? `by ${l.actor}` : "system"}
+          </span>
+        </>
+      ),
+      timestamp: at.toLocaleString(),
+      body: transitionText(l.fromStatus, l.toStatus),
+    };
+  });
 
   // The current reviewer can act when the ticket is in their stage.
   const canApprove = isAdmin && (status === "peeyush_review" || status === "kamal_review");
@@ -196,30 +244,33 @@ export default async function TicketDetailPage({
               </h2>
               <ol className="space-y-3">
                 {approvals.map((a) => {
-                  const tone = !a.decision
-                    ? "text-mute"
-                    : a.decision === "approved"
-                      ? "text-accent-green"
-                      : "text-accent-red";
+                  const decision = a.decision ?? "pending";
                   return (
-                    <li
-                      key={a.id}
-                      className="flex items-start justify-between gap-3 border-b border-hairline pb-3 last:border-0 last:pb-0"
-                    >
-                      <div className="min-w-0">
-                        <div className="text-[14px] font-medium capitalize text-on-dark">
-                          {a.approverRole}
+                    <li key={a.id}>
+                      <Surface level={2} radius="md" className="p-3.5">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-[14px] font-medium capitalize leading-[1.5] text-on-dark">
+                            {a.approverRole}
+                          </span>
+                          <span
+                            className={`inline-flex items-center rounded-xs px-2 py-0.5 text-[12px] leading-[1.5] tracking-[0.4px] ${
+                              DECISION_TONE[decision] ?? DECISION_TONE.pending
+                            }`}
+                          >
+                            {DECISION_LABEL[decision] ?? decision}
+                          </span>
                         </div>
                         {a.decidedAt && (
-                          <div className="text-[12px] text-ash">
+                          <div className="mt-1 font-mono text-[12px] tabular-nums text-ash">
                             {new Date(a.decidedAt).toLocaleString()}
                           </div>
                         )}
-                        {a.notes && <div className="mt-1 text-[12px] text-mute">{a.notes}</div>}
-                      </div>
-                      <span className={`text-[12px] font-medium capitalize ${tone}`}>
-                        {a.decision ?? "pending"}
-                      </span>
+                        {a.notes && (
+                          <p className="mt-2 border-t border-hairline pt-2 text-[13px] leading-[1.5] text-mute">
+                            {a.notes}
+                          </p>
+                        )}
+                      </Surface>
                     </li>
                   );
                 })}
@@ -235,7 +286,11 @@ export default async function TicketDetailPage({
               <h2 className="mb-4 text-[16px] font-medium leading-[1.4] tracking-[0.2px] text-ink">
                 Status timeline
               </h2>
-              <StatusTimeline entries={timeline} />
+              <Timeline
+                variant="status"
+                items={timelineItems}
+                emptyMessage="No status transitions recorded yet."
+              />
             </Surface>
           </Reveal>
         </div>

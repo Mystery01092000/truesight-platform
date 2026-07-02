@@ -2,26 +2,28 @@ import { cn } from "@/lib/utils/cn";
 import { STATUS_LABELS, type TicketStatus } from "@/lib/ticketing/types";
 
 /**
- * TicketStatusBadge — maps a ticket status to the accent-soft fill + accent text
- * pair, consistent with the design system's StatusBadge vocabulary.
+ * TicketStatusBadge — maps a ticket status to the SEMANTIC token pairs
+ * (soft fill + accent text): pending=warning, in-review=info,
+ * approved/done=positive, declined=critical. `done` is the one terminal
+ * state and reads as a filled positive chip.
  */
-type Tone = "mute" | "blue" | "green" | "red" | "filled-green";
+type Tone = "warning" | "info" | "positive" | "critical" | "positive-filled";
 
 const TONE: Record<TicketStatus, Tone> = {
-  pending: "mute",
-  peeyush_review: "blue",
-  kamal_review: "blue",
-  approved: "green",
-  declined: "red",
-  done: "filled-green",
+  pending: "warning",
+  peeyush_review: "info",
+  kamal_review: "info",
+  approved: "positive",
+  declined: "critical",
+  done: "positive-filled",
 };
 
 const TONE_CLASS: Record<Tone, { fill: string; dot: string }> = {
-  mute: { fill: "bg-surface-elevated text-mute", dot: "bg-mute" },
-  blue: { fill: "bg-accent-blue-soft text-accent-blue", dot: "bg-accent-blue" },
-  green: { fill: "bg-accent-green-soft text-accent-green", dot: "bg-accent-green" },
-  red: { fill: "bg-accent-red-soft text-accent-red", dot: "bg-accent-red" },
-  "filled-green": { fill: "bg-accent-green text-on-dark", dot: "bg-on-dark" },
+  warning: { fill: "bg-warning-soft text-warning", dot: "bg-warning" },
+  info: { fill: "bg-info-soft text-info", dot: "bg-info" },
+  positive: { fill: "bg-positive-soft text-positive", dot: "bg-positive" },
+  critical: { fill: "bg-critical-soft text-critical", dot: "bg-critical" },
+  "positive-filled": { fill: "bg-positive text-on-primary", dot: "bg-on-primary" },
 };
 
 export function TicketStatusBadge({
