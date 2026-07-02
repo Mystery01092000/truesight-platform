@@ -100,7 +100,10 @@ export async function runCostSync(opts?: {
     await db
       .delete(costSnapshots)
       .where(
-        sql`${costSnapshots.periodStart} >= ${new Date(range.startDate)} AND ${costSnapshots.periodEnd} <= ${new Date(range.endDate + "T23:59:59Z")}`,
+        // ISO strings, not Date objects: raw sql`` params bypass the column
+        // mapper, and postgres.js serializes an inline Date as an invalid
+        // string arg (ERR_INVALID_ARG_TYPE). Postgres casts text→timestamptz.
+        sql`${costSnapshots.periodStart} >= ${new Date(range.startDate).toISOString()} AND ${costSnapshots.periodEnd} <= ${new Date(range.endDate + "T23:59:59Z").toISOString()}`,
       );
     await db.insert(costSnapshots).values(rows);
     await recomputeCostRollups(db);
