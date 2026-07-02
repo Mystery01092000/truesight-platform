@@ -85,12 +85,16 @@ module "ecs_service" {
     GITHUB_ORG              = var.github_org
     AZURE_RESOURCE_GROUP    = var.azure_resource_group
     AZURE_SUBSCRIPTION_NAME = var.azure_subscription_name
+    # Knowledge Base config.
+    KB_BUCKET_NAME     = aws_ssm_parameter.kb_bucket_name.value
+    KB_EMBEDDING_MODEL = aws_ssm_parameter.kb_embedding_model.value
   }
 
   # Runtime secrets pulled from SSM by the execution role at task start.
-  secrets = {
-    for k in var.app_secret_keys : k => aws_ssm_parameter.app[k].arn
-  }
+  secrets = merge(
+    { for k in var.app_secret_keys : k => aws_ssm_parameter.app[k].arn },
+    { OPENAI_API_KEY = aws_ssm_parameter.openai_api_key.arn }
+  )
 
   tags = { Service = var.app_name }
 

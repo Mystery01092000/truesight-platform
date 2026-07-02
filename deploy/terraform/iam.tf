@@ -97,6 +97,23 @@ data "aws_iam_policy_document" "task" {
     actions   = ["sts:AssumeRole"]
     resources = var.argus_readonly_role_arns
   }
+
+  # Knowledge Base S3 artefacts (docs, chunks, embedding state).
+  # Bucket encryption is AES256 (SSE-S3) so no extra KMS decrypt is required.
+  statement {
+    sid    = "KnowledgeBaseS3Access"
+    effect = "Allow"
+    actions = [
+      "s3:ListBucket",
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:DeleteObject",
+    ]
+    resources = [
+      aws_s3_bucket.knowledge_base.arn,
+      "${aws_s3_bucket.knowledge_base.arn}/*",
+    ]
+  }
 }
 
 resource "aws_iam_role_policy" "task" {

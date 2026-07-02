@@ -261,6 +261,13 @@ variable "sync_schedule_expression" {
   default     = "rate(30 minutes)"
 }
 
+# ---- Knowledge Base ingestion schedule ---------------------------------------
+variable "kb_ingest_schedule_expression" {
+  description = "EventBridge schedule for the Knowledge Base ingestion Fargate task."
+  type        = string
+  default     = "rate(10 minutes)"
+}
+
 # ---- Monitoring --------------------------------------------------------------
 variable "alarm_email" {
   description = "Optional email subscribed to the alarm SNS topic. Empty = no subscription."

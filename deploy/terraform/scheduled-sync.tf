@@ -44,13 +44,66 @@ module "scheduled_sync" {
     GITHUB_ORG              = var.github_org
     AZURE_RESOURCE_GROUP    = var.azure_resource_group
     AZURE_SUBSCRIPTION_NAME = var.azure_subscription_name
+    # Knowledge Base config.
+    KB_BUCKET_NAME     = aws_ssm_parameter.kb_bucket_name.value
+    KB_EMBEDDING_MODEL = aws_ssm_parameter.kb_embedding_model.value
   }
 
   # Same SSM SecureStrings the app uses (DATABASE_URL, AWS_*, AWS_PROD_*, GITHUB_PAT,
-  # AZURE_*). Injected by the execution role at task start; unused keys are harmless.
-  secrets = {
-    for k in var.app_secret_keys : k => aws_ssm_parameter.app[k].arn
+  # AZURE_*) plus OPENAI_API_KEY for embeddings. Injected by the execution role at
+  # task start; unused keys are harmless.
+  secrets = merge(
+    { for k in var.app_secret_keys : k => aws_ssm_parameter.app[k].arn },
+    { OPENAI_API_KEY = aws_ssm_parameter.openai_api_key.arn }
+  )
+
+  tags = { Service = var.app_name }
+}
+
+# -----------------------------------------------------------------------------
+# Knowledge Base ingestion — scheduled Fargate task.
+#
+# Reuses the Argus app image and the same cluster/roles/networking as the web
+# service. The container entrypoint is expected to honour KB_INGEST_PATH and
+# run a one-time ingestion pipeline (e.g. fetch /api/kb/ingest or invoke the
+# equivalent internal routine). Command is left empty so the image's built-in
+# CMD controls behaviour; override it if the image needs an explicit ingest CLI.
+# -----------------------------------------------------------------------------
+module "scheduled_kb_ingest" {
+  source = "../../../iac-self-service-terraform/terraform/modules/compute/ecs-scheduled-task"
+
+  task_name = "kb-ingest"
+  namespace = local.name_prefix # argus-prod -> rule "argus-prod-kb-ingest"
+
+  cluster_arn        = module.ecs_cluster.cluster_id
+  subnet_ids         = var.private_subnet_ids
+  security_group_ids = [aws_security_group.ecs.id]
+
+  image_url = "${module.ecr.repository_urls["${var.app_name}-sync"]}:latest"
+  cpu       = 512  # embedding work is heavier than the web task
+  memory    = 1024 # valid Fargate pair with cpu 512
+  command   = ["node_modules/.bin/tsx", "db/kb-ingest-cli.ts"]
+
+  schedule_expression = var.kb_ingest_schedule_expression
+
+  execution_role_arn = aws_iam_role.execution.arn
+  task_role_arn      = aws_iam_role.task.arn
+
+  environment_variables = {
+    AWS_REGION              = var.aws_region
+    AWS_MGMT_ACCOUNT_ID     = var.management_account_id
+    AWS_PROD_ACCOUNT_ID     = var.prod_account_id
+    GITHUB_ORG              = var.github_org
+    AZURE_RESOURCE_GROUP    = var.azure_resource_group
+    AZURE_SUBSCRIPTION_NAME = var.azure_subscription_name
+    KB_BUCKET_NAME          = aws_ssm_parameter.kb_bucket_name.value
+    KB_EMBEDDING_MODEL      = aws_ssm_parameter.kb_embedding_model.value
   }
+
+  secrets = merge(
+    { for k in var.app_secret_keys : k => aws_ssm_parameter.app[k].arn },
+    { OPENAI_API_KEY = aws_ssm_parameter.openai_api_key.arn }
+  )
 
   tags = { Service = var.app_name }
 }
