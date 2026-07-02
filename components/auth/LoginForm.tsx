@@ -4,13 +4,14 @@ import { useActionState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils/cn";
 import { loginAction, type LoginState } from "@/app/(auth)/login/actions";
 import { Surface } from "@/components/ui/Surface";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonClass } from "@/components/ui/Button";
 import { TextInput } from "@/components/ui/TextInput";
 import { Logo } from "@/components/brand/Logo";
 
 export function LoginForm({
   next,
   compact = false,
+  ssoError,
 }: {
   next: string;
   /**
@@ -19,6 +20,8 @@ export function LoginForm({
    * Default is the standalone card used by the /login route.
    */
   compact?: boolean;
+  /** SSO failure message resolved server-side from the ?error= query param. */
+  ssoError?: string;
 }) {
   const [state, formAction, pending] = useActionState<LoginState, FormData>(
     loginAction,
@@ -125,12 +128,12 @@ export function LoginForm({
           />
         </label>
 
-        {state.error && (
+        {(state.error || ssoError) && (
           <p
             role="alert"
             className="rounded-md bg-accent-red-soft px-3 py-2 text-[13px] leading-[1.5] text-accent-red"
           >
-            {state.error}
+            {state.error ?? ssoError}
           </p>
         )}
 
@@ -138,6 +141,18 @@ export function LoginForm({
           {pending ? "Signing in…" : "Enter Argus"}
         </Button>
       </form>
+
+      <div className="mt-4 flex items-center gap-3" aria-hidden>
+        <span className="h-px flex-1 bg-hairline" />
+        <span className="text-[12px] leading-[1.6] text-mute">or</span>
+        <span className="h-px flex-1 bg-hairline" />
+      </div>
+      <a
+        href={`/api/auth/azure/login?next=${encodeURIComponent(next)}`}
+        className={buttonClass("secondary", "md", "mt-2 w-full")}
+      >
+        Continue with Microsoft
+      </a>
     </Surface>
   );
 }

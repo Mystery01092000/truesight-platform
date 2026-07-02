@@ -2,17 +2,24 @@ import bcrypt from 'bcryptjs';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 
-import { users } from './schema';
+import { platformAdmins, users } from './schema';
 
 /**
  * Standalone seed runner: `tsx db/seed.ts` (npm run db:seed).
  *
- * Seeds the default DevOps Super Admin. Idempotent: `onConflictDoNothing` on the
- * unique email means re-running is a no-op. The password is read from env, hashed
- * with bcrypt (12 rounds), and NEVER logged. Like `db/migrate.ts`, this creates its
- * own single connection rather than importing the `server-only` client.
+ * Seeds the default DevOps Super Admin and the platform_admins SSO allowlist.
+ * Idempotent: unique-email upserts mean re-running just refreshes the rows. The
+ * password is read from env, hashed with bcrypt (12 rounds), and NEVER logged.
+ * Like `db/migrate.ts`, this creates its own single connection rather than
+ * importing the `server-only` client.
  */
 const BCRYPT_ROUNDS = 12;
+
+/** Emails granted the mapped role on SSO login (see lib/auth/providers/azure-entra.ts). */
+const PLATFORM_ADMIN_ROWS = [
+  { email: 'devops@centricity.co.in', role: 'admin', note: 'Akshat Mukhriya — DevOps Super Admin' },
+  { email: 'rishabh.arya@centricity.co.in', role: 'admin', note: 'Rishabh Arya — Maintainer' },
+] as const;
 
 async function main(): Promise<void> {
   const connectionString = process.env.DATABASE_URL;
@@ -43,6 +50,18 @@ async function main(): Promise<void> {
       .returning({ id: users.id, email: users.email });
 
     console.log(`[seed] ensured admin user "${email}" (role=admin, id=${inserted[0].id}).`);
+
+    // Upsert the SSO allowlist so re-seeding refreshes role/note per email.
+    for (const row of PLATFORM_ADMIN_ROWS) {
+      await db
+        .insert(platformAdmins)
+        .values(row)
+        .onConflictDoUpdate({
+          target: platformAdmins.email,
+          set: { role: row.role, note: row.note },
+        });
+      console.log(`[seed] ensured platform admin "${row.email}" (role=${row.role}).`);
+    }
   } finally {
     await sql.end();
   }
