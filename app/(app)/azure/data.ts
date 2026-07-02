@@ -1,15 +1,19 @@
 import "server-only";
 
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, ne } from "drizzle-orm";
 import { db } from "@/db";
-import { resources, integrationAccounts, integrationSync } from "@/db/schema";
-import { toKind } from "@/components/estate/types";
+import { driftFindings, resources, integrationAccounts, integrationSync } from "@/db/schema";
+import {
+  sortEnvironments,
+  toKind,
+  type EstateGroupSummary,
+} from "@/components/estate/types";
 import type { ResourceKind, ResourceStatus } from "@/lib/taxonomy";
 
 /**
  * Azure estate data access. Reads the materialized `resources` table (real
  * discovered Azure resources — never mocked), normalizes rows into serializable
- * view-models, and buckets them resource-group → service for the explorer UI.
+ * view-models, and rolls them up per resource group for the discovery console.
  *
  * Azure's natural top-level dimension inside a subscription is the resource
  * group (the parity of an AWS account), so the estate is grouped by
@@ -29,24 +33,10 @@ export type AzureResource = {
   kind: ResourceKind;
   status: ResourceStatus;
   lastSeen: string | null;
-};
-
-/** All resources of one Azure service within one resource group. */
-export type AzureServiceGroup = {
-  resourceGroup: string;
-  service: string;
-  kind: ResourceKind;
-  regions: string[];
-  count: number;
-  resources: AzureResource[];
-};
-
-/** Everything discovered in one resource group, bucketed by service. */
-export type AzureRgGroup = {
-  resourceGroup: string;
-  resourceCount: number;
-  serviceCount: number;
-  services: AzureServiceGroup[];
+  /** Environment tag (prod / staging / dev …) when discovered, else null. */
+  environment: string | null;
+  /** Raw ARM tags (key → value). */
+  tags: Record<string, string>;
 };
 
 export type AzureAccount = {
@@ -75,6 +65,8 @@ export async function getAzureResources(resourceGroup?: string): Promise<AzureRe
       service: resources.service,
       type: resources.type,
       status: resources.status,
+      environment: resources.environment,
+      tags: resources.tags,
       lastSeen: resources.lastSeen,
       attributes: resources.attributes,
     })
@@ -97,6 +89,8 @@ export async function getAzureResources(resourceGroup?: string): Promise<AzureRe
         kind: toKind(r.type),
         status: (r.status ?? "unknown") as ResourceStatus,
         lastSeen: r.lastSeen ? new Date(r.lastSeen).toISOString() : null,
+        environment: r.environment?.trim() || null,
+        tags: r.tags ?? {},
       } satisfies AzureResource;
     })
     // The resource-group container nodes are the grouping dimension itself.
@@ -134,57 +128,20 @@ export async function getAzureAccount(): Promise<AzureAccount> {
   };
 }
 
-/** Rank so unhealthy resources surface first inside a group. */
-const STATUS_RANK: Record<ResourceStatus, number> = {
-  stopped: 0,
-  degraded: 1,
-  unknown: 2,
-  healthy: 3,
-};
-
-function dominantKind(items: AzureResource[]): ResourceKind {
-  const tally = new Map<ResourceKind, number>();
-  for (const it of items) tally.set(it.kind, (tally.get(it.kind) ?? 0) + 1);
-  let best: ResourceKind = "unknown";
-  let bestN = -1;
-  for (const [kind, n] of tally) {
-    if (n > bestN) {
-      best = kind;
-      bestN = n;
-    }
-  }
-  return best;
+/** URNs carrying at least one non-`in_sync` Terraform drift finding. */
+export async function getDriftedUrns(): Promise<Set<string>> {
+  const rows = await db
+    .selectDistinct({ urn: driftFindings.urn })
+    .from(driftFindings)
+    .where(ne(driftFindings.classification, "in_sync"));
+  return new Set(rows.map((r) => r.urn));
 }
 
-/** Bucket a flat resource list into per-service groups, sorted by size. */
-export function groupByService(items: AzureResource[]): AzureServiceGroup[] {
-  const byService = new Map<string, AzureResource[]>();
-  for (const it of items) {
-    const list = byService.get(it.service);
-    if (list) list.push(it);
-    else byService.set(it.service, [it]);
-  }
-
-  const groups: AzureServiceGroup[] = [];
-  for (const [service, list] of byService) {
-    const sorted = [...list].sort(
-      (a, b) => STATUS_RANK[a.status] - STATUS_RANK[b.status] || a.name.localeCompare(b.name),
-    );
-    groups.push({
-      resourceGroup: sorted[0]?.resourceGroup ?? NO_RG,
-      service,
-      kind: dominantKind(sorted),
-      regions: [...new Set(sorted.map((r) => r.region))].sort(),
-      count: sorted.length,
-      resources: sorted,
-    });
-  }
-
-  return groups.sort((a, b) => b.count - a.count || a.service.localeCompare(b.service));
-}
-
-/** Bucket a flat resource list into per-resource-group groups (each with service groups). */
-export function groupByResourceGroup(items: AzureResource[]): AzureRgGroup[] {
+/** Roll a flat resource list up into per-resource-group summary cards. */
+export function summarizeResourceGroups(
+  items: AzureResource[],
+  drifted: Set<string>,
+): EstateGroupSummary[] {
   const byRg = new Map<string, AzureResource[]>();
   for (const it of items) {
     const list = byRg.get(it.resourceGroup);
@@ -192,18 +149,23 @@ export function groupByResourceGroup(items: AzureResource[]): AzureRgGroup[] {
     else byRg.set(it.resourceGroup, [it]);
   }
 
-  const groups: AzureRgGroup[] = [];
-  for (const [resourceGroup, list] of byRg) {
-    const services = groupByService(list);
-    groups.push({
-      resourceGroup,
+  const summaries: EstateGroupSummary[] = [];
+  for (const [rg, list] of byRg) {
+    summaries.push({
+      id: rg,
       resourceCount: list.length,
-      serviceCount: services.length,
-      services,
+      serviceCount: new Set(list.map((r) => r.service)).size,
+      regionCount: new Set(list.map((r) => r.region)).size,
+      driftCount: list.filter((r) => drifted.has(r.urn)).length,
+      environments: sortEnvironments(
+        list.map((r) => r.environment).filter((e): e is string => Boolean(e)),
+      ),
+      degraded: list.filter((r) => r.status === "degraded").length,
+      stopped: list.filter((r) => r.status === "stopped").length,
     });
   }
 
-  return groups.sort(
-    (a, b) => b.resourceCount - a.resourceCount || a.resourceGroup.localeCompare(b.resourceGroup),
+  return summaries.sort(
+    (a, b) => b.resourceCount - a.resourceCount || a.id.localeCompare(b.id),
   );
 }

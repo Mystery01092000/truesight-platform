@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, Cloud } from "lucide-react";
+import { ArrowLeft, Boxes, Cloud, GitCompareArrows, Globe, Layers } from "lucide-react";
 
-import { Surface } from "@/components/ui/Surface";
 import { Reveal } from "@/components/ui/Reveal";
-import { getAzureResources } from "../data";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { StatTile } from "@/components/ui/StatTile";
+import { buttonClass } from "@/components/ui/Button";
+import { getAzureResources, getDriftedUrns } from "../data";
 import { AzureResourceTable } from "../explorer";
 
 export const dynamic = "force-dynamic";
@@ -31,10 +33,21 @@ export default async function AzureResourceGroupPage({
   const resourceGroup = decodeURIComponent(rg);
 
   // Real rows for this one resource group (never mocked).
-  const resources = await getAzureResources(resourceGroup);
+  const [resources, drifted] = await Promise.all([
+    getAzureResources(resourceGroup),
+    getDriftedUrns(),
+  ]);
   const regionCount = new Set(resources.map((r) => r.region)).size;
   const serviceCount = new Set(resources.map((r) => r.service)).size;
+  const driftCount = resources.filter((r) => drifted.has(r.urn)).length;
   const subscriptionId = resources[0]?.subscriptionId ?? null;
+
+  const stats = [
+    { label: "Resources", value: resources.length, icon: <Boxes /> },
+    { label: "Services", value: serviceCount, icon: <Layers /> },
+    { label: "Regions", value: regionCount, icon: <Globe /> },
+    { label: "Drift findings", value: driftCount, icon: <GitCompareArrows /> },
+  ];
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -80,22 +93,34 @@ export default async function AzureResourceGroupPage({
       </Reveal>
 
       {resources.length === 0 ? (
-        <Reveal delay={0.1}>
-          <Surface level={1} radius="lg" className="p-8 text-center">
-            <h2 className="text-[18px] font-medium leading-[1.4] text-ink">
-              No resources for this resource group
-            </h2>
-            <p className="mx-auto mt-1.5 max-w-prose text-[14px] leading-[1.6] text-body">
-              Nothing discovered under{" "}
-              <span className="font-mono text-on-dark">{resourceGroup}</span> yet. Run the Azure
-              sync, or head back to the estate overview.
-            </p>
-          </Surface>
+        <Reveal delay={0.08}>
+          <EmptyState
+            icon={<Cloud />}
+            title="No resources for this resource group"
+            description={`Nothing discovered under ${resourceGroup} yet. Run the Azure sync, or head back to the estate overview.`}
+            action={
+              <Link href="/azure" className={buttonClass("install", "sm")}>
+                Back to Azure estate
+              </Link>
+            }
+          />
         </Reveal>
       ) : (
-        <Reveal delay={0.1}>
-          <AzureResourceTable resources={resources} />
-        </Reveal>
+        <>
+          <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {stats.map((s, i) => (
+              <Reveal key={s.label} delay={Math.min(i, 8) * 0.04}>
+                <StatTile label={s.label} value={s.value} icon={s.icon} />
+              </Reveal>
+            ))}
+          </div>
+          <Reveal delay={0.12}>
+            <AzureResourceTable
+              resources={resources}
+              storageKey={`argus:azure:rg:${resourceGroup}`}
+            />
+          </Reveal>
+        </>
       )}
     </div>
   );

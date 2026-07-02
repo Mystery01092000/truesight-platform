@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
-import { Cloud } from "lucide-react";
+import Link from "next/link";
+import { Boxes, Cloud, FolderTree, Globe, Layers } from "lucide-react";
 
-import { Surface } from "@/components/ui/Surface";
 import { Reveal } from "@/components/ui/Reveal";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { StatTile } from "@/components/ui/StatTile";
+import { buttonClass } from "@/components/ui/Button";
+import { EstateSummaryCard } from "@/components/estate/EstateSummaryCard";
 import {
   getAzureResources,
   getAzureAccount,
-  groupByResourceGroup,
+  getDriftedUrns,
+  summarizeResourceGroups,
 } from "./data";
 import { AzureEstateExplorer } from "./explorer";
 
@@ -15,19 +20,21 @@ export const dynamic = "force-dynamic";
 
 export default async function AzurePage() {
   // Real discovered Azure resources from the `resources` table — never mocked.
-  const [resources, account] = await Promise.all([getAzureResources(), getAzureAccount()]);
+  const [resources, account, drifted] = await Promise.all([
+    getAzureResources(),
+    getAzureAccount(),
+    getDriftedUrns(),
+  ]);
 
-  const rgGroups = groupByResourceGroup(resources);
-  const resourceGroups = rgGroups.map((g) => g.resourceGroup);
-  const services = rgGroups.flatMap((g) => g.services);
+  const resourceGroups = summarizeResourceGroups(resources, drifted);
   const serviceCount = new Set(resources.map((r) => r.service)).size;
   const regionCount = new Set(resources.map((r) => r.region)).size;
 
   const stats = [
-    { label: "Resources", value: resources.length },
-    { label: "Resource groups", value: resourceGroups.length },
-    { label: "Services", value: serviceCount },
-    { label: "Regions", value: regionCount },
+    { label: "Resources", value: resources.length, icon: <Boxes /> },
+    { label: "Resource groups", value: resourceGroups.length, icon: <FolderTree /> },
+    { label: "Services", value: serviceCount, icon: <Layers /> },
+    { label: "Regions", value: regionCount, icon: <Globe /> },
   ];
 
   return (
@@ -61,37 +68,52 @@ export default async function AzurePage() {
       </Reveal>
 
       {resources.length === 0 ? (
-        <Reveal delay={0.1}>
-          <Surface level={1} radius="lg" className="p-8 text-center">
-            <div className="mx-auto grid size-12 place-items-center rounded-lg border border-hairline bg-surface-card">
-              <Cloud size={24} strokeWidth={1.5} className="text-mute" />
-            </div>
-            <h2 className="mt-4 text-[18px] font-medium leading-[1.4] text-ink">
-              No Azure resources discovered yet
-            </h2>
-            <p className="mx-auto mt-1.5 max-w-prose text-[14px] leading-[1.6] text-body">
-              Argus hasn&rsquo;t mapped this subscription. Run the Azure sync to discover
-              resource groups, services and resources read-only via Resource Graph — they&rsquo;ll
-              appear here grouped by resource group and service.
-            </p>
-          </Surface>
+        <Reveal delay={0.08}>
+          <EmptyState
+            icon={<Cloud />}
+            title="No Azure resources discovered yet"
+            description="Argus hasn't mapped this subscription. Run the Azure sync to discover resource groups, services and resources read-only via Resource Graph — they'll appear here grouped by resource group and service."
+            action={
+              <Link href="/overview" className={buttonClass("install", "sm")}>
+                Go to overview
+              </Link>
+            }
+          />
         </Reveal>
       ) : (
         <>
-          <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
             {stats.map((s, i) => (
-              <Reveal key={s.label} delay={i * 0.05}>
-                <Surface level={1} radius="lg" className="p-5">
-                  <div className="text-[13px] text-mute">{s.label}</div>
-                  <div className="mt-2 font-display text-[40px] font-medium leading-none tracking-[-0.5px] text-ink tabular-nums">
-                    {s.value}
-                  </div>
-                </Surface>
+              <Reveal key={s.label} delay={Math.min(i, 8) * 0.04}>
+                <StatTile label={s.label} value={s.value} icon={s.icon} />
               </Reveal>
             ))}
           </div>
 
-          <AzureEstateExplorer resourceGroups={resourceGroups} services={services} />
+          <section aria-label="Resource groups" className="mb-8">
+            <h2 className="mb-3 text-[11px] font-medium uppercase leading-[1.4] tracking-[0.06em] text-ash">
+              Resource groups
+            </h2>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {resourceGroups.map((summary, i) => (
+                <Reveal key={summary.id} delay={Math.min(i, 8) * 0.04}>
+                  <EstateSummaryCard
+                    summary={summary}
+                    href={`/azure/${encodeURIComponent(summary.id)}`}
+                  />
+                </Reveal>
+              ))}
+            </div>
+          </section>
+
+          <section aria-label="Resources">
+            <h2 className="mb-3 text-[11px] font-medium uppercase leading-[1.4] tracking-[0.06em] text-ash">
+              Resources
+            </h2>
+            <Reveal delay={0.08}>
+              <AzureEstateExplorer resources={resources} />
+            </Reveal>
+          </section>
         </>
       )}
     </div>

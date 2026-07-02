@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, Cloud } from "lucide-react";
-import { getAwsResources } from "@/lib/estate/query";
-import { Surface } from "@/components/ui/Surface";
+import { ArrowLeft, Boxes, Cloud, GitCompareArrows, Globe, Layers } from "lucide-react";
+
 import { Reveal } from "@/components/ui/Reveal";
-import { AccountResourceExplorer } from "@/components/estate/AccountResourceExplorer";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { StatTile } from "@/components/ui/StatTile";
+import { buttonClass } from "@/components/ui/Button";
+import { ResourceExplorer } from "@/components/estate/ResourceExplorer";
+import { getAwsEstateResources, getDriftedUrns } from "../data";
 
 export const dynamic = "force-dynamic";
 
@@ -30,9 +33,17 @@ export default async function AwsAccountPage({
   const acct = decodeURIComponent(account);
 
   // Real rows for this one AWS account (never mocked).
-  const resources = await getAwsResources(acct);
+  const [resources, drifted] = await Promise.all([getAwsEstateResources(acct), getDriftedUrns()]);
   const regionCount = new Set(resources.map((r) => r.region)).size;
   const serviceCount = new Set(resources.map((r) => r.service)).size;
+  const driftCount = resources.filter((r) => drifted.has(r.urn)).length;
+
+  const stats = [
+    { label: "Resources", value: resources.length, icon: <Boxes /> },
+    { label: "Services", value: serviceCount, icon: <Layers /> },
+    { label: "Regions", value: regionCount, icon: <Globe /> },
+    { label: "Drift findings", value: driftCount, icon: <GitCompareArrows /> },
+  ];
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -70,22 +81,35 @@ export default async function AwsAccountPage({
       </Reveal>
 
       {resources.length === 0 ? (
-        <Reveal delay={0.1}>
-          <Surface level={1} radius="lg" className="p-8 text-center">
-            <h2 className="text-[18px] font-medium leading-[1.4] text-ink">
-              No resources for this account
-            </h2>
-            <p className="mx-auto mt-1.5 max-w-prose text-[14px] leading-[1.6] text-body">
-              Nothing discovered under{" "}
-              <span className="text-on-dark tabular-nums">{acct}</span> yet. Trigger a sync,
-              or head back to the estate overview.
-            </p>
-          </Surface>
+        <Reveal delay={0.08}>
+          <EmptyState
+            icon={<Cloud />}
+            title="No resources for this account"
+            description={`Nothing discovered under ${acct} yet. Trigger a sync, or head back to the estate overview.`}
+            action={
+              <Link href="/aws" className={buttonClass("install", "sm")}>
+                Back to AWS estate
+              </Link>
+            }
+          />
         </Reveal>
       ) : (
-        <Reveal delay={0.1}>
-          <AccountResourceExplorer resources={resources} />
-        </Reveal>
+        <>
+          <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {stats.map((s, i) => (
+              <Reveal key={s.label} delay={Math.min(i, 8) * 0.04}>
+                <StatTile label={s.label} value={s.value} icon={s.icon} />
+              </Reveal>
+            ))}
+          </div>
+          <Reveal delay={0.12}>
+            <ResourceExplorer
+              resources={resources}
+              provider="aws"
+              storageKey={`argus:aws:account:${acct}`}
+            />
+          </Reveal>
+        </>
       )}
     </div>
   );
