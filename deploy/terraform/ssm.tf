@@ -20,9 +20,19 @@ resource "aws_ssm_parameter" "openai_api_key" {
 resource "aws_ssm_parameter" "kb_bucket_name" {
   name        = "${var.ssm_prefix}/KB_BUCKET_NAME"
   type        = "String"
-  value       = aws_s3_bucket.knowledge_base.id
+  value       = aws_s3_bucket.kb_backend.id
   description = "S3 bucket used by the Argus Knowledge Base backend."
   tags        = { Name = "${var.ssm_prefix}/KB_BUCKET_NAME", Service = var.app_name }
+}
+
+# Terraform OWNS this value (composed from the redis module + its auth token);
+# no ignore_changes — rotation happens by re-applying the module.
+resource "aws_ssm_parameter" "redis_url" {
+  name        = "${var.ssm_prefix}/REDIS_URL"
+  type        = "SecureString"
+  value       = local.redis_url
+  description = "Full rediss:// connection URL (auth token embedded) for the Argus cache."
+  tags        = { Name = "${var.ssm_prefix}/REDIS_URL", Service = var.app_name }
 }
 
 resource "aws_ssm_parameter" "kb_embedding_model" {

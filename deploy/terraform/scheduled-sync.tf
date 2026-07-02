@@ -7,7 +7,7 @@
 # INCREMENTALLY into the KB (resources upsert-by-urn + snapshot-on-change), so
 # the Postgres snapshot the screens read stays fresh without a manual refresh.
 #
-# The sync runs in ITS OWN task (never the 256/512 web task), reusing the app's
+# The sync runs in ITS OWN task (never the web task), reusing the app's
 # execution + task roles (SSM read + KMS decrypt + sts:AssumeRole argus-readonly),
 # the private subnets (NAT egress), the ECS SG, and the same /cwt/prod/argus/*
 # secrets. The image is built + pushed to ECR by the Jenkins pipeline.
@@ -24,7 +24,7 @@ module "scheduled_sync" {
   security_group_ids = [aws_security_group.ecs.id]
 
   image_url = "${module.ecr.repository_urls["${var.app_name}-sync"]}:latest"
-  cpu       = 512  # discovery is heavier than the web task; valid Fargate pair
+  cpu       = 512  # discovery workload; valid Fargate pair
   memory    = 1024 # with cpu 512
   command   = []   # use the image's built-in 3-CLI sync CMD (Dockerfile.sync)
 
@@ -50,11 +50,14 @@ module "scheduled_sync" {
   }
 
   # Same SSM SecureStrings the app uses (DATABASE_URL, AWS_*, AWS_PROD_*, GITHUB_PAT,
-  # AZURE_*) plus OPENAI_API_KEY for embeddings. Injected by the execution role at
-  # task start; unused keys are harmless.
+  # AZURE_*) plus OPENAI_API_KEY for embeddings and REDIS_URL for the shared cache.
+  # Injected by the execution role at task start; unused keys are harmless.
   secrets = merge(
     { for k in var.app_secret_keys : k => aws_ssm_parameter.app[k].arn },
-    { OPENAI_API_KEY = aws_ssm_parameter.openai_api_key.arn }
+    {
+      OPENAI_API_KEY = aws_ssm_parameter.openai_api_key.arn
+      REDIS_URL      = aws_ssm_parameter.redis_url.arn
+    }
   )
 
   tags = { Service = var.app_name }
@@ -80,7 +83,7 @@ module "scheduled_kb_ingest" {
   security_group_ids = [aws_security_group.ecs.id]
 
   image_url = "${module.ecr.repository_urls["${var.app_name}-sync"]}:latest"
-  cpu       = 512  # embedding work is heavier than the web task
+  cpu       = 512  # embedding workload
   memory    = 1024 # valid Fargate pair with cpu 512
   command   = ["node_modules/.bin/tsx", "db/kb-ingest-cli.ts"]
 
@@ -102,7 +105,10 @@ module "scheduled_kb_ingest" {
 
   secrets = merge(
     { for k in var.app_secret_keys : k => aws_ssm_parameter.app[k].arn },
-    { OPENAI_API_KEY = aws_ssm_parameter.openai_api_key.arn }
+    {
+      OPENAI_API_KEY = aws_ssm_parameter.openai_api_key.arn
+      REDIS_URL      = aws_ssm_parameter.redis_url.arn
+    }
   )
 
   tags = { Service = var.app_name }

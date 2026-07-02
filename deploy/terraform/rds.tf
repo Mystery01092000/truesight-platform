@@ -1,5 +1,5 @@
 # =============================================================================
-# RDS PostgreSQL — small, single-AZ, Graviton (db.t4g.micro) for Argus.
+# RDS PostgreSQL — small, single-AZ, Graviton (db.t4g.small) for Argus.
 # Lives in the prod DATA subnets; reachable ONLY from the ECS task SG (5432).
 # The module provisions its own KMS key, subnet group, parameter group and a
 # Secrets Manager secret holding the generated master credential.
@@ -19,7 +19,7 @@ module "rds" {
   # (16.9). Parameter group family "postgres16" already covers this version.
   engine_version = "16.9"
 
-  instance_class        = var.db_instance_class # db.t4g.micro
+  instance_class        = var.db_instance_class # db.t4g.small
   initial_database_name = var.db_name           # argus
   allocated_storage     = var.db_allocated_storage
   max_allocated_storage = var.db_max_allocated_storage
@@ -31,7 +31,7 @@ module "rds" {
   skip_final_snapshot     = false
   backup_retention_period = 7
 
-  # Cost control: db.t4g.micro — keep PI / enhanced monitoring off (<$50/mo).
+  # Cost control: db.t4g.small — keep PI / enhanced monitoring off.
   performance_insights_enabled = false
   enhanced_monitoring_interval = 0
 

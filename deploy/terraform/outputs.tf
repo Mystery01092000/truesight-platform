@@ -51,3 +51,18 @@ output "ssm_secret_prefix" {
   description = "SSM path prefix operators fill with real secret values."
   value       = var.ssm_prefix
 }
+
+output "cloudfront_distribution_id" {
+  description = "CloudFront distribution ID (cache invalidations after deploys)."
+  value       = aws_cloudfront_distribution.argus.id
+}
+
+output "cloudfront_domain_name" {
+  description = "CloudFront *.cloudfront.net domain (pre-cutover verification target)."
+  value       = aws_cloudfront_distribution.argus.domain_name
+}
+
+output "redis_endpoint" {
+  description = "ElastiCache Redis primary endpoint (host only)."
+  value       = module.redis.primary_endpoint
+}

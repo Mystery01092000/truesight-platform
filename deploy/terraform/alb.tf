@@ -71,3 +71,39 @@ resource "aws_lb_listener" "http_redirect" {
 
   tags = { Name = "${local.name_prefix}-http-redirect" }
 }
+
+# CUTOVER (CloudFront hardening — enable AFTER argus-infraspace DNS points at
+# the distribution, together with the prefix-list SG rule in
+# security-groups.tf): only requests carrying CloudFront's X-Origin-Verify
+# secret reach the app; direct-to-ALB traffic gets a 403. Also flip the
+# `https` listener default_action above to the fixed-response below so the
+# forward happens exclusively through this rule.
+#
+# resource "aws_lb_listener_rule" "cloudfront_origin_verify" {
+#   listener_arn = aws_lb_listener.https.arn
+#   priority     = 1
+#
+#   action {
+#     type             = "forward"
+#     target_group_arn = aws_lb_target_group.this.arn
+#   }
+#
+#   condition {
+#     http_header {
+#       http_header_name = "X-Origin-Verify"
+#       values           = [random_password.origin_verify.result]
+#     }
+#   }
+#
+#   tags = { Name = "${local.name_prefix}-origin-verify" }
+# }
+#
+# ...and replace the `https` listener default_action with:
+#   default_action {
+#     type = "fixed-response"
+#     fixed_response {
+#       content_type = "text/plain"
+#       message_body = "Forbidden"
+#       status_code  = "403"
+#     }
+#   }

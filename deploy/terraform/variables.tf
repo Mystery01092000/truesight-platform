@@ -111,6 +111,12 @@ variable "acm_domain" {
   default     = "*.centricitywealth.tech"
 }
 
+variable "origin_domain_name" {
+  description = "Origin-facing FQDN CloudFront uses to reach the ALB (covered by the wildcard ALB cert)."
+  type        = string
+  default     = "argus-origin.centricitywealth.tech"
+}
+
 # ---- Container / ECS ---------------------------------------------------------
 variable "container_port" {
   description = "Port the Next.js standalone server listens on."
@@ -125,33 +131,33 @@ variable "health_check_path" {
 }
 
 variable "task_cpu" {
-  description = "Fargate task CPU units (256 = 0.25 vCPU)."
+  description = "Fargate task CPU units (1024 = 1 vCPU)."
   type        = number
-  default     = 256
+  default     = 1024
 }
 
 variable "task_memory" {
   description = "Fargate task memory (MiB)."
   type        = number
-  default     = 512
+  default     = 2048
 }
 
 variable "desired_count" {
   description = "Desired running task count."
   type        = number
-  default     = 1
+  default     = 2
 }
 
 variable "min_count" {
   description = "Autoscaling minimum task count."
   type        = number
-  default     = 1
+  default     = 2
 }
 
 variable "max_count" {
   description = "Autoscaling maximum task count."
   type        = number
-  default     = 2
+  default     = 4
 }
 
 variable "image_tag" {
@@ -164,7 +170,7 @@ variable "image_tag" {
 variable "db_instance_class" {
   description = "RDS instance class (Graviton, cost-optimised)."
   type        = string
-  default     = "db.t4g.micro"
+  default     = "db.t4g.small"
 }
 
 variable "db_name" {

@@ -32,7 +32,7 @@ resource "aws_ssm_parameter" "app" {
 }
 
 # -----------------------------------------------------------------------------
-# Argus Fargate service (256 CPU / 512 MiB, desired 1 / max 2).
+# Argus Fargate service (1024 CPU / 2048 MiB, desired 2 / max 4).
 # -----------------------------------------------------------------------------
 module "ecs_service" {
   # Shared estate module (local path; git-source alt in ecr.tf header).
@@ -93,7 +93,10 @@ module "ecs_service" {
   # Runtime secrets pulled from SSM by the execution role at task start.
   secrets = merge(
     { for k in var.app_secret_keys : k => aws_ssm_parameter.app[k].arn },
-    { OPENAI_API_KEY = aws_ssm_parameter.openai_api_key.arn }
+    {
+      OPENAI_API_KEY = aws_ssm_parameter.openai_api_key.arn
+      REDIS_URL      = aws_ssm_parameter.redis_url.arn
+    }
   )
 
   tags = { Service = var.app_name }

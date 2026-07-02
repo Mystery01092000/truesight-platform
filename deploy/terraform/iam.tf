@@ -112,6 +112,30 @@ data "aws_iam_policy_document" "task" {
     resources = [
       aws_s3_bucket.knowledge_base.arn,
       "${aws_s3_bucket.knowledge_base.arn}/*",
+      aws_s3_bucket.kb_backend.arn,
+      "${aws_s3_bucket.kb_backend.arn}/*",
+    ]
+  }
+
+  # Bedrock — KB embeddings (Titan v2) + generation (Claude). Foundation-model
+  # ARNs are regionless-account (::) and scoped to the two model families.
+  # Cross-region inference profiles (apac.*) route the call to other regions,
+  # so the profile ARN in the CALLING region is needed alongside the
+  # foundation-model ARNs of every region the profile can land in (covered by
+  # the region wildcard). us-east-1 profiles included for a region fallback.
+  statement {
+    sid    = "BedrockInvokeKbModels"
+    effect = "Allow"
+    actions = [
+      "bedrock:InvokeModel",
+      "bedrock:InvokeModelWithResponseStream",
+    ]
+    resources = [
+      "arn:aws:bedrock:*::foundation-model/amazon.titan-embed-text-v2:0",
+      "arn:aws:bedrock:*::foundation-model/anthropic.claude-*",
+      "arn:aws:bedrock:ap-south-1:${local.account_id}:inference-profile/apac.anthropic.claude-*",
+      "arn:aws:bedrock:us-east-1:${local.account_id}:inference-profile/apac.anthropic.claude-*",
+      "arn:aws:bedrock:us-east-1:${local.account_id}:inference-profile/us.anthropic.claude-*",
     ]
   }
 }

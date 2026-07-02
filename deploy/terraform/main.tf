@@ -49,6 +49,30 @@ provider "aws" {
 }
 
 # -----------------------------------------------------------------------------
+# us-east-1 provider — CloudFront viewer certificates MUST live in us-east-1.
+# Same prod-account assume_role as the default provider, different region.
+# -----------------------------------------------------------------------------
+provider "aws" {
+  alias  = "us_east_1"
+  region = "us-east-1"
+
+  assume_role {
+    role_arn     = "arn:aws:iam::${var.prod_account_id}:role/${var.assume_role_name}"
+    session_name = "terraform-argus-prod-cf"
+  }
+
+  default_tags {
+    tags = {
+      Owner       = "rishabh"
+      Team        = "infra-services"
+      Project     = "argus"
+      Environment = "prod"
+      ManagedBy   = "terraform"
+    }
+  }
+}
+
+# -----------------------------------------------------------------------------
 # Management provider — Route53 hosted zone lives in the management account
 # (664224997032). The pipeline's base credentials already reside in this
 # account, so this aliased provider uses them directly (no assume_role).
