@@ -1,15 +1,24 @@
 import "server-only";
-import { sql } from "drizzle-orm";
+import { sql, desc, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { integrationAccounts, resourceEdges } from "@/db/schema";
+import { integrationAccounts, resourceEdges, driftFindings } from "@/db/schema";
 import {
   RESOURCE_KINDS,
   type ResourceKind,
   type ResourceStatus,
   type EdgeKind,
+  type DriftStatus,
 } from "@/lib/taxonomy";
+import { clusterGraph } from "./cluster";
 import { layoutGraph } from "./layout";
-import type { TopoEnvScope, TopoNode, TopoEdge, TopoGraph, TopoStats } from "./types";
+import type {
+  TopoEnvScope,
+  TopoLayoutMode,
+  TopoNode,
+  TopoEdge,
+  TopoGraph,
+  TopoStats,
+} from "./types";
 
 /**
  * Server-side topology graph builder. Reads the real `resources` + `resource_edges`
@@ -46,96 +55,35 @@ const asKind = (t: string | null): ResourceKind =>
 const asStatus = (s: string | null): ResourceStatus =>
   s === "healthy" || s === "degraded" || s === "stopped" ? s : "unknown";
 
-const pushInto = (m: Map<string, string[]>, k: string, v: string) => {
-  const a = m.get(k);
-  if (a) a.push(v);
-  else m.set(k, [v]);
-};
-
 /**
- * Mind-map curation. A VPC `contains` dozens of subnets/SGs that add density
- * without dependency signal — they only ever appear as the target of a
- * `contains` edge. We fold those pure structural leaves into a single summary
- * node per container ("N network resources"), so the workload weave (ECS → ECR
- * lineage, workload → networking) becomes the visual hero. Anything that also
- * participates in a non-`contains` edge stays a first-class node.
+ * Resolve the latest Terraform drift classification per URN from the
+ * `drift_findings` KB. Returns a URN → status map so the topology can render
+ * the real "no blind spots" halo on every node. Falls back to `unknown` when no
+ * finding exists — the canvas reads clean until the drift engine has spoken.
  */
-const MIN_COLLAPSE = 4;
-function curate(
-  nodes: TopoNode[],
-  edges: TopoEdge[],
-): { nodes: TopoNode[]; edges: TopoEdge[] } {
-  const byId = new Map(nodes.map((n) => [n.id, n]));
-  const isContainer = new Set<string>();
-  const hasWorkloadEdge = new Set<string>();
-  const containedBy = new Map<string, string[]>();
-
-  for (const e of edges) {
-    if (e.kind === "contains") {
-      isContainer.add(e.source);
-      pushInto(containedBy, e.target, e.source);
-    } else {
-      hasWorkloadEdge.add(e.source);
-      hasWorkloadEdge.add(e.target);
-    }
+async function loadDriftByUrn(
+  urns: string[],
+): Promise<Map<string, DriftStatus>> {
+  if (urns.length === 0) return new Map();
+  const rows = await db
+    .select({
+      urn: driftFindings.urn,
+      classification: driftFindings.classification,
+    })
+    .from(driftFindings)
+    .where(inArray(driftFindings.urn, urns))
+    .orderBy(desc(driftFindings.detectedAt));
+  const latest = new Map<string, DriftStatus>();
+  for (const r of rows) {
+    if (!latest.has(r.urn)) latest.set(r.urn, r.classification);
   }
-
-  const collapsibleByParent = new Map<string, string[]>();
-  for (const n of nodes) {
-    const parents = containedBy.get(n.id);
-    if (
-      n.data.kind === "network" &&
-      !isContainer.has(n.id) &&
-      !hasWorkloadEdge.has(n.id) &&
-      parents &&
-      parents.length === 1
-    ) {
-      pushInto(collapsibleByParent, parents[0], n.id);
-    }
-  }
-
-  const removed = new Set<string>();
-  const clusterNodes: TopoNode[] = [];
-  const clusterEdges: TopoEdge[] = [];
-  for (const [parent, children] of collapsibleByParent) {
-    const parentNode = byId.get(parent);
-    if (!parentNode || children.length < MIN_COLLAPSE) continue;
-    for (const c of children) removed.add(c);
-    const clusterId = `cluster:${parent}`;
-    clusterNodes.push({
-      id: clusterId,
-      group: parentNode.group,
-      position: { x: 0, y: 0 },
-      width: 0,
-      height: 0,
-      data: {
-        urn: clusterId,
-        name: `${children.length} network resources`,
-        kind: "network",
-        service: parentNode.data.service,
-        provider: parentNode.data.provider,
-        account: parentNode.data.account,
-        accountLabel: parentNode.data.accountLabel,
-        region: parentNode.data.region,
-        environment: parentNode.data.environment,
-        status: "unknown",
-        drift: "unknown",
-        nativeType: null,
-        appearDelay: 0,
-        isCluster: true,
-        clusterCount: children.length,
-        clusterMembers: children.map((c) => byId.get(c)?.data.name ?? c).sort(),
-      },
-    });
-    clusterEdges.push({ id: `e:${clusterId}`, source: parent, target: clusterId, kind: "contains" });
-  }
-
-  const keptNodes = nodes.filter((n) => !removed.has(n.id));
-  const keptEdges = edges.filter((e) => !removed.has(e.source) && !removed.has(e.target));
-  return { nodes: [...keptNodes, ...clusterNodes], edges: [...keptEdges, ...clusterEdges] };
+  return latest;
 }
 
-export async function getTopology(scope: TopoEnvScope): Promise<TopoGraph> {
+export async function getTopology(
+  scope: TopoEnvScope,
+  layout: TopoLayoutMode = "layered",
+): Promise<TopoGraph> {
   const scopeAll = scope === "all";
   const like = `${scope}%`;
 
@@ -177,6 +125,10 @@ export async function getTopology(scope: TopoEnvScope): Promise<TopoGraph> {
 
   const nodeUrns = new Set(nodeRows.map((n) => n.urn));
 
+  // Resolve the latest Terraform drift classification for every resource in the
+  // weave — the signature "no blind spots" halo is driven from real findings.
+  const driftByUrn = await loadDriftByUrn([...nodeUrns]);
+
   // All edges whose BOTH endpoints are in-scope — guarantees a fully-woven graph
   // with no half-drawn dependencies. 428 edges total, so an in-memory filter.
   const allEdges = await db.select().from(resourceEdges);
@@ -209,39 +161,56 @@ export async function getTopology(scope: TopoEnvScope): Promise<TopoGraph> {
         region: r.region,
         environment: r.environment,
         status: asStatus(r.status),
-        drift: "unknown",
+        drift: driftByUrn.get(r.urn) ?? "unknown",
         nativeType: r.native_type,
         appearDelay: 0,
       },
     };
   });
 
-  // Fold structural leaves into cluster nodes for a mind-map-clean canvas, then
-  // lay out and derive stats from what is actually rendered (header ↔ canvas
-  // stay consistent; the cluster nodes themselves state the collapsed counts).
-  const curated = curate(nodes, edges);
-  const { nodes: laidOut, groups } = await layoutGraph(curated.nodes, curated.edges);
+  // Collapse low-signal fan-out (same-kind structural leaves) into cluster nodes
+  // for a mind-map-clean canvas, then lay out and derive stats from what is
+  // actually rendered (header ↔ canvas stay consistent; the cluster nodes
+  // themselves state the collapsed counts).
+  const clustered = clusterGraph({
+    nodes,
+    edges,
+    groups: [],
+    stats: {
+      scope,
+      nodes: nodes.length,
+      edges: edges.length,
+      accounts: [],
+      byKind: [],
+      drifted: 0,
+    },
+  });
+  const { nodes: laidOut, groups } = await layoutGraph(
+    clustered.nodes,
+    clustered.edges,
+    layout,
+  );
 
   const kindCounts = new Map<ResourceKind, number>();
-  for (const n of curated.nodes) kindCounts.set(n.data.kind, (kindCounts.get(n.data.kind) ?? 0) + 1);
+  for (const n of clustered.nodes) kindCounts.set(n.data.kind, (kindCounts.get(n.data.kind) ?? 0) + 1);
   const byKind = [...kindCounts.entries()]
     .map(([kind, n]) => ({ kind, n }))
     .sort((a, b) => b.n - a.n);
 
   const acctCounts = new Map<string, number>();
-  for (const n of curated.nodes) acctCounts.set(n.data.account, (acctCounts.get(n.data.account) ?? 0) + 1);
+  for (const n of clustered.nodes) acctCounts.set(n.data.account, (acctCounts.get(n.data.account) ?? 0) + 1);
   const accounts = [...acctCounts.entries()]
     .map(([account, n]) => ({ account, label: labelFor(account), n }))
     .sort((a, b) => b.n - a.n);
 
   const stats: TopoStats = {
     scope,
-    nodes: curated.nodes.length,
-    edges: curated.edges.length,
+    nodes: clustered.nodes.length,
+    edges: clustered.edges.length,
     accounts,
     byKind,
-    drifted: curated.nodes.filter((n) => n.data.drift !== "in_sync" && n.data.drift !== "unknown").length,
+    drifted: clustered.nodes.filter((n) => n.data.drift !== "in_sync" && n.data.drift !== "unknown").length,
   };
 
-  return { nodes: laidOut, groups, edges: curated.edges, stats };
+  return { nodes: laidOut, groups, edges: clustered.edges, stats };
 }

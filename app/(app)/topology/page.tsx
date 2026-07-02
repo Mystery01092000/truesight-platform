@@ -4,7 +4,9 @@ import { getTopology } from "@/lib/topology/graph";
 import {
   TOPO_ENV_SCOPES,
   TOPO_SCOPE_LABEL,
+  TOPO_LAYOUT_MODES,
   type TopoEnvScope,
+  type TopoLayoutMode,
 } from "@/lib/topology/types";
 import { TopologyCanvas } from "@/components/topology/TopologyCanvas";
 import { ScopeTabs } from "@/components/topology/ScopeTabs";
@@ -19,6 +21,13 @@ function normalizeScope(v: string | string[] | undefined): TopoEnvScope {
     : "prod";
 }
 
+function normalizeLayout(v: string | string[] | undefined): TopoLayoutMode {
+  const s = Array.isArray(v) ? v[0] : v;
+  return (TOPO_LAYOUT_MODES as readonly string[]).includes(s ?? "")
+    ? (s as TopoLayoutMode)
+    : "layered";
+}
+
 export default async function TopologyPage({
   searchParams,
 }: {
@@ -26,7 +35,8 @@ export default async function TopologyPage({
 }) {
   const sp = await searchParams;
   const scope = normalizeScope(sp.env);
-  const graph = await getTopology(scope);
+  const layout = normalizeLayout(sp.layout);
+  const graph = await getTopology(scope, layout);
   const accountN = graph.stats.accounts.length;
 
   return (
@@ -43,7 +53,7 @@ export default async function TopologyPage({
             {accountN === 1 ? "" : "s"}. Select any node to trace what it touches.
           </p>
         </div>
-        <ScopeTabs active={scope} />
+        <ScopeTabs active={scope} layout={layout} />
       </header>
 
       <div className="relative flex-1 overflow-hidden rounded-xl border border-hairline bg-surface">

@@ -1,34 +1,55 @@
 import "server-only";
 import ELK from "elkjs/lib/elk.bundled.js";
-import { NODE_W, NODE_H, type TopoNode, type TopoEdge, type TopoGroup } from "./types";
+import {
+  NODE_W,
+  NODE_H,
+  type TopoNode,
+  type TopoEdge,
+  type TopoGroup,
+  type TopoLayoutMode,
+} from "./types";
 
 /**
- * Server-side layout engine. Each account is laid out independently with ELK's
- * layered algorithm (LEFT → RIGHT, so `contains`/`depends-on`/`uses` read as a
- * flow from networking on the left to workloads and their image lineage on the
- * right), then the account blocks are stacked into vertical bands with a gap.
- * Running per-account keeps bands from interleaving and yields clean group boxes
- * — accounts have no cross-account edges in practice, and any that appear are
+ * Server-side layout engine. Each account is laid out independently with ELK,
+ * then the account blocks are stacked into vertical bands with a gap. Running
+ * per-account keeps bands from interleaving and yields clean group boxes —
+ * accounts have no cross-account edges in practice, and any that appear are
  * still drawn correctly between the positioned bands. Deterministic: ELK is
  * seeded only by node/edge identity and order, so the same estate lays out the
  * same way every render (no client layout jump).
+ *
+ * Two modes are available:
+ *  - `layered` (default): a force-directed (Fruchterman–Reingold) spread. The
+ *    estate weave has shallow depth but high breadth, so a strict layered
+ *    algorithm collapses into a tall unreadable column. Force spreads nodes in
+ *    2D: hubs (a VPC, an ECS cluster) settle at the centre of their satellites.
+ *  - `organic`: ELK stress majorization — a "constellation" read where the
+ *    graph-theoretic distances are preserved, giving a rounder, more organic
+ *    mind-map for exploration.
  */
 
 const elk = new ELK();
 
-// Organic force layout — the estate weave has shallow depth but high breadth, so
-// a layered layout collapses into a tall unreadable column. Force spreads nodes
-// in 2D: hubs (a VPC, an ECS cluster) settle at the centre of their satellites,
-// giving a genuine mind-map. Deterministic via a fixed random seed so the same
-// estate always lays out identically (no client jump).
-const LAYOUT_OPTIONS: Record<string, string> = {
-  "elk.algorithm": "org.eclipse.elk.force",
-  "elk.force.model": "FRUCHTERMAN_REINGOLD",
-  "elk.force.iterations": "300",
-  "elk.spacing.nodeNode": "64",
-  "elk.randomSeed": "1",
-  "elk.separateConnectedComponents": "true",
-  "elk.spacing.componentComponent": "72",
+const LAYOUT_OPTIONS: Record<TopoLayoutMode, Record<string, string>> = {
+  // Force-directed (Fruchterman–Reingold). The default layered-band read.
+  layered: {
+    "elk.algorithm": "org.eclipse.elk.force",
+    "elk.force.model": "FRUCHTERMAN_REINGOLD",
+    "elk.force.iterations": "300",
+    "elk.spacing.nodeNode": "64",
+    "elk.randomSeed": "1",
+    "elk.separateConnectedComponents": "true",
+    "elk.spacing.componentComponent": "72",
+  },
+  // Stress majorization — graph-theoretic distance preservation for a
+  // constellation mind-map read. Rounder, more organic cluster shapes.
+  organic: {
+    "elk.algorithm": "org.eclipse.elk.stress",
+    "elk.spacing.nodeNode": "72",
+    "elk.randomSeed": "1",
+    "elk.separateConnectedComponents": "true",
+    "elk.spacing.componentComponent": "88",
+  },
 };
 
 const GROUP_PAD_X = 30;
@@ -39,6 +60,7 @@ const ACCOUNT_GAP = 88;
 export async function layoutGraph(
   nodes: TopoNode[],
   edges: TopoEdge[],
+  mode: TopoLayoutMode = "layered",
 ): Promise<{ nodes: TopoNode[]; groups: TopoGroup[] }> {
   // Bucket nodes by account, largest band first for a stable top-down order.
   const byAccount = new Map<string, TopoNode[]>();
@@ -62,7 +84,7 @@ export async function layoutGraph(
 
     const res = await elk.layout({
       id: `acc-${account}`,
-      layoutOptions: LAYOUT_OPTIONS,
+      layoutOptions: LAYOUT_OPTIONS[mode],
       children: accNodes.map((n) => ({ id: n.id, width: NODE_W, height: NODE_H })),
       edges: accEdges.map((e) => ({ id: e.id, sources: [e.source], targets: [e.target] })),
     });
@@ -125,4 +147,20 @@ export async function layoutGraph(
   }));
 
   return { nodes: laidOut, groups };
+}
+
+/** Default layered-band layout (Fruchterman–Reingold force spread). */
+export async function layeredLayout(
+  nodes: TopoNode[],
+  edges: TopoEdge[],
+): Promise<{ nodes: TopoNode[]; groups: TopoGroup[] }> {
+  return layoutGraph(nodes, edges, "layered");
+}
+
+/** Organic constellation layout (ELK stress majorization). */
+export async function organicLayout(
+  nodes: TopoNode[],
+  edges: TopoEdge[],
+): Promise<{ nodes: TopoNode[]; groups: TopoGroup[] }> {
+  return layoutGraph(nodes, edges, "organic");
 }

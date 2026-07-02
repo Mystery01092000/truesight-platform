@@ -1,7 +1,7 @@
 "use client";
 
 import "@xyflow/react/dist/style.css";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -10,6 +10,7 @@ import {
   Controls,
   MiniMap,
   Panel,
+  MarkerType,
   type Node,
   type Edge,
   type NodeMouseHandler,
@@ -22,7 +23,7 @@ import { FlowField } from "./FlowField";
 import { TopoFocusContext, type TopoFocus } from "./focus";
 import { DetailPanel, type Relation } from "./DetailPanel";
 import { Legend } from "./Legend";
-import { kindAccent } from "@/lib/taxonomy";
+import { kindAccent, type EdgeKind } from "@/lib/taxonomy";
 import { cn } from "@/lib/utils/cn";
 import type { TopoGraph, TopoNodeData } from "@/lib/topology/types";
 
@@ -37,19 +38,68 @@ const ACCENT_HEX: Record<string, string> = {
   mute: "#5a5b5c",
 };
 
+/** Arrowhead markers for directional edges. Color matches the edge stroke so
+ *  directionality reads without competing with the flowing data packets. */
+const ARROW_MARKER: Partial<Record<EdgeKind, { color: string }>> = {
+  "deployed-from": { color: "#6fe5b0" },
+  "depends-on": { color: "#9c9c9d" },
+};
+
 function CanvasInner({ graph }: { graph: TopoGraph }) {
   const reduce = useReducedMotion();
   const [selected, setSelected] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
+  const [pulseRings, setPulseRings] = useState(false);
+  const sseRef = useRef<EventSource | null>(null);
 
+  // Entrance choreography driven by the discovery SSE stream — the aperture
+  // "watches" as each stage resolves, then the weave reveals. Falls back to a
+  // fixed timer if the stream is unavailable so the canvas never hangs.
   useEffect(() => {
     if (reduce) {
       setRevealed(true);
       return;
     }
-    const t = setTimeout(() => setRevealed(true), 560);
-    return () => clearTimeout(t);
-  }, [reduce]);
+
+    let settled = false;
+    const reveal = () => {
+      if (settled) return;
+      settled = true;
+      setRevealed(true);
+      // After the nodes settle, pulse the drift rings once — the "no blind
+      // spots" halo announces itself, then goes quiet.
+      const pulse = setTimeout(() => {
+        setPulseRings(true);
+        const clear = setTimeout(() => setPulseRings(false), 1100);
+        return () => clearTimeout(clear);
+      }, 900);
+      return () => clearTimeout(pulse);
+    };
+
+    // Timer fallback — fires if the SSE stream never sends a `done` event.
+    const fallback = setTimeout(reveal, 2400);
+
+    try {
+      const es = new EventSource(`/api/topology/stream?env=${graph.stats.scope}`);
+      sseRef.current = es;
+      es.addEventListener("done", () => {
+        reveal();
+        es.close();
+      });
+      es.addEventListener("error", () => {
+        // Stream dropped or unavailable — let the timer fallback handle it.
+        es.close();
+      });
+    } catch {
+      // EventSource unsupported — the timer fallback handles reveal.
+    }
+
+    return () => {
+      clearTimeout(fallback);
+      sseRef.current?.close();
+      sseRef.current = null;
+    };
+  }, [reduce, graph.stats.scope]);
 
   const rfNodes = useMemo<Node[]>(() => {
     const groupNodes: Node[] = graph.groups.map((g) => ({
@@ -80,13 +130,19 @@ function CanvasInner({ graph }: { graph: TopoGraph }) {
 
   const rfEdges = useMemo<Edge[]>(
     () =>
-      graph.edges.map((e) => ({
-        id: e.id,
-        source: e.source,
-        target: e.target,
-        type: "flow",
-        data: { kind: e.kind },
-      })),
+      graph.edges.map((e) => {
+        const marker = ARROW_MARKER[e.kind];
+        return {
+          id: e.id,
+          source: e.source,
+          target: e.target,
+          type: "flow",
+          data: { kind: e.kind },
+          markerEnd: marker
+            ? { type: MarkerType.ArrowClosed, width: 16, height: 16, color: marker.color }
+            : undefined,
+        };
+      }),
     [graph],
   );
 
@@ -134,7 +190,13 @@ function CanvasInner({ graph }: { graph: TopoGraph }) {
 
   return (
     <TopoFocusContext.Provider value={focus}>
-      <div className={cn("topo-canvas relative h-full w-full", revealed && "topo-revealed")}>
+      <div
+        className={cn(
+          "topo-canvas relative h-full w-full",
+          revealed && "topo-revealed",
+          pulseRings && "topo-pulse",
+        )}
+      >
         {/* WebGL data-nebula — cinematic depth behind the weave */}
         <FlowField className="pointer-events-none absolute inset-0 z-0 h-full w-full" />
         <ReactFlow

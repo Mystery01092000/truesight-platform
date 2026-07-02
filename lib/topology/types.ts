@@ -24,6 +24,16 @@ export const TOPO_SCOPE_LABEL: Record<TopoEnvScope, string> = {
   all: "All environments",
 };
 
+/** Layout algorithms the canvas can render in. `layered` = the default force
+ *  band layout; `organic` = stress-majorization for a constellation read. */
+export const TOPO_LAYOUT_MODES = ["layered", "organic"] as const;
+export type TopoLayoutMode = (typeof TOPO_LAYOUT_MODES)[number];
+
+export const TOPO_LAYOUT_LABEL: Record<TopoLayoutMode, string> = {
+  layered: "Layered",
+  organic: "Organic",
+};
+
 /** Per-node payload rendered by `ResourceNode`. */
 export type TopoNodeData = {
   urn: string;
