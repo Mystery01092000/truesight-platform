@@ -13,7 +13,13 @@ const schema = z.object({
   // Auth — SESSION_SECRET is required in production; dev gets a clearly-fake default.
   SESSION_SECRET: z.string().min(16).default("argus-dev-secret-change-me-in-prod"),
   ADMIN_EMAIL: z.string().default("admin"),
-  ADMIN_PASSWORD: z.string().default("akshatcentricity2026"),
+  ADMIN_PASSWORD: z.string().optional(),
+
+  // Azure AD (Entra) SSO — a dedicated app registration, distinct from the
+  // estate service principal below.
+  AZURE_SSO_TENANT_ID: z.string().optional(),
+  AZURE_SSO_CLIENT_ID: z.string().optional(),
+  AZURE_SSO_CLIENT_SECRET: z.string().optional(),
 
   // Data
   DATABASE_URL: z
@@ -48,9 +54,17 @@ const schema = z.object({
 
   // Knowledge Base (semantic search)
   OPENAI_API_KEY: z.string().min(1).optional(),
-  KB_BUCKET_NAME: z.string().default("argus-prod-kb-backend"),
+  KB_BUCKET_NAME: z.string().default("knowledge-base-iac-argus-backend"),
   KB_EMBEDDING_MODEL: z.string().default("text-embedding-3-small"),
+  KB_EMBEDDING_PROVIDER: z.enum(["openai", "bedrock"]).default("openai"),
   KB_SYNC_SCHEDULE: z.string().optional(), // cron expression, e.g. "rate(10 minutes)"
+
+  // Bedrock (embeddings + RAG generation)
+  BEDROCK_REGION: z.string().default("ap-south-1"),
+  BEDROCK_EMBEDDING_MODEL: z.string().default("amazon.titan-embed-text-v2:0"),
+  BEDROCK_GENERATION_MODEL: z
+    .string()
+    .default("apac.anthropic.claude-sonnet-4-20250514-v1:0"),
 
   // Ticketing — Teams webhook + SMTP (optional, graceful no-op when unset)
   TEAMS_WEBHOOK_URL: z.string().url().optional(),
@@ -74,6 +88,9 @@ export function serverEnv(): ServerEnv {
     SESSION_SECRET: process.env.SESSION_SECRET,
     ADMIN_EMAIL: process.env.ADMIN_EMAIL,
     ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
+    AZURE_SSO_TENANT_ID: process.env.AZURE_SSO_TENANT_ID,
+    AZURE_SSO_CLIENT_ID: process.env.AZURE_SSO_CLIENT_ID,
+    AZURE_SSO_CLIENT_SECRET: process.env.AZURE_SSO_CLIENT_SECRET,
     DATABASE_URL: process.env.DATABASE_URL,
     REDIS_URL: process.env.REDIS_URL,
     AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
@@ -96,7 +113,11 @@ export function serverEnv(): ServerEnv {
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     KB_BUCKET_NAME: process.env.KB_BUCKET_NAME,
     KB_EMBEDDING_MODEL: process.env.KB_EMBEDDING_MODEL,
+    KB_EMBEDDING_PROVIDER: process.env.KB_EMBEDDING_PROVIDER,
     KB_SYNC_SCHEDULE: process.env.KB_SYNC_SCHEDULE,
+    BEDROCK_REGION: process.env.BEDROCK_REGION,
+    BEDROCK_EMBEDDING_MODEL: process.env.BEDROCK_EMBEDDING_MODEL,
+    BEDROCK_GENERATION_MODEL: process.env.BEDROCK_GENERATION_MODEL,
     TEAMS_WEBHOOK_URL: process.env.TEAMS_WEBHOOK_URL,
     SMTP_HOST: process.env.SMTP_HOST,
     SMTP_PORT: process.env.SMTP_PORT,
@@ -117,6 +138,13 @@ export function serverEnv(): ServerEnv {
         .map((i) => `${i.path.join(".")} ${i.message}`)
         .join("; ")}`,
     );
+  }
+  // Never run production on the development fallback secret.
+  if (
+    parsed.data.NODE_ENV === "production" &&
+    parsed.data.SESSION_SECRET === "argus-dev-secret-change-me-in-prod"
+  ) {
+    throw new Error("SESSION_SECRET must be set explicitly in production");
   }
   cached = parsed.data;
   return cached;

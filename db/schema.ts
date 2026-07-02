@@ -44,6 +44,19 @@ export const users = pgTable('users', {
   passwordHash: text('password_hash'),
   role: text('role').notNull().default('viewer'),
   image: text('image'),
+  entraOid: text('entra_oid').unique(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+/**
+ * PLATFORM-ADMINS allowlist. Emails here are granted the mapped role on SSO
+ * (or credentials) login — the db-driven source of truth for platform access.
+ */
+export const platformAdmins = pgTable('platform_admins', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  email: text('email').notNull().unique(),
+  role: text('role').notNull().default('admin'),
+  note: text('note'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -355,10 +368,15 @@ export const kbEmbeddings = pgTable(
       .notNull()
       .references(() => kbChunks.id, { onDelete: 'cascade' }),
     embedding: vector('embedding', { dimensions: 1536 }).notNull(),
+    // Bedrock Titan v2 embeddings. pgvector dimensions are immutable, so the
+    // provider migration runs dual-column: backfill v2, flip the provider
+    // flag, then drop the legacy column in a later migration.
+    embeddingV2: vector('embedding_v2', { dimensions: 1024 }),
   },
   (t) => [
     index('kb_embeddings_chunk_idx').on(t.chunkId),
     index('kb_embeddings_vector_idx').using('hnsw', t.embedding.op('vector_cosine_ops')),
+    index('kb_embeddings_vector_v2_idx').using('hnsw', t.embeddingV2.op('vector_cosine_ops')),
   ],
 );
 
@@ -480,11 +498,127 @@ export const ticketStatusLog = pgTable('ticket_status_log', {
 ]);
 
 /* -------------------------------------------------------------------------- */
+/* Vulnerability findings — code + cloud scanners, resource-linked            */
+/* -------------------------------------------------------------------------- */
+
+export const vulnerabilityFindings = pgTable(
+  'vulnerability_findings',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    urn: text('urn'),
+    source: text('source').notNull(), // dependabot | code-scanning | secret-scanning | inspector | defender
+    externalId: text('external_id').notNull(),
+    severity: text('severity').$type<Severity>(),
+    title: text('title'),
+    description: text('description'),
+    mitigation: text('mitigation'),
+    packageName: text('package_name'),
+    cve: text('cve'),
+    resourceLink: text('resource_link'),
+    status: text('status').notNull().default('open'), // open | fixed | dismissed
+    firstSeen: timestamp('first_seen', { withTimezone: true }).defaultNow().notNull(),
+    lastSeen: timestamp('last_seen', { withTimezone: true }).defaultNow().notNull(),
+    metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+  },
+  (t) => [
+    unique('vulnerability_findings_source_external_uq').on(t.source, t.externalId),
+    index('vulnerability_findings_urn_idx').on(t.urn),
+    index('vulnerability_findings_severity_idx').on(t.severity),
+    index('vulnerability_findings_status_idx').on(t.status),
+  ],
+);
+
+/* -------------------------------------------------------------------------- */
+/* Terraform plan executions — chat-style history sourced from S3             */
+/* -------------------------------------------------------------------------- */
+
+export const terraformPlans = pgTable(
+  'terraform_plans',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    bucket: text('bucket').notNull(),
+    key: text('key').notNull(),
+    name: text('name'),
+    env: text('env'),
+    service: text('service'),
+    sizeBytes: integer('size_bytes'),
+    lastModified: timestamp('last_modified', { withTimezone: true }),
+    summary: jsonb('summary').$type<Record<string, unknown>>(),
+    discoveredAt: timestamp('discovered_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    unique('terraform_plans_bucket_key_uq').on(t.bucket, t.key),
+    index('terraform_plans_env_idx').on(t.env),
+    index('terraform_plans_modified_idx').on(t.lastModified),
+  ],
+);
+
+/* -------------------------------------------------------------------------- */
+/* Precomputed aggregates — written at sync end for sub-100ms reads           */
+/* -------------------------------------------------------------------------- */
+
+export const costRollups = pgTable(
+  'cost_rollups',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    provider: text('provider').$type<CloudProvider>().notNull(),
+    account: text('account'),
+    service: text('service'),
+    day: timestamp('day', { withTimezone: true }).notNull(),
+    amount: numeric('amount', { precision: 20, scale: 6 }).notNull(),
+    currency: text('currency').notNull().default('USD'),
+    computedAt: timestamp('computed_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    unique('cost_rollups_dims_uq').on(t.provider, t.account, t.service, t.day),
+    index('cost_rollups_day_idx').on(t.day),
+    index('cost_rollups_service_idx').on(t.service),
+  ],
+);
+
+export const developerStats = pgTable(
+  'developer_stats',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    login: text('login').notNull(),
+    team: text('team'),
+    repo: text('repo'),
+    loc: integer('loc').notNull().default(0),
+    additions: integer('additions').notNull().default(0),
+    deletions: integer('deletions').notNull().default(0),
+    commits: integer('commits').notNull().default(0),
+    languages: jsonb('languages').$type<Record<string, number>>(),
+    highlights: jsonb('highlights').$type<Record<string, unknown>>(),
+    computedAt: timestamp('computed_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    unique('developer_stats_login_repo_uq').on(t.login, t.repo),
+    index('developer_stats_login_idx').on(t.login),
+    index('developer_stats_team_idx').on(t.team),
+  ],
+);
+
+/* -------------------------------------------------------------------------- */
 /* Inferred row types                                                         */
 /* -------------------------------------------------------------------------- */
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+
+export type PlatformAdmin = typeof platformAdmins.$inferSelect;
+export type NewPlatformAdmin = typeof platformAdmins.$inferInsert;
+
+export type VulnerabilityFinding = typeof vulnerabilityFindings.$inferSelect;
+export type NewVulnerabilityFinding = typeof vulnerabilityFindings.$inferInsert;
+
+export type TerraformPlan = typeof terraformPlans.$inferSelect;
+export type NewTerraformPlan = typeof terraformPlans.$inferInsert;
+
+export type CostRollup = typeof costRollups.$inferSelect;
+export type NewCostRollup = typeof costRollups.$inferInsert;
+
+export type DeveloperStat = typeof developerStats.$inferSelect;
+export type NewDeveloperStat = typeof developerStats.$inferInsert;
 
 export type IntegrationAccount = typeof integrationAccounts.$inferSelect;
 export type NewIntegrationAccount = typeof integrationAccounts.$inferInsert;
