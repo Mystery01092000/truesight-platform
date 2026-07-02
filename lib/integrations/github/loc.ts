@@ -106,6 +106,11 @@ export type OrgLOCSummary = {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// Agent/bot identities excluded from developer stats (org policy: human
+// contributors only). Matches GitHub Apps ("[bot]") and known agent logins.
+const AGENT_LOGIN_RE = /\[bot\]$|^(claude|devin|copilot|dependabot|renovate)(-|$)/i;
+const isAgentLogin = (login: string): boolean => AGENT_LOGIN_RE.test(login);
+
 type AnyResponse = { status: number; data: unknown };
 
 /** GitHub computes stats asynchronously — a first hit often returns 202 with an
@@ -260,6 +265,9 @@ export async function getContributorStats(
       for (const r of rows) {
         const author = r.author;
         if (!author?.login) continue;
+        // Human contributors only — agent/bot identities are excluded from
+        // developer stats platform-wide (org policy: no agent contributors).
+        if (isAgentLogin(author.login)) continue;
         let additions = 0;
         let deletions = 0;
         for (const w of r.weeks ?? []) {
