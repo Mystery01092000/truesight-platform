@@ -7,24 +7,27 @@
  */
 @theme {
   /* ── Surface ladder (elevation without shadows) ───────────────────── */
-  --color-canvas: #07080a;
-  --color-surface: #0d0d0d;
-  --color-surface-elevated: #101111;
-  --color-surface-card: #121212;
+  --color-canvas: #08090b;
+  --color-surface: #101114;
+  --color-surface-elevated: #15171c;
+  --color-surface-card: #191b21;
   --color-button-fg: #18191a;
 
-  /* ── Hairline borders (the only edge treatment) ───────────────────── */
-  --color-hairline: #242728;
-  --color-hairline-soft: rgba(255, 255, 255, 0.08);
-  --color-hairline-strong: rgba(255, 255, 255, 0.16);
+  /* ── Hairline borders (the only edge treatment) — white-alpha so every
+     rung of the ladder reads the same edge weight. ──────────────────── */
+  --color-hairline: rgba(255, 255, 255, 0.1);
+  --color-hairline-soft: rgba(255, 255, 255, 0.06);
+  --color-hairline-emphasis: rgba(255, 255, 255, 0.14);
+  --color-hairline-strong: rgba(255, 255, 255, 0.22);
 
-  /* ── Text ─────────────────────────────────────────────────────────── */
+  /* ── Text — body/mute/ash verified AA (≥4.5:1) on every ladder step,
+     including the lightest (surface-card #191b21: body 11.9, mute 7.1,
+     ash 5.2). ───────────────────────────────────────────────────────── */
   --color-ink: #f4f4f6;
-  --color-body: #cdcdcd;
+  --color-body: #d6d7db;
   --color-charcoal: #d3d3d4;
-  --color-mute: #9c9c9d;
-  /* ash bumped from #6a6b6c → #85868a for a legible AA floor on meta text */
-  --color-ash: #85868a;
+  --color-mute: #a4a6ad;
+  --color-ash: #8b8d94;
   --color-stone: #434345;
   --color-on-dark: #ffffff;
   --color-on-dark-mute: rgba(255, 255, 255, 0.72);
@@ -43,6 +46,23 @@
   --color-accent-green-soft: rgba(89, 212, 153, 0.15);
   --color-accent-yellow: #ffc533;
   --color-accent-yellow-soft: rgba(255, 197, 51, 0.15);
+
+  /* ── Semantic aliases — same hues, named for intent so components read
+     `text-positive` / `bg-critical-soft` instead of a raw hue. ───────── */
+  --color-positive: var(--color-accent-green);
+  --color-positive-soft: var(--color-accent-green-soft);
+  --color-warning: var(--color-accent-yellow);
+  --color-warning-soft: var(--color-accent-yellow-soft);
+  --color-critical: var(--color-accent-red);
+  --color-critical-soft: var(--color-accent-red-soft);
+  --color-info: var(--color-accent-blue);
+  --color-info-soft: var(--color-accent-blue-soft);
+
+  /* ── Overlay — the ONE sanctioned shadow. Resting chrome never casts;
+     only surfaces floating over the ladder (drawers, popovers) separate
+     with shadow-overlay above a scrim. ──────────────────────────────── */
+  --shadow-overlay: 0 24px 64px -16px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --color-scrim: rgba(4, 5, 8, 0.62);
 
   /* ── Iris — the signature brand accent (Argus, the watching eye). Distinct
      from the functional status accents: reserved for the aperture, the live
@@ -75,8 +95,35 @@
   --font-display: var(--ff-display), "Space Grotesk", var(--font-inter), system-ui, sans-serif;
   --font-mono: var(--ff-mono), "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
-  /* ── Signature motion (aperture / scanning) ──────────────────────── */
-  --animate-scan: scan 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  /* ── Type scale (text-display / text-title / text-label / text-micro).
+     display pairs with font-display (Space Grotesk); label/micro stay in
+     Inter; numerals always render in font-mono tabular figures. ─────── */
+  --text-display: 28px;
+  --text-display--line-height: 1.15;
+  --text-display--letter-spacing: -0.02em;
+  --text-display--font-weight: 600;
+  --text-title: 18px;
+  --text-title--line-height: 1.35;
+  --text-title--letter-spacing: -0.01em;
+  --text-title--font-weight: 500;
+  --text-label: 13px;
+  --text-label--line-height: 1.5;
+  --text-label--letter-spacing: 0.015em;
+  --text-label--font-weight: 500;
+  --text-micro: 11px;
+  --text-micro--line-height: 1.4;
+  --text-micro--letter-spacing: 0.06em;
+  --text-micro--font-weight: 500;
+
+  /* ── Motion scale — three durations, one ease. fast = hover/press
+     feedback, base = entrances/sheets, slow = page-level fades. Nothing
+     decorative loops forever except the skeleton shimmer and the
+     live-status pulse dots. ─────────────────────────────────────────── */
+  --motion-fast: 150ms;
+  --motion-base: 250ms;
+  --motion-slow: 400ms;
+
+  /* ── Signature live-status + loading loops (the sanctioned infinites) */
   --animate-pulse-ring: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   --animate-flow: flow 1.6s linear infinite;
   --animate-shimmer: shimmer 1.6s ease-in-out infinite;
@@ -95,11 +142,6 @@
   --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-@keyframes scan {
-  0% { transform: translateY(-100%); opacity: 0; }
-  50% { opacity: 1; }
-  100% { transform: translateY(100%); opacity: 0; }
-}
 @keyframes pulse-ring {
   0% { transform: scale(0.9); opacity: 0.7; }
   70% { transform: scale(1.25); opacity: 0; }

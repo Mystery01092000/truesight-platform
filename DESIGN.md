@@ -1,16 +1,16 @@
 ## Overview
 
-Raycast's marketing site reads like an extended product screenshot. The chrome IS the in-product command palette at marketing scale: pure near-black canvas (`{colors.canvas}` — `#07080a`), hairline 1px borders (`{colors.hairline}` — `#242728`), command-palette-style cards with rounded corners between 6 and 16px, Inter typography with the **ss03 stylistic set enabled site-wide** (a single character — the alternate `g` — that gives Raycast's typography its signature subtle distinction), a single white CTA pill that anchors every primary action, and small splashes of saturated accent reserved for category illustrations.
+Raycast's marketing site reads like an extended product screenshot. The chrome IS the in-product command palette at marketing scale: pure near-black canvas (`{colors.canvas}` — `#08090b`), hairline 1px borders (`{colors.hairline}` — `rgba(255,255,255,0.10)`), command-palette-style cards with rounded corners between 6 and 16px, Inter typography with the **ss03 stylistic set enabled site-wide** (a single character — the alternate `g` — that gives Raycast's typography its signature subtle distinction), a single white CTA pill that anchors every primary action, and small splashes of saturated accent reserved for category illustrations.
 
 The system has effectively one surface mode — dark — with a faint three-step surface ladder (`{colors.canvas}` → `{colors.surface}` → `{colors.surface-elevated}` → `{colors.surface-card}`) carrying cards, in-card panels, and key-cap glyph backgrounds. The signature decorative moment is a **red diagonal-stripe gradient band** across the very top of the home page hero, used as a launch-banner motif behind the headline (the only time saturated red appears on chrome). Beyond that single moment, color in the chrome is reserved for category accents inside extension and feature illustrations: Hacker News yellow, Slack red, Linear green, info blue.
 
 The design philosophy is "the marketing page is the product." Section rhythm is generous (`{spacing.section}` 96px) but the page never breaks tonal continuity — the whole site sits in one continuous dark mode, full-bleed product UI screenshots show Raycast's actual command palette / store / AI chat surfaces, and the typography ligature settings (`ss03`) are inherited from the in-product app's text rendering.
 
 **Key Characteristics:**
-- Single dark surface mode with a 4-step surface ladder: `{colors.canvas}` (#07080a) → `{colors.surface}` (#0d0d0d) → `{colors.surface-elevated}` (#101111) → `{colors.surface-card}` (#121212)
+- Single dark surface mode with a 4-step surface ladder: `{colors.canvas}` (#08090b) → `{colors.surface}` (#101114) → `{colors.surface-elevated}` (#15171c) → `{colors.surface-card}` (#191b21)
 - White CTA pill (`{colors.primary}` — #ffffff) is the universal primary action; everything else is monochrome dark
 - Inter typography with `font-feature-settings: "calt", "kern", "liga", "ss03"` enabled site-wide — the ss03 alternate `g` is part of the brand voice
-- Hairline 1px borders (`{colors.hairline}` — #242728) carry every card edge; there are no drop shadows in the system
+- Hairline 1px borders (`{colors.hairline}` — rgba(255,255,255,0.10)) carry every card edge; there are no drop shadows in the system (the one exception: floating overlays wear `{shadow.overlay}`)
 - Multi-radius card vocabulary: `{rounded.sm}` (6px) for keycaps, `{rounded.md}` (8px) for buttons and small cards, `{rounded.lg}` (10px) for feature cards, `{rounded.xl}` (16px) for hero command-palette mockup containers
 - Saturated category accents (`{colors.accent-yellow}` for Hacker News, `{colors.accent-red}` for Slack/Apple, `{colors.accent-green}` for productivity tools, `{colors.accent-blue}` for info) appear only inside extension tile imagery — never on chrome
 - Signature red diagonal-stripe gradient band at the very top of the hero — three angled stripes in `{colors.hero-stripe-start}` → `{colors.hero-stripe-end}`, used once per page maximum
@@ -25,22 +25,25 @@ The design philosophy is "the marketing page is the product." Section rhythm is 
 - **On Primary** (`{colors.on-primary}` — `#000000`): pure black text on the white CTA — the only place black appears as text in the system.
 
 ### Surface
-- **Canvas** (`{colors.canvas}` — `#07080a`): pure-near-black page background. The dominant surface across every page.
-- **Surface** (`{colors.surface}` — `#0d0d0d`): card and elevated panel background — one notch lighter than canvas.
-- **Surface Elevated** (`{colors.surface-elevated}` — `#101111`): button-tertiary fill, text-input fill, store-search-bar fill, pill-tab-active fill.
-- **Surface Card** (`{colors.surface-card}` — `#121212`): app-icon-tile background, keycap fill, command-palette row hover.
+- **Canvas** (`{colors.canvas}` — `#08090b`): pure-near-black page background. The dominant surface across every page.
+- **Surface** (`{colors.surface}` — `#101114`): card and elevated panel background — one notch lighter than canvas.
+- **Surface Elevated** (`{colors.surface-elevated}` — `#15171c`): button-tertiary fill, text-input fill, store-search-bar fill, pill-tab-active fill.
+- **Surface Card** (`{colors.surface-card}` — `#191b21`): app-icon-tile background, keycap fill, command-palette row hover.
 - **Button FG (in-card)** (`{colors.button-fg}` — `#18191a`): rare deep-card variant used inside featured pricing tier card backgrounds.
-- **Hairline** (`{colors.hairline}` — `#242728`): the universal 1px card border. Carries every card edge across every page.
-- **Hairline Soft** (`{colors.hairline-soft}` — `rgba(255,255,255,0.08)`): even fainter border on translucent over-image overlays.
-- **Hairline Strong** (`{colors.hairline-strong}` — `rgba(255,255,255,0.16)`): stronger 1px divider where a regular hairline reads as too soft.
+- **Hairline** (`{colors.hairline}` — `rgba(255,255,255,0.10)`): the universal 1px card border. White-alpha so it reads the same weight on every ladder rung.
+- **Hairline Soft** (`{colors.hairline-soft}` — `rgba(255,255,255,0.06)`): even fainter border on translucent over-image overlays.
+- **Hairline Emphasis** (`{colors.hairline-emphasis}` — `rgba(255,255,255,0.14)`): one notch above default where a divider must carry structure (table header rule, section split).
+- **Hairline Strong** (`{colors.hairline-strong}` — `rgba(255,255,255,0.22)`): the strongest 1px edge — focused inputs, install-button outline.
 
 ### Text
+> Body, mute and ash are verified WCAG AA (≥4.5:1) against every surface-ladder step, including the lightest (`{colors.surface-card}` #191b21: body 11.9:1, mute 7.1:1, ash 5.2:1).
+
 - **Ink** (`{colors.ink}` — `#f4f4f6`): primary headlines on dark canvas. Slightly off-white for tonal coherence with the near-black background.
-- **Body** (`{colors.body}` — `#cdcdcd`): default paragraph text and inline-link color.
-- **Charcoal** (`{colors.charcoal}` — `#d3d3d4`): subtly brighter body where ink reads too soft.
-- **Mute** (`{colors.mute}` — `#9c9c9d`): metadata, footer link text, secondary captions.
-- **Ash** (`{colors.ash}` — `#6a6b6c`): disabled-state text, lowest-emphasis utility.
-- **Stone** (`{colors.stone}` — `#434345`): least-emphasis caption text and disabled icon color.
+- **Body** (`{colors.body}` — `#d6d7db`): default paragraph text and inline-link color.
+- **Charcoal** (`{colors.charcoal}` — `#d3d3d4`): alternate body tone kept for legacy call sites.
+- **Mute** (`{colors.mute}` — `#a4a6ad`): metadata, footer link text, secondary captions.
+- **Ash** (`{colors.ash}` — `#8b8d94`): lowest-emphasis readable utility text (meta, counts) — still AA on all rungs.
+- **Stone** (`{colors.stone}` — `#434345`): decorative-only glyph tint (sort chevrons); never body copy.
 - **On Dark** (`{colors.on-dark}` — `#ffffff`): interactive-state primary text (button label, focused tab).
 - **On Dark Mute** (`{colors.on-dark-mute}` — `rgba(255,255,255,0.72)`): translucent secondary text on dark surfaces.
 
@@ -49,6 +52,18 @@ The design philosophy is "the marketing page is the product." Section rhythm is 
 - **Accent Red** (`{colors.accent-red}` — `#ff6161`) + **Soft** (`{colors.accent-red-soft}` — `rgba(255,97,97,0.15)`): destructive/error indicator + Slack/Apple category accent in extension illustrations.
 - **Accent Green** (`{colors.accent-green}` — `#59d499`) + **Soft** (`{colors.accent-green-soft}` — `rgba(89,212,153,0.15)`): success state + productivity category accent in extension illustrations.
 - **Accent Yellow** (`{colors.accent-yellow}` — `#ffc533`) + **Soft** (`{colors.accent-yellow-soft}` — `rgba(255,197,51,0.15)`): "warning" semantic + the Hacker News orange-yellow that appears as the most prominent accent illustration on the home page hero.
+
+### Semantic Aliases
+Intent-named aliases over the same accent hues, so components read as status rather than color. Each pairs with its 15%-alpha `-soft` fill for badge/tile backgrounds:
+- **Positive** (`{colors.positive}` → accent-green): success, in-sync, passing.
+- **Warning** (`{colors.warning}` → accent-yellow): degraded, drifted, at-risk.
+- **Critical** (`{colors.critical}` → accent-red): failure, security finding, destructive delta.
+- **Info** (`{colors.info}` → accent-blue): informational, unmanaged, new.
+
+### Overlay
+The one sanctioned exception to the no-shadow rule — surfaces that *float over* the ladder (drawers, popovers) must separate from it:
+- **Scrim** (`{colors.scrim}` — `rgba(4,5,8,0.62)`): full-viewport dimming layer behind any overlay.
+- **Overlay Shadow** (`{shadow.overlay}` — `0 24px 64px -16px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.06)`): the floating panel's edge. Resting chrome never casts.
 
 ### Brand Gradient
 - **Hero Stripe Gradient** — three diagonal red stripes layered across the very top of the home page hero, fading from `{colors.hero-stripe-start}` (`#ff5757`) to `{colors.hero-stripe-end}` (`#a1131a`). The system's only chromatic gradient on chrome — used once per page maximum and reserved for hero launch-banner moments.
@@ -59,7 +74,19 @@ The design philosophy is "the marketing page is the product." Section rhythm is 
 ### Font Family
 **Inter** is the system's primary face, loaded with the `Inter Fallback` system fallback variant. Critically, Raycast enables `font-feature-settings: "calt", "kern", "liga", "ss03"` site-wide — the **ss03 stylistic set** swaps in Inter's alternate `g` glyph (single-story open `g`), which is the brand's signature typographic detail. Standard ligatures (`liga`), kerning (`kern`), and contextual alternates (`calt`) are also active. The display tier additionally enables `ss02` and `ss08` and disables standard `liga` to render the hero "Raycast Pro" wordmark with its distinctive geometric construction.
 
-There is no monospace face used outside of inline `<code>` chips in documentation; the marketing pages use Inter for everything.
+Argus extends this into a **three-voice system**: **Inter** (`{font.sans}`) is the quiet body workhorse, **Space Grotesk** (`{font.display}`) is the character face for headings and the wordmark, and **JetBrains Mono** (`{font.mono}`, always `tabular-nums`) is the instrument face for all machine data — counts, IDs, timestamps, deltas. Any live-updating numeral renders in mono so columns never reflow.
+
+### Type-Scale Tokens
+Four utility-grade tokens (emitted as `text-display` / `text-title` / `text-label` / `text-micro`) carry size, line-height, letter-spacing and weight together:
+
+| Token | Size | Weight | Line Height | Letter Spacing | Voice / Use |
+|---|---|---|---|---|---|
+| `{typography.display}` | 28px | 600 | 1.15 | −0.02em | Space Grotesk — page titles, hero stats |
+| `{typography.title}` | 18px | 500 | 1.35 | −0.01em | Space Grotesk — card/section headings, drawer titles |
+| `{typography.label}` | 13px | 500 | 1.5 | +0.015em | Inter — form labels, stat-tile labels, table meta |
+| `{typography.micro}` | 11px | 500 | 1.4 | +0.06em | Inter (usually uppercase) — facet-group labels, badges, counts |
+
+Display/title track negative (tight, confident); label/micro track positive (airy at small sizes). Pair `text-display`/`text-title` with `font-display`; numerals inside any tier switch to `font-mono`.
 
 ### Hierarchy
 
@@ -122,6 +149,24 @@ Depth comes from product imagery and a single stripe-gradient band:
 - **Command-palette mockups** — full-fidelity Raycast in-product UI screenshots (the actual Spotlight-style overlay with rounded keycaps, command rows, and accent-color glyphs) sitting inside the home-page hero and feature rows. These ARE the brand decoration.
 - **App icon tiles** — small 48–64px rounded-corner tiles displaying real app icons (Slack, Spotify, Figma, Notion, Linear, Hacker News) inside store and feature illustrations.
 - **Keycap glyphs** — subtle gradient-filled rounded keycap glyphs used inline to indicate keyboard shortcuts (e.g., `⌘ K`), with a faint `{colors.key-bg-start}` → `{colors.key-bg-end}` linear gradient suggesting a physical key surface.
+
+## Motion System
+
+Motion is fast, purposeful and finite. Three durations and one ease cover the whole app:
+
+| Token | Value | Use |
+|---|---|---|
+| `{motion.fast}` | 150ms | Hover, press, focus, color/border shifts — feedback that must feel instant |
+| `{motion.base}` | 250ms | Entrances, drawers/sheets, list-item reveals, layout shifts |
+| `{motion.slow}` | 400ms | Page-level fades, large canvas transitions, exit of full overlays |
+| `{motion.ease}` | `cubic-bezier(0.22, 1, 0.36, 1)` (`--ease-smooth`) | The one out-curve for every transition, so micro-interactions feel like one hand made them |
+
+### Rules
+- **Entrances run once, ≤300ms** (250ms standard), mount-triggered, never replayed on scroll. Stagger between siblings is ≤40ms with a hard cap (~8 items) so long lists don't queue.
+- **No infinite loops** except two sanctioned ones: the skeleton shimmer (`.skeleton`) and live-status pulse dots (`pulse-ring` / data-flow dashes). Everything else decorative must resolve and go quiet (e.g. the one-shot topology halo pulse).
+- **The cinematic watcher scene** (hero/login: `breathe`, `drift`, `sweep`, `twinkle`) is the marketing-surface exception — slow ambient loops, pointer-inert, never inside the authenticated app chrome.
+- **Reduced-motion floor is absolute**: `prefers-reduced-motion` collapses every animation/transition to ~0ms globally, and JS-driven motion (motion/react) checks `useReducedMotion()` and renders the resting state.
+- **Numbers move, layout doesn't**: live stats animate via RollupNumber count-ups in tabular mono; containers never resize in response.
 
 ## Shapes
 
@@ -333,8 +378,9 @@ The only "imagery" in the system is in-product Raycast UI screenshots and small 
 ## Known Gaps
 
 - **Mobile screenshots not captured** — responsive behavior synthesizes Raycast's mobile pattern (hamburger drawer, single-column grid, hero downscale) from desktop evidence and the breakpoint stack.
-- **Hover states not documented** by system policy. Raycast's in-product app has rich hover behavior on command-palette rows that this document doesn't capture.
+- ~~**Hover states not documented**~~ — **Resolved**: hover/press feedback is standardized under the Motion System (`{motion.fast}` 150ms on `--ease-smooth`; color/border shifts only, never scale beyond `active:scale-[0.98]`).
 - **In-product app chrome** (the actual Raycast launcher running on macOS) is referenced in marketing screenshots but not documented as a separate UI system here. The marketing site is documented; the in-product app surface is its own design system.
-- **Dark mode is the only mode** — no light variant exists in the captured surfaces.
+- **Dark mode is the only mode** — no light variant exists in the captured surfaces (and by design in Argus).
 - **Form validation states** beyond the focused-input border treatment are not present in the captured surfaces.
-- **Authenticated chrome** (account dashboard, billing settings, team management) not in the captured pages.
+- ~~**Authenticated chrome** not in the captured pages~~ — **Resolved**: Argus now defines the authenticated-app primitives on the same vocabulary — DataTable (+ Pagination, global filter, virtualized mode), FilterBar, StatTile, Timeline (status/chat), Drawer (scrim + `{shadow.overlay}`), and composable Skeletons.
+- ~~**Overlay treatment undefined**~~ — **Resolved**: `{colors.scrim}` + `{shadow.overlay}` are the one sanctioned floating-surface exception to the no-shadow rule.
