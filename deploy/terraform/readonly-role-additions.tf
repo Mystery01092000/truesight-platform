@@ -17,15 +17,18 @@
 # =============================================================================
 
 # Read-only lookup of the existing discovery role — never creates or mutates it.
+# Gated: the role is provisioned per-account by iac-self-service-terraform and
+# does not exist in this account yet; a hard lookup would fail the whole plan.
 data "aws_iam_role" "argus_readonly" {
-  name = "argus-readonly"
+  count = var.enable_readonly_cost_grant ? 1 : 0
+  name  = "argus-readonly"
 }
 
 data "aws_iam_policy_document" "argus_readonly_cost" {
   statement {
-    sid       = "CostExplorerRead"
-    effect    = "Allow"
-    actions   = [
+    sid    = "CostExplorerRead"
+    effect = "Allow"
+    actions = [
       "ce:GetCostAndUsage",
       "ce:GetDimensionValues",
       "ce:GetTags",
@@ -37,7 +40,8 @@ data "aws_iam_policy_document" "argus_readonly_cost" {
 resource "aws_iam_role_policy" "argus_readonly_cost" {
   # Inline (not a managed policy attachment) so the grant is self-contained in this
   # module and removed cleanly if this file is ever dropped — no orphaned policies.
+  count  = var.enable_readonly_cost_grant ? 1 : 0
   name   = "argus-readonly-cost-read"
-  role   = data.aws_iam_role.argus_readonly.id
+  role   = data.aws_iam_role.argus_readonly[0].id
   policy = data.aws_iam_policy_document.argus_readonly_cost.json
 }

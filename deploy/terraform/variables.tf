@@ -221,6 +221,10 @@ variable "app_secret_keys" {
     "AZURE_CLIENT_SECRET",
     "AZURE_TENANT_ID",
     "AZURE_SUBSCRIPTION_ID",
+    # Azure AD SSO app registration (distinct from the estate SP above).
+    "AZURE_SSO_TENANT_ID",
+    "AZURE_SSO_CLIENT_ID",
+    "AZURE_SSO_CLIENT_SECRET",
   ]
 }
 
@@ -309,4 +313,20 @@ variable "rds_free_storage_bytes_threshold" {
   description = "RDS free storage low-water mark (bytes). Default 2 GiB."
   type        = number
   default     = 2147483648
+}
+
+variable "enable_readonly_cost_grant" {
+  description = <<-EOT
+    Attach the Cost Explorer read policy to the shared argus-readonly discovery
+    role. The role is provisioned per-account by iac-self-service-terraform and
+    does not exist in this account yet — enable once it does.
+  EOT
+  type        = bool
+  default     = false
+}
+
+variable "kb_embedding_provider" {
+  description = "Active KB embedding provider (openai | bedrock). Flip to bedrock only after the kb:reembed backfill reports 0 remaining."
+  type        = string
+  default     = "openai"
 }

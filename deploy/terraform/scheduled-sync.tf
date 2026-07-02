@@ -45,8 +45,9 @@ module "scheduled_sync" {
     AZURE_RESOURCE_GROUP    = var.azure_resource_group
     AZURE_SUBSCRIPTION_NAME = var.azure_subscription_name
     # Knowledge Base config.
-    KB_BUCKET_NAME     = aws_ssm_parameter.kb_bucket_name.value
-    KB_EMBEDDING_MODEL = aws_ssm_parameter.kb_embedding_model.value
+    KB_BUCKET_NAME        = aws_ssm_parameter.kb_bucket_name.value
+    KB_EMBEDDING_MODEL    = aws_ssm_parameter.kb_embedding_model.value
+    KB_EMBEDDING_PROVIDER = var.kb_embedding_provider
   }
 
   # Same SSM SecureStrings the app uses (DATABASE_URL, AWS_*, AWS_PROD_*, GITHUB_PAT,
@@ -101,6 +102,7 @@ module "scheduled_kb_ingest" {
     AZURE_SUBSCRIPTION_NAME = var.azure_subscription_name
     KB_BUCKET_NAME          = aws_ssm_parameter.kb_bucket_name.value
     KB_EMBEDDING_MODEL      = aws_ssm_parameter.kb_embedding_model.value
+    KB_EMBEDDING_PROVIDER   = var.kb_embedding_provider
   }
 
   secrets = merge(

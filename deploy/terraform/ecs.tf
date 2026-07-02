@@ -86,8 +86,9 @@ module "ecs_service" {
     AZURE_RESOURCE_GROUP    = var.azure_resource_group
     AZURE_SUBSCRIPTION_NAME = var.azure_subscription_name
     # Knowledge Base config.
-    KB_BUCKET_NAME     = aws_ssm_parameter.kb_bucket_name.value
-    KB_EMBEDDING_MODEL = aws_ssm_parameter.kb_embedding_model.value
+    KB_BUCKET_NAME        = aws_ssm_parameter.kb_bucket_name.value
+    KB_EMBEDDING_MODEL    = aws_ssm_parameter.kb_embedding_model.value
+    KB_EMBEDDING_PROVIDER = var.kb_embedding_provider
   }
 
   # Runtime secrets pulled from SSM by the execution role at task start.
