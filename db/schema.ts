@@ -367,10 +367,11 @@ export const kbEmbeddings = pgTable(
     chunkId: uuid('chunk_id')
       .notNull()
       .references(() => kbChunks.id, { onDelete: 'cascade' }),
-    embedding: vector('embedding', { dimensions: 1536 }).notNull(),
-    // Bedrock Titan v2 embeddings. pgvector dimensions are immutable, so the
+    // Nullable pair: ingest writes only the active provider's column
+    // (retrieval excludes NULLs). pgvector dimensions are immutable, so the
     // provider migration runs dual-column: backfill v2, flip the provider
     // flag, then drop the legacy column in a later migration.
+    embedding: vector('embedding', { dimensions: 1536 }),
     embeddingV2: vector('embedding_v2', { dimensions: 1024 }),
   },
   (t) => [

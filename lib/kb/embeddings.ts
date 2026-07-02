@@ -1,5 +1,6 @@
 import "server-only";
 import OpenAI from "openai";
+import { embedTexts as bedrockEmbedTexts } from "@/lib/ai/bedrock";
 import { kbConfig } from "./config";
 
 let client: OpenAI | null = null;
@@ -14,13 +15,7 @@ function getClient(): OpenAI {
   return client;
 }
 
-/**
- * Generate embeddings for a batch of texts.
- * Handles retry/back-off via the OpenAI SDK default behavior.
- */
-export async function embedTexts(texts: string[]): Promise<number[][]> {
-  if (texts.length === 0) return [];
-
+async function embedTextsOpenai(texts: string[]): Promise<number[][]> {
   const cfg = kbConfig();
   const openai = getClient();
 
@@ -42,6 +37,19 @@ export async function embedTexts(texts: string[]): Promise<number[][]> {
   }
 
   return embeddings;
+}
+
+/**
+ * Generate embeddings for a batch of texts with the active provider
+ * (KB_EMBEDDING_PROVIDER). Retry/back-off is handled by each SDK.
+ */
+export async function embedTexts(texts: string[]): Promise<number[][]> {
+  if (texts.length === 0) return [];
+
+  if (kbConfig().activeProvider === "bedrock") {
+    return bedrockEmbedTexts(texts);
+  }
+  return embedTextsOpenai(texts);
 }
 
 export function getEmbeddingDimensions(): number {

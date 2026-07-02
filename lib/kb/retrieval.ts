@@ -1,21 +1,28 @@
 import "server-only";
 
-import { and, asc, desc, eq, inArray, sql, cosineDistance } from "drizzle-orm";
+import { createHash } from "crypto";
+import { and, asc, desc, eq, inArray, isNotNull, sql, cosineDistance } from "drizzle-orm";
 import { db } from "@/db";
 import { kbChunks, kbDocuments, kbEmbeddings } from "@/db/schema";
-import { serverEnv } from "@/lib/config/env";
+import { cacheable } from "@/lib/cache";
+import { kbConfig } from "./config";
 import { embedTexts } from "./embeddings";
 import type { KbQueryFilters, KbQueryResult, KbSourceType } from "./types";
 
 const RRF_K = 60;
 const FETCH_MULTIPLIER = 10;
+const QUERY_EMBEDDING_TTL_SECONDS = 86400;
+
+function sha256(input: string): string {
+  return createHash("sha256").update(input, "utf8").digest("hex");
+}
 
 export async function queryKb(
   query: string,
   filters?: KbQueryFilters
 ): Promise<KbQueryResult[]> {
-  const env = serverEnv();
-  if (!env.OPENAI_API_KEY) {
+  const cfg = kbConfig();
+  if (cfg.activeProvider === "openai" && !cfg.openaiApiKey) {
     throw new Error("OPENAI_API_KEY is required to query the knowledge base");
   }
 
@@ -26,7 +33,18 @@ export async function queryKb(
   const limit = filters?.limit ?? 10;
   const fetchLimit = Math.max(limit * FETCH_MULTIPLIER, 50);
 
-  const [queryEmbedding] = await embedTexts([query]);
+  const queryEmbedding = await cacheable(
+    `kb:emb:${sha256(cfg.activeProvider + query)}`,
+    QUERY_EMBEDDING_TTL_SECONDS,
+    async () => (await embedTexts([query]))[0]
+  );
+
+  // Dual-column migration: read whichever column the active provider owns and
+  // skip rows that have not been embedded for it yet.
+  const embeddingColumn =
+    cfg.embeddingColumn === "embeddingV2"
+      ? kbEmbeddings.embeddingV2
+      : kbEmbeddings.embedding;
 
   const baseFilter = buildFilter(filters);
 
@@ -40,13 +58,13 @@ export async function queryKb(
       url: kbDocuments.url,
       content: kbChunks.content,
       metadata: kbDocuments.metadata,
-      distance: cosineDistance(kbEmbeddings.embedding, queryEmbedding),
+      distance: cosineDistance(embeddingColumn, queryEmbedding),
     })
     .from(kbEmbeddings)
     .innerJoin(kbChunks, eq(kbEmbeddings.chunkId, kbChunks.id))
     .innerJoin(kbDocuments, eq(kbChunks.documentId, kbDocuments.id))
-    .where(baseFilter)
-    .orderBy(asc(cosineDistance(kbEmbeddings.embedding, queryEmbedding)))
+    .where(and(isNotNull(embeddingColumn), baseFilter))
+    .orderBy(asc(cosineDistance(embeddingColumn, queryEmbedding)))
     .limit(fetchLimit);
 
   const tsQuery = sql`plainto_tsquery('english', ${query})`;

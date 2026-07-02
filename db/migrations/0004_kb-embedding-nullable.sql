@@ -1,0 +1,1 @@
+ALTER TABLE "kb_embeddings" ALTER COLUMN "embedding" DROP NOT NULL;

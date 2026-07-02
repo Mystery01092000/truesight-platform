@@ -16,7 +16,8 @@
     "db:seed": "tsx db/seed.ts",
     "db:studio": "drizzle-kit studio",
     "db:github-sync": "tsx db/github-sync-cli.ts",
-    "db:azure-sync": "tsx db/azure-sync-cli.ts"
+    "db:azure-sync": "tsx db/azure-sync-cli.ts",
+    "kb:reembed": "tsx --conditions=react-server db/kb-reembed-cli.ts"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1077.0",

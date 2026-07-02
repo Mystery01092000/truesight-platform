@@ -144,10 +144,13 @@ async function ingestDocument(
     const texts = batch.map((c) => c.content);
     const embeddings = await embedTexts(texts);
 
+    // Write the active provider's column only; the other stays NULL and is
+    // excluded by retrieval's isNotNull guard (backfilled by kb:reembed).
+    const column = kbConfig().embeddingColumn;
     await tx.insert(kbEmbeddings).values(
       batch.map((chunk, idx) => ({
         chunkId: chunk.id,
-        embedding: embeddings[idx],
+        [column]: embeddings[idx],
       }))
     );
     embeddingCount += embeddings.length;
