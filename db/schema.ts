@@ -9,6 +9,7 @@ import {
   timestamp,
   index,
   unique,
+  vector,
 } from 'drizzle-orm/pg-core';
 
 // Type-only imports from the canonical taxonomy. These are erased at build time
@@ -310,6 +311,58 @@ export const checklistItems = pgTable(
 );
 
 /* -------------------------------------------------------------------------- */
+/* Knowledge Base (semantic search over estate, docs, and GitHub)             */
+/* -------------------------------------------------------------------------- */
+
+export const kbDocuments = pgTable(
+  'kb_documents',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    source: text('source').notNull(),
+    externalId: text('external_id').notNull(),
+    title: text('title'),
+    url: text('url'),
+    metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+    contentHash: text('content_hash').notNull(),
+    chunkCount: integer('chunk_count').notNull().default(0),
+    lastIngestedAt: timestamp('last_ingested_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    unique('kb_documents_source_external_uq').on(t.source, t.externalId),
+    index('kb_documents_source_idx').on(t.source),
+  ],
+);
+
+export const kbChunks = pgTable(
+  'kb_chunks',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    documentId: uuid('document_id')
+      .notNull()
+      .references(() => kbDocuments.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull(),
+    content: text('content').notNull(),
+    tokenCount: integer('token_count'),
+  },
+  (t) => [index('kb_chunks_document_idx').on(t.documentId)],
+);
+
+export const kbEmbeddings = pgTable(
+  'kb_embeddings',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    chunkId: uuid('chunk_id')
+      .notNull()
+      .references(() => kbChunks.id, { onDelete: 'cascade' }),
+    embedding: vector('embedding', { dimensions: 1536 }).notNull(),
+  },
+  (t) => [
+    index('kb_embeddings_chunk_idx').on(t.chunkId),
+    index('kb_embeddings_vector_idx').using('hnsw', t.embedding.op('vector_cosine_ops')),
+  ],
+);
+
+/* -------------------------------------------------------------------------- */
 /* Dashboards & widgets                                                       */
 /* -------------------------------------------------------------------------- */
 
@@ -365,6 +418,68 @@ export const auditLog = pgTable(
 );
 
 /* -------------------------------------------------------------------------- */
+/* Access tickets — developer tools access requests                            */
+/* -------------------------------------------------------------------------- */
+
+// Access tickets — developer tools access requests
+export const accessTickets = pgTable('access_tickets', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  requesterEmail: text('requester_email').notNull(),
+  requesterName: text('requester_name').notNull(),
+  team: text('team').notNull(),
+  project: text('project').notNull(),
+  reportingManager: text('reporting_manager').notNull(),
+  tools: jsonb('tools').$type<string[]>().notNull(),
+  purpose: text('purpose'),
+  timeline: text('timeline').notNull(),
+  timelineCustom: text('timeline_custom'),
+  vpnAccess: boolean('vpn_access').notNull().default(false),
+  vpnMacAddress: text('vpn_mac_address'),
+  managerApproved: boolean('manager_approved').notNull().default(false),
+  status: text('status').notNull().default('pending'), // pending | peeyush_review | kamal_review | approved | declined | done
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  index('access_tickets_email_idx').on(t.requesterEmail),
+  index('access_tickets_status_idx').on(t.status),
+]);
+
+export const ticketResources = pgTable('ticket_resources', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  ticketId: uuid('ticket_id').notNull().references(() => accessTickets.id, { onDelete: 'cascade' }),
+  tool: text('tool').notNull(),
+  accessMode: text('access_mode').notNull(), // read | write | full
+  resourceIdentity: text('resource_identity'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  index('ticket_resources_ticket_idx').on(t.ticketId),
+]);
+
+export const ticketApprovals = pgTable('ticket_approvals', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  ticketId: uuid('ticket_id').notNull().references(() => accessTickets.id, { onDelete: 'cascade' }),
+  approverRole: text('approver_role').notNull(), // 'peeyush' | 'kamal' | 'devops'
+  approverEmail: text('approver_email'),
+  decision: text('decision'), // approved | declined | need_more_info | null (pending)
+  decidedAt: timestamp('decided_at', { withTimezone: true }),
+  notes: text('notes'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  index('ticket_approvals_ticket_idx').on(t.ticketId),
+]);
+
+export const ticketStatusLog = pgTable('ticket_status_log', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  ticketId: uuid('ticket_id').notNull().references(() => accessTickets.id, { onDelete: 'cascade' }),
+  fromStatus: text('from_status'),
+  toStatus: text('to_status').notNull(),
+  actor: text('actor'),
+  at: timestamp('at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  index('ticket_status_log_ticket_idx').on(t.ticketId),
+]);
+
+/* -------------------------------------------------------------------------- */
 /* Inferred row types                                                         */
 /* -------------------------------------------------------------------------- */
 
@@ -404,6 +519,15 @@ export type NewChecklist = typeof checklists.$inferInsert;
 export type ChecklistItem = typeof checklistItems.$inferSelect;
 export type NewChecklistItem = typeof checklistItems.$inferInsert;
 
+export type KbDocument = typeof kbDocuments.$inferSelect;
+export type NewKbDocument = typeof kbDocuments.$inferInsert;
+
+export type KbChunk = typeof kbChunks.$inferSelect;
+export type NewKbChunk = typeof kbChunks.$inferInsert;
+
+export type KbEmbedding = typeof kbEmbeddings.$inferSelect;
+export type NewKbEmbedding = typeof kbEmbeddings.$inferInsert;
+
 export type Dashboard = typeof dashboards.$inferSelect;
 export type NewDashboard = typeof dashboards.$inferInsert;
 
@@ -412,3 +536,12 @@ export type NewWidget = typeof widgets.$inferInsert;
 
 export type AuditLogEntry = typeof auditLog.$inferSelect;
 export type NewAuditLogEntry = typeof auditLog.$inferInsert;
+
+export type AccessTicket = typeof accessTickets.$inferSelect;
+export type NewAccessTicket = typeof accessTickets.$inferInsert;
+export type TicketResource = typeof ticketResources.$inferSelect;
+export type NewTicketResource = typeof ticketResources.$inferInsert;
+export type TicketApproval = typeof ticketApprovals.$inferSelect;
+export type NewTicketApproval = typeof ticketApprovals.$inferInsert;
+export type TicketStatusLog = typeof ticketStatusLog.$inferSelect;
+export type NewTicketStatusLog = typeof ticketStatusLog.$inferInsert;

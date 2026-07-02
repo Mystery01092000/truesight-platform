@@ -8,6 +8,20 @@
       "when": 1782871513658,
       "tag": "0000_volatile_spectrum",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1782928772117,
+      "tag": "0001_mean_titanium_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1782932952831,
+      "tag": "0002_closed_shinobi_shaw",
+      "breakpoints": true
     }
   ]
 }
