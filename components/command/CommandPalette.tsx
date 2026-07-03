@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Command } from "cmdk";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Search, Clock } from "lucide-react";
+import { useCapabilities } from "@/components/capabilities/CapabilityProvider";
+import { capabilityForRoute } from "@/lib/capabilities";
 import { COMMAND_ROUTES } from "@/lib/nav";
 import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 
@@ -35,8 +37,15 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const reduced = useReducedMotion();
+  const { isOn } = useCapabilities();
+  // Curated-off capabilities drop out of ⌘K too — same filter as the sidebar.
+  const visible = (href: string) => {
+    const cap = capabilityForRoute(href);
+    return cap == null || isOn(cap);
+  };
   // Recents persist across sessions (localStorage) — survive reload + re-login.
   const [recent, setRecent] = usePersistedState<string[]>("argus:recent-routes", []);
+  const recents = recent.filter(visible);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -90,12 +99,12 @@ export function CommandPalette() {
           <Command.Empty className="px-3 py-6 text-center text-[14px] text-mute">
             No matches. Try a resource, account, or pillar name.
           </Command.Empty>
-          {recent.length > 0 && (
+          {recents.length > 0 && (
             <Command.Group
               heading="Recent"
               className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[12px] [&_[cmdk-group-heading]]:text-ash"
             >
-              {recent.map((href) => (
+              {recents.map((href) => (
                 <Command.Item
                   key={`recent-${href}`}
                   value={`recent ${labelFor(href)}`}
@@ -112,7 +121,7 @@ export function CommandPalette() {
             heading="Go to"
             className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[12px] [&_[cmdk-group-heading]]:text-ash"
           >
-            {COMMAND_ROUTES.map((r) => {
+            {COMMAND_ROUTES.filter((r) => visible(r.href)).map((r) => {
               const Icon = r.icon;
               return (
                 <Command.Item
@@ -131,7 +140,7 @@ export function CommandPalette() {
             heading="Suggestions"
             className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[12px] [&_[cmdk-group-heading]]:text-ash"
           >
-            {SUGGESTIONS.map((s) => (
+            {SUGGESTIONS.filter((s) => visible(s.href)).map((s) => (
               <Command.Item
                 key={s.label}
                 value={s.label}

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import { Fragment } from "react";
 import Link from "next/link";
-import { Boxes, Cable, GitBranch, ShieldAlert, Wallet } from "lucide-react";
-import { desc, eq, ne, sql, inArray } from "drizzle-orm";
+import { Boxes, Cable, GitBranch, ShieldAlert, Wallet, type LucideIcon } from "lucide-react";
+import { desc, eq, ne, notInArray, sql, inArray } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import {
@@ -16,6 +17,11 @@ import { Surface } from "@/components/ui/Surface";
 import { Reveal } from "@/components/ui/Reveal";
 import { StatTile } from "@/components/ui/StatTile";
 import { ProviderChip } from "@/components/ui/ProviderChip";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Gated } from "@/components/capabilities/Gated";
+import { CurateHint } from "@/components/capabilities/CapabilityPane";
+import type { CapabilityKey } from "@/lib/capabilities";
+import { COST_SOURCE_EXTERNAL_IDS } from "@/lib/integrations/cost-sources";
 
 export const metadata: Metadata = { title: "Overview" };
 export const dynamic = "force-dynamic";
@@ -36,7 +42,13 @@ export default async function OverviewPage() {
     lastSync,
   ] = await Promise.all([
     count(resources),
-    count(integrationAccounts),
+    db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(integrationAccounts)
+      // Cost-source registry rows (aws/cost-explorer, azure/cost-management)
+      // are not connected accounts.
+      .where(notInArray(integrationAccounts.externalId, COST_SOURCE_EXTERNAL_IDS))
+      .then((r) => r[0]?.n ?? 0),
     db
       .select({ n: sql<number>`count(*)::int` })
       .from(driftFindings)
@@ -71,7 +83,14 @@ export default async function OverviewPage() {
       ? providers.map((p) => p.toUpperCase()).join(" · ")
       : "No clouds connected";
 
-  const stats = [
+  const stats: Array<{
+    label: string;
+    value: number;
+    hint: string;
+    href: string;
+    icon: LucideIcon;
+    cap?: CapabilityKey;
+  }> = [
     {
       label: "Resources discovered",
       value: resourceCount,
@@ -92,6 +111,7 @@ export default async function OverviewPage() {
       hint: driftCount > 0 ? "needs attention" : "estate in sync",
       href: "/compliance",
       icon: GitBranch,
+      cap: "compliance",
     },
     {
       label: "Security alerts",
@@ -99,6 +119,7 @@ export default async function OverviewPage() {
       hint: securityCount > 0 ? "critical + high" : "no critical findings",
       href: "/security",
       icon: ShieldAlert,
+      cap: "security",
     },
   ];
 
@@ -115,52 +136,57 @@ export default async function OverviewPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <Reveal>
-        <header className="mb-8">
-          <h1 className="font-display text-[24px] font-medium leading-[1.4] tracking-[0.2px] text-ink">
-            Overview
-          </h1>
-          <p className="mt-1 text-[14px] leading-[1.6] text-mute">
-            One pane across your DevOps lifecycle. Argus watches — read-only — and never
-            changes your estate.
-          </p>
-        </header>
+        <PageHeader
+          title="Overview"
+          description="One pane across your DevOps lifecycle. Argus watches — read-only — and never changes your estate."
+        />
       </Reveal>
+      <CurateHint />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {stats.map((s, i) => (
-          <Reveal key={s.label} delay={i * 0.04}>
-            <Link href={s.href} className="block h-full" aria-label={`${s.label} — open`}>
+        {stats.map((s, i) => {
+          const tile = (
+            <Reveal delay={i * 0.04}>
+              <Link href={s.href} className="block h-full" aria-label={`${s.label} — open`}>
+                <StatTile
+                  label={s.label}
+                  value={s.value}
+                  icon={<s.icon strokeWidth={1.75} />}
+                  sparkline={
+                    <span className="text-[12px] leading-[1.5] text-mute">{s.hint}</span>
+                  }
+                  className="h-full transition-colors duration-150 ease-smooth hover:border-hairline-emphasis"
+                />
+              </Link>
+            </Reveal>
+          );
+          return (
+            <Fragment key={s.label}>
+              {s.cap ? <Gated cap={s.cap}>{tile}</Gated> : tile}
+            </Fragment>
+          );
+        })}
+      </div>
+
+      <Gated cap="cost">
+        {monthlyCost > 0 ? (
+          <Reveal delay={0.16}>
+            <Link href="/cost" className="mt-4 block" aria-label="Spend this month — open cost analysis">
               <StatTile
-                label={s.label}
-                value={s.value}
-                icon={<s.icon strokeWidth={1.75} />}
+                label="Spend this month"
+                value={monthlyCost}
+                prefix="$"
+                decimals={2}
+                icon={<Wallet strokeWidth={1.75} />}
                 sparkline={
-                  <span className="text-[12px] leading-[1.5] text-mute">{s.hint}</span>
+                  <span className="text-[12px] leading-[1.5] text-mute">View breakdown →</span>
                 }
-                className="h-full transition-colors duration-150 ease-smooth hover:border-hairline-emphasis"
+                className="transition-colors duration-150 ease-smooth hover:border-hairline-emphasis"
               />
             </Link>
           </Reveal>
-        ))}
-      </div>
-
-      {monthlyCost > 0 ? (
-        <Reveal delay={0.16}>
-          <Link href="/cost" className="mt-4 block" aria-label="Spend this month — open cost analysis">
-            <StatTile
-              label="Spend this month"
-              value={monthlyCost}
-              prefix="$"
-              decimals={2}
-              icon={<Wallet strokeWidth={1.75} />}
-              sparkline={
-                <span className="text-[12px] leading-[1.5] text-mute">View breakdown →</span>
-              }
-              className="transition-colors duration-150 ease-smooth hover:border-hairline-emphasis"
-            />
-          </Link>
-        </Reveal>
-      ) : null}
+        ) : null}
+      </Gated>
 
       <Reveal delay={0.2}>
         <Surface level={1} radius="lg" className="mt-4 p-6">
@@ -197,21 +223,27 @@ export default async function OverviewPage() {
                 </div>
               ) : null}
               <div className="flex flex-wrap gap-3 border-t border-hairline pt-4">
-                <Link href="/topology" className="text-[13px] text-mute transition-colors hover:text-on-dark">
+                <Link href="/topology" className="text-label text-mute transition-colors hover:text-on-dark">
                   Topology canvas →
                 </Link>
-                <Link href="/aws" className="text-[13px] text-mute transition-colors hover:text-on-dark">
+                <Link href="/aws" className="text-label text-mute transition-colors hover:text-on-dark">
                   AWS estate →
                 </Link>
-                <Link href="/cost" className="text-[13px] text-mute transition-colors hover:text-on-dark">
-                  Cost analysis →
-                </Link>
-                <Link href="/security" className="text-[13px] text-mute transition-colors hover:text-on-dark">
-                  Security findings →
-                </Link>
-                <Link href="/compliance" className="text-[13px] text-mute transition-colors hover:text-on-dark">
-                  Compliance posture →
-                </Link>
+                <Gated cap="cost">
+                  <Link href="/cost" className="text-label text-mute transition-colors hover:text-on-dark">
+                    Cost analysis →
+                  </Link>
+                </Gated>
+                <Gated cap="security">
+                  <Link href="/security" className="text-label text-mute transition-colors hover:text-on-dark">
+                    Security findings →
+                  </Link>
+                </Gated>
+                <Gated cap="compliance">
+                  <Link href="/compliance" className="text-label text-mute transition-colors hover:text-on-dark">
+                    Compliance posture →
+                  </Link>
+                </Gated>
               </div>
             </div>
           )}
