@@ -4,6 +4,7 @@ import { ArrowLeft, Boxes, Cloud, GitCompareArrows, Globe, Layers } from "lucide
 
 import { Reveal } from "@/components/ui/Reveal";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { StatTile } from "@/components/ui/StatTile";
 import { buttonClass } from "@/components/ui/Button";
 import { ResourceExplorer } from "@/components/estate/ResourceExplorer";
@@ -51,33 +52,27 @@ export default async function AwsAccountPage({
         <div className="mb-5">
           <Link
             href="/aws"
-            className="inline-flex items-center gap-1.5 text-[13px] leading-[1.6] text-mute transition-colors hover:text-body"
+            className="inline-flex items-center gap-1.5 text-label leading-[1.6] text-mute transition-colors hover:text-body"
           >
             <ArrowLeft size={14} />
             AWS estate
           </Link>
         </div>
-        <header className="mb-8 flex items-start gap-3.5">
-          <span
-            className="grid size-11 shrink-0 place-items-center rounded-lg border border-hairline bg-surface-card"
-            aria-hidden
-          >
-            <Cloud size={22} strokeWidth={1.75} className="text-accent-blue" />
-          </span>
-          <div>
-            <h1 className="font-mono text-[22px] font-medium leading-[1.4] tracking-[0.2px] text-ink tabular-nums">
-              {acct}
-            </h1>
-            <p className="mt-1 text-[14px] leading-[1.6] text-mute tabular-nums">
+        <PageHeader
+          title={acct}
+          titleClassName="font-mono tabular-nums"
+          icon={<Cloud size={22} strokeWidth={1.75} className="text-accent-blue" />}
+          description={
+            <span className="tabular-nums">
               {resources.length > 0
                 ? `${plural(resources.length, "resource")} · ${plural(
                     serviceCount,
                     "service",
                   )} · ${plural(regionCount, "region")}`
                 : "AWS account"}
-            </p>
-          </div>
-        </header>
+            </span>
+          }
+        />
       </Reveal>
 
       {resources.length === 0 ? (

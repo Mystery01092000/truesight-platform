@@ -111,7 +111,7 @@ export function TicketsExplorer({ tickets }: { tickets: MyTicket[] }) {
         accessorFn: (t) => new Date(t.createdAt).getTime(),
         cell: ({ row }) => (
           <span
-            className="font-mono text-[13px] tabular-nums text-mute"
+            className="font-mono text-label tabular-nums text-mute"
             title={new Date(row.original.createdAt).toLocaleString()}
           >
             {formatAge(row.original.createdAt)}
@@ -126,7 +126,7 @@ export function TicketsExplorer({ tickets }: { tickets: MyTicket[] }) {
         cell: ({ row }) => (
           <Link
             href={`/tickets/${row.original.id}`}
-            className="inline-flex items-center gap-1 text-[13px] text-iris transition-colors duration-150 ease-smooth hover:text-iris-bright"
+            className="inline-flex items-center gap-1 text-label text-iris transition-colors duration-150 ease-smooth hover:text-iris-bright"
           >
             View
             <ArrowRight size={13} strokeWidth={1.75} />

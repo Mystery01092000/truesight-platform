@@ -7,6 +7,7 @@ import { Badge, StatusBadge } from "@/components/ui/Badge";
 import { Surface } from "@/components/ui/Surface";
 import { buttonClass } from "@/components/ui/Button";
 import { cn } from "@/lib/utils/cn";
+import { formatDate } from "@/lib/utils/format";
 import type { Severity } from "@/lib/taxonomy";
 
 /**
@@ -49,11 +50,6 @@ export function vulnInventoryHref(urn: string | null): string | null {
   return null;
 }
 
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString();
-}
-
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
@@ -69,10 +65,10 @@ function Meta({
 }) {
   return (
     <div className={className}>
-      <dt className="text-[11px] font-medium uppercase leading-[1.4] tracking-[0.06em] text-ash">
+      <dt className="text-micro font-medium uppercase leading-[1.4] tracking-[0.06em] text-ash">
         {label}
       </dt>
-      <dd className="mt-1 text-[13px] leading-[1.6] text-body">{children}</dd>
+      <dd className="mt-1 text-label leading-[1.6] text-body">{children}</dd>
     </div>
   );
 }
@@ -102,7 +98,7 @@ export function VulnFindingDetail({
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
         {finding.packageName ? (
           <Meta label="Package">
-            <span className="break-all font-mono text-[13px] text-ink">{finding.packageName}</span>
+            <span className="break-all font-mono text-label text-ink">{finding.packageName}</span>
           </Meta>
         ) : null}
         {finding.cve ? (
@@ -111,7 +107,7 @@ export function VulnFindingDetail({
               href={`https://nvd.nist.gov/vuln/detail/${encodeURIComponent(finding.cve)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 font-mono text-[13px] text-iris transition-colors duration-150 ease-smooth hover:text-on-dark"
+              className="inline-flex items-center gap-1 font-mono text-label text-iris transition-colors duration-150 ease-smooth hover:text-on-dark"
             >
               {finding.cve}
               <ExternalLink size={11} strokeWidth={1.75} aria-hidden />
@@ -129,10 +125,10 @@ export function VulnFindingDetail({
 
       {finding.description ? (
         <section>
-          <h4 className="text-[11px] font-medium uppercase leading-[1.4] tracking-[0.06em] text-ash">
+          <h4 className="text-micro font-medium uppercase leading-[1.4] tracking-[0.06em] text-ash">
             Description
           </h4>
-          <p className="mt-1.5 whitespace-pre-line text-[13px] leading-[1.6] text-body">
+          <p className="mt-1.5 whitespace-pre-line text-label leading-[1.6] text-body">
             {finding.description}
           </p>
         </section>
@@ -140,7 +136,7 @@ export function VulnFindingDetail({
 
       {finding.mitigation ? (
         <Surface level={2} radius="md" className="p-4">
-          <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase leading-[1.4] tracking-[0.06em] text-ash">
+          <div className="flex items-center gap-1.5 text-micro font-medium uppercase leading-[1.4] tracking-[0.06em] text-ash">
             <Wrench size={12} strokeWidth={1.75} aria-hidden />
             Proposed mitigation
           </div>

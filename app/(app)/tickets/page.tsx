@@ -10,6 +10,7 @@ import { accessTickets } from "@/db/schema";
 import { Reveal } from "@/components/ui/Reveal";
 import { buttonClass } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { TicketsExplorer, type MyTicket } from "@/components/ticketing/TicketsExplorer";
 import type { TicketStatus } from "@/lib/ticketing/types";
 
@@ -42,39 +43,28 @@ export default async function TicketsLandingPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <Reveal>
-        <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-start gap-3.5">
-            <span
-              className="grid size-11 shrink-0 place-items-center rounded-lg border border-iris bg-iris-soft"
-              aria-hidden
-            >
-              <Ticket size={22} strokeWidth={1.75} className="text-iris" />
-            </span>
-            <div>
-              <h1 className="text-[24px] font-medium leading-[1.4] tracking-[0.2px] text-ink">
-                Developer Tools Access
-              </h1>
-              <p className="mt-1 text-[14px] leading-[1.6] text-mute">
-                Raise or track a request for AWS, Azure, Jenkins, Grafana or Superset access.
-                Managed by DevOps &amp; IT.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            {isAdmin && (
-              <Link
-                href="/tickets/admin"
-                className="text-[13px] text-iris transition-colors duration-150 ease-smooth hover:text-iris-bright"
-              >
-                Admin console
+        <PageHeader
+          title="Developer Tools Access"
+          iconTone="iris"
+          icon={<Ticket size={22} strokeWidth={1.75} className="text-iris" />}
+          description="Raise or track a request for AWS, Azure, Jenkins, Grafana or Superset access. Managed by DevOps & IT."
+          actions={
+            <>
+              {isAdmin && (
+                <Link
+                  href="/tickets/admin"
+                  className="text-label text-iris transition-colors duration-150 ease-smooth hover:text-iris-bright"
+                >
+                  Admin console
+                </Link>
+              )}
+              <Link href="/tickets/new" className={buttonClass("primary", "md")}>
+                <PlusSquare size={15} strokeWidth={1.75} />
+                New request
               </Link>
-            )}
-            <Link href="/tickets/new" className={buttonClass("primary", "md")}>
-              <PlusSquare size={15} strokeWidth={1.75} />
-              New request
-            </Link>
-          </div>
-        </header>
+            </>
+          }
+        />
       </Reveal>
 
       {tickets.length === 0 ? (

@@ -14,7 +14,7 @@ export function Keycap({
     <kbd
       className={cn(
         "inline-flex h-5 min-w-5 items-center justify-center rounded-xs border border-hairline px-1.5",
-        "text-[13px] font-medium leading-none text-body",
+        "text-label font-medium leading-none text-body",
         "bg-[linear-gradient(180deg,var(--color-key-bg-start),var(--color-key-bg-end))]",
         className,
       )}

@@ -45,14 +45,14 @@ function EntryBody({ entry }: { entry: PlanEntry }) {
   return (
     <div>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span className="font-mono text-[11px] leading-[1.4] tracking-[0.06em] text-mute tabular-nums">
+        <span className="font-mono text-micro leading-[1.4] tracking-[0.06em] text-mute tabular-nums">
           {entry.sizeLabel}
         </span>
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          className="inline-flex items-center gap-1 text-[11px] font-medium leading-[1.4] tracking-[0.06em] text-mute transition-colors duration-150 hover:text-on-dark"
+          className="inline-flex items-center gap-1 text-micro font-medium leading-[1.4] tracking-[0.06em] text-mute transition-colors duration-150 hover:text-on-dark"
         >
           <ChevronRight
             size={12}
@@ -76,18 +76,18 @@ function EntryBody({ entry }: { entry: PlanEntry }) {
               <div className="flex flex-wrap items-center gap-1">
                 {segments.map((seg, i) => (
                   <span key={`${seg}-${i}`} className="inline-flex items-center gap-1">
-                    <span className="rounded-xs bg-surface-card px-1.5 py-0.5 font-mono text-[11px] leading-[1.4] text-body">
+                    <span className="rounded-xs bg-surface-card px-1.5 py-0.5 font-mono text-micro leading-[1.4] text-body">
                       {seg}
                     </span>
                     {i < segments.length - 1 && (
-                      <span className="text-[11px] text-stone" aria-hidden>
+                      <span className="text-micro text-stone" aria-hidden>
                         /
                       </span>
                     )}
                   </span>
                 ))}
               </div>
-              <p className="mt-2 break-all font-mono text-[11px] leading-[1.5] text-ash">
+              <p className="mt-2 break-all font-mono text-micro leading-[1.5] text-ash">
                 {entry.key}
               </p>
             </div>
@@ -120,7 +120,7 @@ export function PlanTimeline({ days }: { days: PlanDay[] }) {
           <section key={day.label} aria-label={day.label}>
             {/* Date divider — a micro label on a hairline rule. */}
             <div className="mb-5 flex items-center gap-3">
-              <h2 className="shrink-0 text-[11px] font-medium uppercase leading-[1.4] tracking-[0.06em] text-mute">
+              <h2 className="shrink-0 text-micro font-medium uppercase leading-[1.4] tracking-[0.06em] text-mute">
                 {day.label}
               </h2>
               <span className="h-px flex-1 bg-hairline" aria-hidden />

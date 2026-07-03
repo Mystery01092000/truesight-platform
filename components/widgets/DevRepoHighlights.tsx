@@ -1,6 +1,7 @@
 import { GitCommitVertical } from "lucide-react";
 
 import { cn } from "@/lib/utils/cn";
+import { formatNumber } from "@/lib/utils/format";
 
 /**
  * DevRepoHighlights — a developer's top repositories by net LOC, ranked with
@@ -22,8 +23,6 @@ export type RepoHighlight = {
 const BAR_FILL = ["bg-on-dark", "bg-charcoal", "bg-body", "bg-mute", "bg-ash"];
 const fillFor = (i: number) => BAR_FILL[Math.min(i, BAR_FILL.length - 1)];
 
-const nf = new Intl.NumberFormat("en-US");
-
 export function DevRepoHighlights({
   repos,
   limit = 5,
@@ -39,7 +38,7 @@ export function DevRepoHighlights({
 
   if (rows.length === 0) {
     return (
-      <p className={cn("text-[13px] leading-[1.6] text-mute", className)}>
+      <p className={cn("text-label leading-[1.6] text-mute", className)}>
         No per-repository contributions recorded yet.
       </p>
     );
@@ -58,12 +57,12 @@ export function DevRepoHighlights({
                 href={`https://github.com/${r.repo}`}
                 target="_blank"
                 rel="noreferrer"
-                className="truncate font-mono text-[13px] text-ink underline-offset-4 transition-colors duration-150 ease-smooth hover:underline"
+                className="truncate font-mono text-label text-ink underline-offset-4 transition-colors duration-150 ease-smooth hover:underline"
               >
                 {r.name}
               </a>
-              <span className="shrink-0 font-mono text-[13px] text-ink tabular-nums">
-                {nf.format(r.loc)} <span className="text-[11px] text-mute">loc</span>
+              <span className="shrink-0 font-mono text-label text-ink tabular-nums">
+                {formatNumber(r.loc)} <span className="text-micro text-mute">loc</span>
               </span>
             </div>
             <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-surface-elevated">
@@ -72,12 +71,12 @@ export function DevRepoHighlights({
                 style={{ width: `${Math.max(4, (Math.abs(r.loc) / max) * 100)}%` }}
               />
             </div>
-            <div className="mt-1 flex items-center gap-2 font-mono text-[11px] text-mute tabular-nums">
-              <span className="text-positive">+{nf.format(r.additions)}</span>
-              <span className="text-critical">−{nf.format(r.deletions)}</span>
+            <div className="mt-1 flex items-center gap-2 font-mono text-micro text-mute tabular-nums">
+              <span className="text-positive">+{formatNumber(r.additions)}</span>
+              <span className="text-critical">−{formatNumber(r.deletions)}</span>
               <span className="inline-flex items-center gap-1 text-ash">
                 <GitCommitVertical size={11} strokeWidth={1.75} aria-hidden />
-                {nf.format(r.commits)} commits
+                {formatNumber(r.commits)} commits
               </span>
             </div>
           </div>

@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { securityPosture, vulnerabilityFindings } from "@/db/schema";
 import { Surface } from "@/components/ui/Surface";
 import { Reveal } from "@/components/ui/Reveal";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { StatTile } from "@/components/ui/StatTile";
 import { ProviderChip } from "@/components/ui/ProviderChip";
 import { VulnCounter } from "@/components/widgets/VulnCounter";
@@ -79,23 +80,12 @@ export default async function SecurityPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <Reveal>
-        <header className="mb-8 flex items-start gap-3.5">
-          <span
-            className="grid size-11 shrink-0 place-items-center rounded-lg border border-iris bg-iris-soft"
-            aria-hidden
-          >
-            <ShieldAlert size={22} strokeWidth={1.75} className="text-iris" />
-          </span>
-          <div>
-            <h1 className="text-[24px] font-medium leading-[1.4] tracking-[0.2px] text-ink">
-              Security &amp; Vulnerabilities
-            </h1>
-            <p className="mt-1 text-[14px] leading-[1.6] text-mute">
-              Argus watches your estate read-only — Inspector2, Security Hub, ECR, Defender for
-              Cloud, Dependabot and CodeQL.
-            </p>
-          </div>
-        </header>
+        <PageHeader
+          title="Security & Vulnerabilities"
+          iconTone="iris"
+          icon={<ShieldAlert size={22} strokeWidth={1.75} className="text-iris" />}
+          description="Argus watches your estate read-only — Inspector2, Security Hub, ECR, Defender for Cloud, Dependabot and CodeQL."
+        />
       </Reveal>
 
       {/* Scanner console header — live counts from the durable findings feed */}
@@ -128,7 +118,7 @@ export default async function SecurityPage() {
           {/* Time reads as prose, not a RollupNumber — a local tile in StatTile's clothes. */}
           <div className="h-full rounded-lg border border-hairline bg-surface p-4">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[13px] font-medium leading-[1.5] tracking-[0.015em] text-mute">
+              <span className="text-label font-medium leading-[1.5] tracking-[0.015em] text-mute">
                 Last scan
               </span>
               <span className="text-ash [&>svg]:size-4" aria-hidden>

@@ -7,6 +7,7 @@ import { listRecentPlans } from "@/lib/integrations/terraform/plans";
 import type { TerraformPlan } from "@/db/schema";
 import { Surface } from "@/components/ui/Surface";
 import { Reveal } from "@/components/ui/Reveal";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { StatTile } from "@/components/ui/StatTile";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PlanTimeline, type PlanDay } from "./PlanTimeline";
@@ -99,26 +100,13 @@ export default async function PlansPage() {
     <div className="mx-auto max-w-4xl">
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <Reveal>
-        <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-start gap-3.5">
-            <span
-              className="grid size-11 shrink-0 place-items-center rounded-lg border border-iris bg-iris-soft"
-              aria-hidden
-            >
-              <GitBranch size={22} strokeWidth={1.75} className="text-iris" />
-            </span>
-            <div>
-              <h1 className="text-[24px] font-medium leading-[1.4] tracking-[0.2px] text-ink">
-                Terraform Executions
-              </h1>
-              <p className="mt-1 text-[14px] leading-[1.6] text-mute">
-                Plan-execution history discovered from the Terraform state bucket — read-only,
-                referenced never managed.
-              </p>
-            </div>
-          </div>
-          {canRefresh && <RefreshPlansButton />}
-        </header>
+        <PageHeader
+          title="Terraform Executions"
+          iconTone="iris"
+          icon={<GitBranch size={22} strokeWidth={1.75} className="text-iris" />}
+          description="Plan-execution history discovered from the Terraform state bucket — read-only, referenced never managed."
+          actions={canRefresh ? <RefreshPlansButton /> : undefined}
+        />
       </Reveal>
 
       {/* ── Stat row ───────────────────────────────────────────────────── */}
@@ -135,14 +123,14 @@ export default async function PlansPage() {
             icon={<Layers strokeWidth={1.75} />}
           />
           <div className="rounded-lg border border-hairline bg-surface p-4">
-            <span className="text-[13px] font-medium leading-[1.5] tracking-[0.015em] text-mute">
+            <span className="text-label font-medium leading-[1.5] tracking-[0.015em] text-mute">
               Latest execution
             </span>
             <div className="mt-2 font-mono text-[28px] font-medium leading-none text-ink">
               {latest ? relativeLabel(latest, now) : "—"}
             </div>
             {latest && (
-              <div className="mt-2 font-mono text-[11px] leading-[1.4] tracking-[0.06em] text-ash tabular-nums">
+              <div className="mt-2 font-mono text-micro leading-[1.4] tracking-[0.06em] text-ash tabular-nums">
                 {dayLabel(latest, now)} · {timeLabel(latest)}
               </div>
             )}

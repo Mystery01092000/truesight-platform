@@ -58,12 +58,12 @@ export function ScanFrequencyCard({ initialHours }: { initialHours: number }) {
           <h2 className="text-[15px] font-medium leading-[1.4] tracking-[0.2px] text-ink">
             Scan frequency
           </h2>
-          <p className="mt-1 text-[13px] leading-[1.5] text-mute">
+          <p className="mt-1 text-label leading-[1.5] text-mute">
             How often the scheduled security scan sweeps the estate.
           </p>
         </div>
         <span
-          className="inline-flex items-center gap-1.5 font-mono text-[13px] leading-[1.5] text-body tabular-nums"
+          className="inline-flex items-center gap-1.5 font-mono text-label leading-[1.5] text-body tabular-nums"
           aria-live="polite"
         >
           <Timer size={14} strokeWidth={1.75} className="text-mute" aria-hidden />
@@ -82,8 +82,8 @@ export function ScanFrequencyCard({ initialHours }: { initialHours: number }) {
           aria-live="polite"
           className={
             status?.kind === "error"
-              ? "text-[11px] leading-[1.4] text-critical"
-              : "text-[11px] leading-[1.4] text-positive"
+              ? "text-micro leading-[1.4] text-critical"
+              : "text-micro leading-[1.4] text-positive"
           }
         >
           {status?.text}

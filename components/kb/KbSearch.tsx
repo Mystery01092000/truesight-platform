@@ -57,7 +57,7 @@ function SourceBadge({ source }: { source: KbSourceType }) {
 
 function ScorePill({ score }: { score: number }) {
   return (
-    <span className="inline-flex items-center rounded-full bg-surface-elevated px-2 py-0.5 font-mono text-[11px] tabular-nums text-ash">
+    <span className="inline-flex items-center rounded-full bg-surface-elevated px-2 py-0.5 font-mono text-micro tabular-nums text-ash">
       {(score * 100).toFixed(0)}%
     </span>
   );
@@ -129,7 +129,7 @@ export function KbSearch() {
       </form>
 
       {error && (
-        <p className="mt-3 text-[13px] leading-[1.5] text-accent-red">{error}</p>
+        <p className="mt-3 text-label leading-[1.5] text-accent-red">{error}</p>
       )}
 
       <div className="mt-4 space-y-3">
@@ -147,7 +147,7 @@ export function KbSearch() {
         {!loading && hasSearched && results.length === 0 && (
           <div className="py-8 text-center">
             <p className="text-[14px] leading-[1.6] text-mute">No results found.</p>
-            <p className="mt-1 text-[13px] text-ash">
+            <p className="mt-1 text-label text-ash">
               Try a different query or ingest more sources.
             </p>
           </div>
@@ -168,7 +168,7 @@ export function KbSearch() {
                     {r.title}
                   </div>
                 )}
-                <p className="mt-1 line-clamp-3 text-[13px] leading-[1.5] text-body">
+                <p className="mt-1 line-clamp-3 text-label leading-[1.5] text-body">
                   {r.content}
                 </p>
                 {r.url && (

@@ -152,7 +152,7 @@ export default async function DeveloperProfilePage({
                 ))}
               </div>
             ) : (
-              <p className="mt-5 text-[13px] leading-[1.6] text-mute">
+              <p className="mt-5 text-label leading-[1.6] text-mute">
                 No repository contributions recorded yet.
               </p>
             )}
@@ -199,7 +199,7 @@ function ProfileHeader({
       <div className="mb-5">
         <Link
           href="/developers"
-          className="inline-flex items-center gap-1.5 text-[13px] leading-[1.6] text-mute transition-colors hover:text-body"
+          className="inline-flex items-center gap-1.5 text-label leading-[1.6] text-mute transition-colors hover:text-body"
         >
           <ArrowLeft size={14} />
           Developer Portal
@@ -250,7 +250,7 @@ function ProfileHeader({
 function ChurnTile({ additions, deletions }: { additions: number; deletions: number }) {
   return (
     <div className="rounded-lg border border-hairline bg-surface p-4">
-      <span className="text-[13px] font-medium leading-[1.5] tracking-[0.015em] text-mute">
+      <span className="text-label font-medium leading-[1.5] tracking-[0.015em] text-mute">
         Additions / Deletions
       </span>
       <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">

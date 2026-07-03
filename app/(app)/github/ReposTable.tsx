@@ -7,6 +7,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/ui/DataTable";
 import { TextInput } from "@/components/ui/TextInput";
 import { Badge } from "@/components/ui/Badge";
+import { formatDate, formatNumber } from "@/lib/utils/format";
 
 /**
  * ReposTable — the org repository inventory as a sortable, paginated
@@ -27,16 +28,6 @@ export type RepoRow = {
   visibility: string;
 };
 
-const nf = new Intl.NumberFormat("en-US");
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-function fmtDate(iso: string | null): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
-}
-
 export function ReposTable({ repos }: { repos: RepoRow[] }) {
   const [filter, setFilter] = useState("");
 
@@ -50,7 +41,7 @@ export function ReposTable({ repos }: { repos: RepoRow[] }) {
             href={row.original.htmlUrl}
             target="_blank"
             rel="noreferrer"
-            className="group inline-flex items-center gap-1.5 font-mono text-[13px] text-ink transition-colors hover:text-iris-bright"
+            className="group inline-flex items-center gap-1.5 font-mono text-label text-ink transition-colors hover:text-iris-bright"
           >
             <span className="truncate">{row.original.name}</span>
             <ExternalLink
@@ -74,8 +65,8 @@ export function ReposTable({ repos }: { repos: RepoRow[] }) {
         accessorKey: "stars",
         header: "Stars",
         cell: ({ getValue }) => (
-          <span className="font-mono text-[13px] tabular-nums text-body">
-            {nf.format(getValue<number>())}
+          <span className="font-mono text-label tabular-nums text-body">
+            {formatNumber(getValue<number>())}
           </span>
         ),
       },
@@ -83,8 +74,8 @@ export function ReposTable({ repos }: { repos: RepoRow[] }) {
         accessorKey: "totalContributions",
         header: "Commits",
         cell: ({ getValue }) => (
-          <span className="font-mono text-[13px] tabular-nums text-body">
-            {nf.format(getValue<number>())}
+          <span className="font-mono text-label tabular-nums text-body">
+            {formatNumber(getValue<number>())}
           </span>
         ),
       },
@@ -92,8 +83,8 @@ export function ReposTable({ repos }: { repos: RepoRow[] }) {
         accessorKey: "contributorCount",
         header: "Contributors",
         cell: ({ getValue }) => (
-          <span className="font-mono text-[13px] tabular-nums text-body">
-            {nf.format(getValue<number>())}
+          <span className="font-mono text-label tabular-nums text-body">
+            {formatNumber(getValue<number>())}
           </span>
         ),
       },
@@ -102,7 +93,7 @@ export function ReposTable({ repos }: { repos: RepoRow[] }) {
         header: "Last push",
         cell: ({ getValue }) => (
           <span className="font-mono text-[12px] tabular-nums text-mute">
-            {fmtDate(getValue<string | null>())}
+            {formatDate(getValue<string | null>() ?? "")}
           </span>
         ),
       },

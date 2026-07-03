@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { BookOpen } from "lucide-react";
 
 import { Reveal } from "@/components/ui/Reveal";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { KbAskPanel } from "@/components/kb/KbAskPanel";
 import { KbSearch } from "@/components/kb/KbSearch";
 import { KbStatusCards } from "@/components/kb/KbStatusCards";
@@ -15,22 +16,12 @@ export default function KbPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <Reveal>
-        <header className="mb-8 flex items-start gap-3.5">
-          <span
-            className="grid size-11 shrink-0 place-items-center rounded-lg border border-iris bg-iris-soft"
-            aria-hidden
-          >
-            <BookOpen size={22} strokeWidth={1.75} className="text-iris" />
-          </span>
-          <div>
-            <h1 className="text-[24px] font-medium leading-[1.4] tracking-[0.2px] text-ink">
-              Knowledge Base
-            </h1>
-            <p className="mt-1 text-[14px] leading-[1.6] text-mute">
-              Query, manage and extend Argus memory across docs, snapshots, GitHub and Terraform state.
-            </p>
-          </div>
-        </header>
+        <PageHeader
+          title="Knowledge Base"
+          iconTone="iris"
+          icon={<BookOpen size={22} strokeWidth={1.75} className="text-iris" />}
+          description="Query, manage and extend Argus memory across docs, snapshots, GitHub and Terraform state."
+        />
       </Reveal>
 
       <KbStatusCards />

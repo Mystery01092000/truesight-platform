@@ -65,7 +65,7 @@ function CitationChip({ citation }: { citation: Citation }) {
   const label = citation.title || citation.documentId;
   const inner = (
     <>
-      <span className="font-mono text-[11px] tabular-nums text-iris">[{citation.n}]</span>
+      <span className="font-mono text-micro tabular-nums text-iris">[{citation.n}]</span>
       <span className="max-w-56 truncate">{label}</span>
       {citation.url ? (
         <ExternalLink size={11} strokeWidth={1.75} className="shrink-0 text-mute" />
@@ -282,21 +282,21 @@ export function KbAskPanel() {
         )}
 
       {emptyAnswer && (
-        <p className="mt-4 text-[13px] leading-[1.6] text-mute">
+        <p className="mt-4 text-label leading-[1.6] text-mute">
           Argus has no indexed context for that question yet. Ingest more sources,
           then ask again.
         </p>
       )}
 
       {phase === "error" && (
-        <p className="mt-4 text-[13px] leading-[1.5] text-critical" role="alert">
+        <p className="mt-4 text-label leading-[1.5] text-critical" role="alert">
           {error ?? "Answer failed."}
         </p>
       )}
 
       {citations.length > 0 && (
         <div className="mt-4 border-t border-hairline pt-3">
-          <div className="text-[11px] uppercase tracking-[0.6px] text-ash">Sources</div>
+          <div className="text-micro uppercase tracking-[0.6px] text-ash">Sources</div>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {citations.map((c) => (
               <CitationChip key={c.chunkId} citation={c} />

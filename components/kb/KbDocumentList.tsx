@@ -12,6 +12,7 @@ import { Reveal } from "@/components/ui/Reveal";
 import { getKbDocuments, deleteKbDocument, type KbDocument } from "@/lib/kb/client";
 import type { KbSourceType } from "@/lib/kb/types";
 import { cn } from "@/lib/utils/cn";
+import { formatDate } from "@/lib/utils/format";
 
 const SOURCE_OPTIONS: { value: KbSourceType | "all"; label: string }[] = [
   { value: "all", label: "All" },
@@ -29,13 +30,6 @@ const SOURCE_DOT: Record<KbSourceType, string> = {
 };
 
 const LIMIT = 20;
-
-function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString();
-}
 
 function SourceCell({ source }: { source: KbSourceType }) {
   return (
@@ -121,7 +115,9 @@ export function KbDocumentList() {
         accessorKey: "lastIngestedAt",
         header: "Last ingested",
         cell: ({ row }) => (
-          <span className="text-[13px] text-body">{formatDate(row.original.lastIngestedAt)}</span>
+          <span className="text-label text-body">
+            {row.original.lastIngestedAt ? formatDate(row.original.lastIngestedAt) : "—"}
+          </span>
         ),
       },
       {
@@ -167,7 +163,7 @@ export function KbDocumentList() {
         </div>
 
         {error && (
-          <p className="mb-3 text-[13px] leading-[1.5] text-accent-red">{error}</p>
+          <p className="mb-3 text-label leading-[1.5] text-accent-red">{error}</p>
         )}
 
         {loading ? (
@@ -185,7 +181,7 @@ export function KbDocumentList() {
             />
 
             <div className="mt-4 flex items-center justify-between">
-              <span className="text-[13px] text-mute">
+              <span className="text-label text-mute">
                 {count > 0 ? (
                   <>
                     Showing {offset + 1}-{Math.min(offset + LIMIT, count)} of {count}
@@ -203,7 +199,7 @@ export function KbDocumentList() {
                 >
                   <ChevronLeft size={14} strokeWidth={1.75} />
                 </Button>
-                <span className="min-w-[4rem] text-center font-mono text-[13px] text-body">
+                <span className="min-w-[4rem] text-center font-mono text-label text-body">
                   {currentPage} / {totalPages}
                 </span>
                 <Button

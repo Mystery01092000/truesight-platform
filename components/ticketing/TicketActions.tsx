@@ -104,7 +104,7 @@ export function TicketActions({
         </Button>
       )}
       {!canApprove && !(isAdmin && status === "approved") && (
-        <p className="text-[13px] text-mute">No actions available for this ticket right now.</p>
+        <p className="text-label text-mute">No actions available for this ticket right now.</p>
       )}
     </div>
   );

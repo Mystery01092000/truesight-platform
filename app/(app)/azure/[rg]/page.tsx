@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, Boxes, Cloud, GitCompareArrows, Globe, Layers } from "lucide-react";
+import { ArrowLeft, Boxes, Cloudy, GitCompareArrows, Globe, Layers } from "lucide-react";
 
 import { Reveal } from "@/components/ui/Reveal";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { StatTile } from "@/components/ui/StatTile";
 import { buttonClass } from "@/components/ui/Button";
 import { getAzureResources, getDriftedUrns } from "../data";
@@ -55,24 +56,19 @@ export default async function AzureResourceGroupPage({
         <div className="mb-5">
           <Link
             href="/azure"
-            className="inline-flex items-center gap-1.5 text-[13px] leading-[1.6] text-mute transition-colors hover:text-body"
+            className="inline-flex items-center gap-1.5 text-label leading-[1.6] text-mute transition-colors hover:text-body"
           >
             <ArrowLeft size={14} />
             Azure estate
           </Link>
         </div>
-        <header className="mb-8 flex items-start gap-3.5">
-          <span
-            className="grid size-11 shrink-0 place-items-center rounded-lg border border-hairline bg-surface-card"
-            aria-hidden
-          >
-            <Cloud size={22} strokeWidth={1.75} className="text-iris" />
-          </span>
-          <div className="min-w-0">
-            <h1 className="truncate font-mono text-[22px] font-medium leading-[1.4] tracking-[0.2px] text-ink">
-              {resourceGroup}
-            </h1>
-            <p className="mt-1 truncate text-[14px] leading-[1.6] text-mute">
+        <PageHeader
+          title={resourceGroup}
+          titleClassName="truncate font-mono"
+          icon={<Cloudy size={22} strokeWidth={1.75} className="text-iris" />}
+          iconTone="iris"
+          description={
+            <span className="block truncate">
               {resources.length > 0 ? (
                 <>
                   {plural(resources.length, "resource")} · {plural(serviceCount, "service")} ·{" "}
@@ -87,15 +83,15 @@ export default async function AzureResourceGroupPage({
               ) : (
                 "Azure resource group"
               )}
-            </p>
-          </div>
-        </header>
+            </span>
+          }
+        />
       </Reveal>
 
       {resources.length === 0 ? (
         <Reveal delay={0.08}>
           <EmptyState
-            icon={<Cloud />}
+            icon={<Cloudy />}
             title="No resources for this resource group"
             description={`Nothing discovered under ${resourceGroup} yet. Run the Azure sync, or head back to the estate overview.`}
             action={

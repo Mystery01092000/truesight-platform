@@ -11,6 +11,7 @@ import { FRAMEWORKS } from "@/lib/governance/frameworks";
 import { Surface } from "@/components/ui/Surface";
 import { Reveal } from "@/components/ui/Reveal";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { StatTile } from "@/components/ui/StatTile";
 import {
   VerifiedChecklist,
@@ -82,23 +83,12 @@ export default async function CompliancePage({
     <div className="mx-auto max-w-6xl">
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <Reveal>
-        <header className="mb-8 flex items-start gap-3.5">
-          <span
-            className="grid size-11 shrink-0 place-items-center rounded-lg border border-iris bg-iris-soft"
-            aria-hidden
-          >
-            <ScrollText size={22} strokeWidth={1.75} className="text-iris" />
-          </span>
-          <div>
-            <h1 className="text-[24px] font-medium leading-[1.4] tracking-[0.2px] text-ink">
-              Compliance &amp; Governance
-            </h1>
-            <p className="mt-1 text-[14px] leading-[1.6] text-mute">
-              Every control is verified against the live estate — drift, security posture, and
-              compliance findings. No blind spots.
-            </p>
-          </div>
-        </header>
+        <PageHeader
+          title="Compliance & Governance"
+          iconTone="iris"
+          icon={<ScrollText size={22} strokeWidth={1.75} className="text-iris" />}
+          description="Every control is verified against the live estate — drift, security posture, and compliance findings. No blind spots."
+        />
       </Reveal>
 
       {isEmpty ? (
@@ -212,7 +202,7 @@ export default async function CompliancePage({
                 <ComplianceScore score={summary.postureScore} />
                 <div className="text-center">
                   <div className="text-[12px] text-mute">Overall posture</div>
-                  <div className="text-[13px] font-medium text-body">
+                  <div className="text-label font-medium text-body">
                     {postureLabel(summary.postureScore)}
                   </div>
                 </div>

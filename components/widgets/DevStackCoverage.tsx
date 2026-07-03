@@ -32,7 +32,7 @@ export function DevStackCoverage({
 
   if (positive.length === 0 || total === 0) {
     return (
-      <p className={cn("text-[13px] leading-[1.6] text-mute", className)}>
+      <p className={cn("text-label leading-[1.6] text-mute", className)}>
         No language telemetry recorded for this developer yet.
       </p>
     );
@@ -80,7 +80,7 @@ export function DevStackCoverage({
         {segments.map((s) => (
           <span
             key={s.language}
-            className="inline-flex items-center gap-1.5 rounded-full bg-surface-elevated px-2.5 py-1 font-mono text-[11px] text-body"
+            className="inline-flex items-center gap-1.5 rounded-full bg-surface-elevated px-2.5 py-1 font-mono text-micro text-body"
           >
             <span
               className="size-1.5 shrink-0 rounded-full"

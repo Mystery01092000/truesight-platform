@@ -16,7 +16,7 @@ export function Footer({ children, className }: FooterProps) {
       <div className="mx-auto flex max-w-[1240px] flex-col items-start justify-between gap-6 px-6 py-10 sm:flex-row sm:items-center">
         <div className="flex flex-col gap-1">
           <Logo size={20} />
-          <p className="text-[13px] leading-[1.4] text-mute">
+          <p className="text-label leading-[1.4] text-mute">
             Cloud governance with no blind spots.
           </p>
         </div>
@@ -27,7 +27,7 @@ export function Footer({ children, className }: FooterProps) {
           </nav>
         )}
 
-        <p className="text-[13px] leading-[1.4] text-stone">
+        <p className="text-label leading-[1.4] text-stone">
           © {new Date().getFullYear()} CentricityWealthTech
         </p>
       </div>

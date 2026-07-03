@@ -44,7 +44,7 @@ export function StatTile({
   return (
     <div className={cn("rounded-lg border border-hairline bg-surface p-4", className)}>
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[13px] font-medium leading-[1.5] tracking-[0.015em] text-mute">
+        <span className="text-label font-medium leading-[1.5] tracking-[0.015em] text-mute">
           {label}
         </span>
         {icon && (
@@ -64,7 +64,7 @@ export function StatTile({
         {delta !== undefined && (
           <span
             className={cn(
-              "rounded-xs px-1.5 py-0.5 font-mono text-[11px] leading-[1.4] tabular-nums",
+              "rounded-xs px-1.5 py-0.5 font-mono text-micro leading-[1.4] tabular-nums",
               delta === 0
                 ? "bg-surface-elevated text-mute"
                 : good

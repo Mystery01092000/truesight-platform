@@ -84,7 +84,7 @@ export default async function TopologyPage({
           action={
             <Link
               href="/topology?env=all&layout=layered&provider=all"
-              className="inline-flex items-center rounded-md border border-hairline bg-surface-elevated px-3 py-1.5 text-[13px] text-on-dark transition-colors duration-150 ease-smooth hover:border-hairline-strong"
+              className="inline-flex items-center rounded-md border border-hairline bg-surface-elevated px-3 py-1.5 text-label text-on-dark transition-colors duration-150 ease-smooth hover:border-hairline-strong"
             >
               View the whole estate
             </Link>

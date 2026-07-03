@@ -33,7 +33,7 @@ const VARIANTS: Record<ButtonVariant, string> = {
 
 const SIZES: Record<ButtonSize, string> = {
   md: "h-9 px-4 text-[14px] leading-[1.6]",
-  sm: "h-8 px-3.5 text-[13px] leading-[1.6]",
+  sm: "h-8 px-3.5 text-label leading-[1.6]",
 };
 
 /** Shared class builder — lets `next/link` anchors wear a button skin without nesting <button> in <a>. */
