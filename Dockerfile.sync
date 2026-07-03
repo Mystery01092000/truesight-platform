@@ -19,4 +19,4 @@ COPY . .
 
 # Each CLI is idempotent (upsert) and read-only against the cloud. Use `;` so a
 # single provider failure does not block the others; logs report per-provider.
-CMD ["sh", "-c", "node_modules/.bin/tsx db/sync-cli.ts; node_modules/.bin/tsx db/github-sync-cli.ts; node_modules/.bin/tsx db/azure-sync-cli.ts"]
+CMD ["sh", "-c", "node_modules/.bin/tsx db/sync-cli.ts; node_modules/.bin/tsx db/github-sync-cli.ts; node_modules/.bin/tsx db/azure-sync-cli.ts; node_modules/.bin/tsx --conditions=react-server db/cost-sync-cli.ts"]

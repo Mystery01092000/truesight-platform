@@ -4,6 +4,7 @@ import type { TokenCredential } from "@azure/identity";
 
 import { cacheable } from "@/lib/cache";
 import type { NewCostSnapshot } from "@/db/schema";
+import type { CostSourceError } from "@/lib/integrations/types";
 
 import { createAzureCredential, readAzureEnv, resolveSubscription } from "./client";
 
@@ -73,36 +74,102 @@ interface CostQueryResponse {
   error?: { code?: string; message?: string };
 }
 
-/** Discover Azure costs for the configured subscription over the given date range. */
-export async function getAzureCosts(opts: AzureCostOptions): Promise<AzureCostRow[]> {
+export interface AzureCostResult {
+  rows: AzureCostRow[];
+  errors: CostSourceError[];
+  /** False when no Azure Service Principal is configured — the pull never ran. */
+  configured: boolean;
+}
+
+/**
+ * Discover Azure costs for the configured subscription over the given date range.
+ * Every failure mode (missing config, unresolvable subscription, denied query) is
+ * surfaced as a `CostSourceError` rather than a silent empty result, and a result
+ * carrying errors is never cached so a transient failure can't pin the whole TTL.
+ */
+export async function getAzureCosts(opts: AzureCostOptions): Promise<AzureCostResult> {
   const cacheKey = `argus:azure:costs:${opts.startDate}:${opts.endDate}:${opts.granularity ?? "DAILY"}`;
-  return cacheable(cacheKey, CACHE_TTL_SECONDS, async () => {
-    const env = readAzureEnv();
-    const credential = createAzureCredential(env);
-    const granularity = opts.granularity ?? "DAILY";
+  return cacheable(
+    cacheKey,
+    CACHE_TTL_SECONDS,
+    async (): Promise<AzureCostResult> => {
+      let env;
+      try {
+        env = readAzureEnv();
+      } catch (err) {
+        // A wholly-absent Service Principal means Azure isn't connected at all;
+        // a partial config is an operator error that must surface.
+        const configured = [
+          process.env.AZURE_TENANT_ID,
+          process.env.AZURE_CLIENT_ID,
+          process.env.AZURE_CLIENT_SECRET,
+          process.env.AZURE_SUBSCRIPTION_NAME,
+        ].some((v) => Boolean(v?.trim()));
+        return {
+          rows: [],
+          errors: configured
+            ? [{ scope: "azure:config", message: (err as Error)?.message ?? String(err) }]
+            : [],
+          configured,
+        };
+      }
+      const granularity = opts.granularity ?? "DAILY";
 
-    // Resolve the subscription id once (cached upstream); Cost Management scopes to it.
-    const sub = await resolveSubscription(credential, env.subscriptionName).catch((err) => {
-      console.warn(
-        `[azure-cost] could not resolve subscription "${env.subscriptionName}":`,
-        (err as Error)?.message ?? err,
-      );
-      return null;
-    });
-    if (!sub) return [];
+      // Resolve the subscription id once (cached upstream); Cost Management scopes to it.
+      // The credential constructor validates its inputs, so it lives inside the try.
+      let credential;
+      let sub;
+      try {
+        credential = createAzureCredential(env);
+        sub = await resolveSubscription(credential, env.subscriptionName);
+      } catch (err) {
+        const e = err as Error & { statusCode?: number };
+        console.warn(
+          `[azure-cost] could not resolve subscription "${env.subscriptionName}":`,
+          e?.message ?? err,
+        );
+        return {
+          rows: [],
+          errors: [
+            {
+              scope: `azure:${env.subscriptionName}`,
+              message: e?.message ?? String(err),
+              code: e?.name,
+              statusCode: e?.statusCode,
+            },
+          ],
+          configured: true,
+        };
+      }
 
-    try {
-      return await queryCost(credential, sub.subscriptionId, opts, granularity);
-    } catch (err) {
-      // A missing `Microsoft.CostManagement/query` permission, or a subscription with
-      // no usage data yet, must never take down the cost sync — degrade to empty + log.
-      console.warn(
-        `[azure-cost:${sub.subscriptionId}] Cost Management query failed:`,
-        (err as Error)?.message ?? err,
-      );
-      return [];
-    }
-  });
+      try {
+        const rows = await queryCost(credential, sub.subscriptionId, opts, granularity);
+        return { rows, errors: [], configured: true };
+      } catch (err) {
+        const e = err as Error & { statusCode?: number };
+        console.warn(
+          `[azure-cost:${sub.subscriptionId}] Cost Management query failed:`,
+          e?.message ?? err,
+        );
+        const denied = e?.statusCode === 401 || e?.statusCode === 403;
+        return {
+          rows: [],
+          errors: [
+            {
+              scope: `azure:${sub.subscriptionId}`,
+              message: denied
+                ? "Grant Cost Management Reader to the service principal at subscription scope"
+                : (e?.message ?? String(err)),
+              code: e?.name,
+              statusCode: e?.statusCode,
+            },
+          ],
+          configured: true,
+        };
+      }
+    },
+    { shouldCache: (v) => v.configured && v.errors.length === 0 },
+  );
 }
 
 /** Run the Cost Management `query` REST call and map the response to normalized rows. */
@@ -154,7 +221,12 @@ async function queryCost(
 
   if (!resp.ok) {
     const text = await resp.text().catch(() => "");
-    throw new Error(`Cost Management HTTP ${resp.status}: ${text.slice(0, 300)}`);
+    const err = new Error(
+      `Cost Management HTTP ${resp.status}: ${text.slice(0, 300)}`,
+    ) as Error & { statusCode?: number };
+    // Carry the HTTP status so the caller can map 401/403 to a remediation hint.
+    err.statusCode = resp.status;
+    throw err;
   }
 
   const payload = (await resp.json()) as CostQueryResponse;

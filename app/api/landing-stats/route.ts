@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { eq, inArray, ne, sql } from "drizzle-orm";
+import { and, eq, inArray, ne, notInArray, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { resources, integrationAccounts, driftFindings } from "@/db/schema";
 import { cacheable } from "@/lib/cache";
+import { COST_SOURCE_EXTERNAL_IDS } from "@/lib/integrations/cost-sources";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,11 +48,17 @@ async function computeStats(): Promise<LandingStats> {
       .groupBy(resources.provider),
     // Ever-seen total (present + absent) — the coverage denominator.
     db.select({ total: sql<number>`count(*)::int` }).from(resources),
-    // Cloud accounts + subscriptions only (GitHub org is not an "account · sub").
+    // Cloud accounts + subscriptions only (GitHub org is not an "account · sub",
+    // and the cost-source registry rows are not accounts either).
     db
       .select({ n: sql<number>`count(*)::int` })
       .from(integrationAccounts)
-      .where(inArray(integrationAccounts.provider, ["aws", "azure"])),
+      .where(
+        and(
+          inArray(integrationAccounts.provider, ["aws", "azure"]),
+          notInArray(integrationAccounts.externalId, COST_SOURCE_EXTERNAL_IDS),
+        ),
+      ),
     // Real drift: exclude in-sync findings so the tile means "needs attention".
     db
       .select({ n: sql<number>`count(*)::int` })

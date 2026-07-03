@@ -17,6 +17,7 @@
     "db:studio": "drizzle-kit studio",
     "db:github-sync": "tsx db/github-sync-cli.ts",
     "db:azure-sync": "tsx db/azure-sync-cli.ts",
+    "db:cost-sync": "tsx --conditions=react-server db/cost-sync-cli.ts",
     "kb:reembed": "tsx --conditions=react-server db/kb-reembed-cli.ts"
   },
   "dependencies": {
