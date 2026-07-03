@@ -6,20 +6,13 @@ import { Surface } from "@/components/ui/Surface";
 import { Reveal } from "@/components/ui/Reveal";
 import { AppIconTile } from "@/components/ui/AppIconTile";
 import { Badge } from "@/components/ui/Badge";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { StatTile } from "@/components/ui/StatTile";
+import { formatDate, formatNumber } from "@/lib/utils/format";
 import { ReposTable, type RepoRow } from "./ReposTable";
 
 export const metadata: Metadata = { title: "GitHub" };
 export const dynamic = "force-dynamic";
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-function fmtDate(iso: string | null): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
-}
-const nf = new Intl.NumberFormat("en-US");
 
 /* -------------------------------------------------------------------------- */
 
@@ -41,7 +34,7 @@ export default async function GithubPage() {
             </h2>
             <p className="mx-auto mt-1.5 max-w-prose text-[14px] leading-[1.6] text-body">
               Argus hasn&rsquo;t enumerated the organization. Run{" "}
-              <code className="font-mono text-[13px] text-mute">tsx db/github-sync-cli.ts</code> to
+              <code className="font-mono text-label text-mute">tsx db/github-sync-cli.ts</code> to
               discover teams, members and repositories read-only — they&rsquo;ll appear here as
               insights.
             </p>
@@ -54,7 +47,7 @@ export default async function GithubPage() {
   const { org, counts, teams, topContributors, repos, languages, lastSync } = insights;
   const syncLine =
     lastSync?.startedAt != null
-      ? `Last sync ${fmtDate(lastSync.startedAt)} · ${lastSync.status}`
+      ? `Last sync ${formatDate(lastSync.startedAt)} · ${lastSync.status}`
       : "Org insights — Team → Member → Repo, read-only.";
 
   const stats = [
@@ -116,9 +109,9 @@ export default async function GithubPage() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-3">
-                      <span className="truncate font-mono text-[13px] text-body">{m.login}</span>
-                      <span className="shrink-0 font-mono text-[13px] text-ink tabular-nums">
-                        {nf.format(m.contributions)}
+                      <span className="truncate font-mono text-label text-body">{m.login}</span>
+                      <span className="shrink-0 font-mono text-label text-ink tabular-nums">
+                        {formatNumber(m.contributions)}
                       </span>
                     </div>
                     <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-surface-elevated">
@@ -128,7 +121,7 @@ export default async function GithubPage() {
                       />
                     </div>
                   </div>
-                  <span className="shrink-0 font-mono text-[11px] text-mute tabular-nums">
+                  <span className="shrink-0 font-mono text-micro text-mute tabular-nums">
                     {m.teamCount} {m.teamCount === 1 ? "team" : "teams"}
                   </span>
                 </li>
@@ -158,7 +151,7 @@ export default async function GithubPage() {
                 </div>
               ))}
               {languages.length === 0 && (
-                <p className="text-[13px] text-mute">No language metadata on repositories.</p>
+                <p className="text-label text-mute">No language metadata on repositories.</p>
               )}
             </div>
           </Surface>
@@ -199,24 +192,20 @@ export default async function GithubPage() {
 function Header({ org, sub }: { org: string; sub: string }) {
   return (
     <Reveal>
-      <header className="mb-8 flex items-start gap-3.5">
-        <span
-          className="grid size-11 shrink-0 place-items-center rounded-lg border border-iris bg-iris-soft"
-          aria-hidden
-        >
-          <Users size={22} strokeWidth={1.75} className="text-iris" />
-        </span>
-        <div>
-          <h1 className="text-[24px] font-medium leading-[1.4] tracking-[0.2px] text-ink">
-            GitHub
-          </h1>
-          <p className="mt-1 text-[14px] leading-[1.6] text-mute">
+      <PageHeader
+        title="GitHub"
+        iconTone="iris"
+        icon={<Users size={22} strokeWidth={1.75} className="text-iris" />}
+        description={
+          <>
             <span className="font-mono text-body">{org}</span>
-            <span className="mx-1.5" aria-hidden>·</span>
+            <span className="mx-1.5" aria-hidden>
+              ·
+            </span>
             {sub}
-          </p>
-        </div>
-      </header>
+          </>
+        }
+      />
     </Reveal>
   );
 }

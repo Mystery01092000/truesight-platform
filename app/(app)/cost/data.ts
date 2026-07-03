@@ -1,9 +1,9 @@
 import "server-only";
 
-import { and, gte, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 
 import { db } from "@/db";
-import { costRollups, costSnapshots } from "@/db/schema";
+import { costRollups, costSnapshots, integrationAccounts, integrationSync } from "@/db/schema";
 import type { CloudProvider } from "@/lib/taxonomy";
 
 export type CostRangeKey = "7d" | "30d" | "90d" | "mtd";
@@ -89,6 +89,77 @@ export interface CostConsoleData {
   /** True row count at this grain before the LINE_ITEM_CAP was applied. */
   lineItemsTotal: number;
   facets: CostFacets;
+}
+
+export interface CostSyncError {
+  scope: string;
+  message: string;
+}
+
+/** Latest recorded cost-sync run per provider — "never" when no run exists yet. */
+export interface CostSyncProviderStatus {
+  provider: "aws" | "azure";
+  status: "ok" | "partial" | "error" | "never";
+  finishedAt: string | null;
+  errors: CostSyncError[];
+}
+
+/** The integration_accounts identity each provider's cost runs are recorded under. */
+const COST_SYNC_SOURCES: ReadonlyArray<{
+  provider: CostSyncProviderStatus["provider"];
+  externalId: string;
+}> = [
+  { provider: "aws", externalId: "cost-explorer" },
+  { provider: "azure", externalId: "cost-management" },
+];
+
+function toSyncErrors(raw: unknown): CostSyncError[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((e) => {
+    if (typeof e !== "object" || e === null) return [];
+    const { scope, message } = e as Record<string, unknown>;
+    if (typeof message !== "string" || message.length === 0) return [];
+    return [{ scope: typeof scope === "string" ? scope : "unknown", message }];
+  });
+}
+
+/**
+ * Read each cost provider's most recent integration_sync run (recorded by the cost
+ * sync under aws/cost-explorer and azure/cost-management). Providers with no run
+ * yet report "never" — nothing is fabricated.
+ */
+export async function getCostSyncStatus(): Promise<CostSyncProviderStatus[]> {
+  return Promise.all(
+    COST_SYNC_SOURCES.map(async ({ provider, externalId }): Promise<CostSyncProviderStatus> => {
+      const [run] = await db
+        .select({
+          status: integrationSync.status,
+          finishedAt: integrationSync.finishedAt,
+          errors: integrationSync.errors,
+        })
+        .from(integrationSync)
+        .innerJoin(integrationAccounts, eq(integrationSync.accountId, integrationAccounts.id))
+        .where(
+          and(
+            eq(integrationAccounts.provider, provider),
+            eq(integrationAccounts.externalId, externalId),
+          ),
+        )
+        .orderBy(desc(integrationSync.startedAt))
+        .limit(1);
+      if (!run) return { provider, status: "never", finishedAt: null, errors: [] };
+      const status =
+        run.status === "ok" || run.status === "partial" || run.status === "error"
+          ? run.status
+          : "error";
+      return {
+        provider,
+        status,
+        finishedAt: run.finishedAt ? run.finishedAt.toISOString() : null,
+        errors: toSyncErrors(run.errors),
+      };
+    }),
+  );
 }
 
 interface NormalizedRow {

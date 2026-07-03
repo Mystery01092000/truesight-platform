@@ -4,13 +4,16 @@ import { Activity, ArrowLeftRight, Layers, Wallet } from "lucide-react";
 import { Surface } from "@/components/ui/Surface";
 import { Reveal } from "@/components/ui/Reveal";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { StatTile } from "@/components/ui/StatTile";
 import { Sparkline } from "@/components/ui/Sparkline";
 import { ProviderChip } from "@/components/ui/ProviderChip";
 import { CostBreakdown } from "@/components/widgets/CostBreakdown";
 import { CostLineItemsTable } from "@/components/widgets/CostLineItemsTable";
+import { CostSyncStatusStrip } from "@/components/widgets/CostSyncStatusStrip";
+import { formatNumber } from "@/lib/utils/format";
 
-import { getCostConsole, type CostRangeKey } from "./data";
+import { getCostConsole, getCostSyncStatus, type CostRangeKey } from "./data";
 import { CostRangeFilter } from "./CostRangeFilter";
 import { CostSyncButton } from "./CostSyncButton";
 
@@ -38,33 +41,31 @@ export default async function CostPage({
 }) {
   const sp = await searchParams;
   const range = normalizeRange(sp.range);
-  const cost = await getCostConsole(range);
+  const [cost, syncStatus] = await Promise.all([getCostConsole(range), getCostSyncStatus()]);
 
   const dailyTotals = cost.series.map((p) => p.aws + p.azure);
 
   return (
     <div className="mx-auto max-w-6xl">
       <Reveal>
-        <header className="mb-8 flex items-start gap-3.5">
-          <span
-            className="grid size-11 shrink-0 place-items-center rounded-lg border border-hairline bg-surface-card"
-            aria-hidden
-          >
-            <Wallet size={22} strokeWidth={1.75} className="text-iris" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-[24px] font-medium leading-[1.4] tracking-[0.2px] text-ink">
-              Cost &amp; FinOps
-            </h1>
-            <p className="mt-1 text-[14px] leading-[1.6] text-mute">
-              Cross-cloud spend, read-only from AWS Cost Explorer and Azure Cost Management.
-            </p>
-          </div>
-          <div className="hidden shrink-0 items-center gap-3 sm:flex">
-            <CostRangeFilter value={range} />
-            {cost.hasData ? <CostSyncButton variant="tertiary" size="sm" label="Re-sync" /> : null}
-          </div>
-        </header>
+        <PageHeader
+          title="Cost & FinOps"
+          description="Cross-cloud spend, read-only from AWS Cost Explorer and Azure Cost Management."
+          icon={<Wallet size={22} strokeWidth={1.75} className="text-iris" />}
+          iconTone="iris"
+          actions={
+            <div className="hidden items-center gap-3 sm:flex">
+              <CostRangeFilter value={range} />
+              {cost.hasData ? (
+                <CostSyncButton variant="tertiary" size="sm" label="Re-sync" />
+              ) : null}
+            </div>
+          }
+        />
+      </Reveal>
+
+      <Reveal delay={0.04}>
+        <CostSyncStatusStrip entries={syncStatus} />
       </Reveal>
 
       {!cost.hasData ? (
@@ -177,8 +178,8 @@ export default async function CostPage({
                 <h2 className="text-[16px] font-medium leading-[1.4] text-ink">Line items</h2>
                 <span className="font-mono text-micro tabular-nums text-ash">
                   {cost.lineItems.length < cost.lineItemsTotal
-                    ? `top ${cost.lineItems.length.toLocaleString("en-US")} of ${cost.lineItemsTotal.toLocaleString("en-US")} rows by recency + spend`
-                    : `${cost.lineItemsTotal.toLocaleString("en-US")} rows · provider / account / service / day grain`}
+                    ? `top ${formatNumber(cost.lineItems.length)} of ${formatNumber(cost.lineItemsTotal)} rows by recency + spend`
+                    : `${formatNumber(cost.lineItemsTotal)} rows · provider / account / service / day grain`}
                 </span>
               </div>
               <CostLineItemsTable rows={cost.lineItems} facets={cost.facets} />

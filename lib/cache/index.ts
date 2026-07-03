@@ -60,6 +60,20 @@ function driver(): CacheDriver {
   return globalForCache.__argusCache;
 }
 
+export interface CacheableOptions<T> {
+  /**
+   * Return false to skip storing the fresh value — the caller still receives it, but
+   * the next read re-fetches. Lets partially-failed pulls (e.g. a cost adapter that
+   * lost one account) avoid pinning their degraded result for the whole TTL.
+   */
+  shouldCache?: (value: T) => boolean;
+}
+
+// In-flight dedup: concurrent misses on the same key share one fetcher run instead of
+// stampeding the upstream (Cost Explorer bills per request). Cleared on settle either
+// way so a rejected fetch never poisons later calls.
+const inFlight = new Map<string, Promise<unknown>>();
+
 /**
  * Read-through cache: return the cached value for `key`, or run `fetcher`, store, return.
  * Shared by RSC pages and API route handlers so a cloud call is made once and reused.
@@ -68,13 +82,28 @@ export async function cacheable<T>(
   key: string,
   ttlSeconds: number,
   fetcher: () => Promise<T>,
+  opts?: CacheableOptions<T>,
 ): Promise<T> {
   const cache = driver();
   const cached = await cache.get<T>(key);
   if (cached !== null) return cached;
-  const fresh = await fetcher();
-  await cache.set(key, fresh, ttlSeconds);
-  return fresh;
+
+  const pending = inFlight.get(key);
+  if (pending) return pending as Promise<T>;
+
+  const fetch = (async () => {
+    const fresh = await fetcher();
+    if (opts?.shouldCache?.(fresh) !== false) {
+      await cache.set(key, fresh, ttlSeconds);
+    }
+    return fresh;
+  })();
+  inFlight.set(key, fetch);
+  try {
+    return await fetch;
+  } finally {
+    inFlight.delete(key);
+  }
 }
 
 export async function invalidate(key: string): Promise<void> {

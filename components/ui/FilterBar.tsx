@@ -93,7 +93,7 @@ export function FilterBar({
             aria-label={facet.label}
             className="flex flex-wrap items-center gap-1"
           >
-            <span className="mr-1.5 text-[11px] font-medium uppercase leading-[1.4] tracking-[0.06em] text-ash">
+            <span className="mr-1.5 text-micro font-medium uppercase leading-[1.4] tracking-[0.06em] text-ash">
               {facet.label}
             </span>
             {facet.options.map((option) => {
@@ -107,7 +107,7 @@ export function FilterBar({
                     onFacetChange?.(facet.key, selected ? "" : option.value)
                   }
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[13px] leading-[1.5] transition-colors duration-150 ease-smooth",
+                    "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-label leading-[1.5] transition-colors duration-150 ease-smooth",
                     selected
                       ? "bg-surface-elevated text-on-dark"
                       : "text-body hover:text-on-dark",
@@ -117,7 +117,7 @@ export function FilterBar({
                   {option.count !== undefined && (
                     <span
                       className={cn(
-                        "font-mono text-[11px] tabular-nums",
+                        "font-mono text-micro tabular-nums",
                         selected ? "text-mute" : "text-ash",
                       )}
                     >

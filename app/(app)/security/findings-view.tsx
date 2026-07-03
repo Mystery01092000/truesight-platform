@@ -97,7 +97,10 @@ export function SecurityFindingsView() {
   // Union of every source ever seen, so source pills survive a filtered slice
   // (the API computes facet counts against the active filters).
   const [knownSources, setKnownSources] = useState<string[]>([]);
-  const [scan, setScan] = useState<"idle" | "running" | "forbidden" | "error">("idle");
+  const [scan, setScan] = useState<"idle" | "running" | "forbidden" | "error" | "partial">(
+    "idle",
+  );
+  const [scanIssues, setScanIssues] = useState<string[]>([]);
 
   const { severity, source, status } = facetValues;
 
@@ -253,7 +256,14 @@ export function SecurityFindingsView() {
         return;
       }
       if (!res.ok) throw new Error(`scan ${res.status}`);
-      setScan("idle");
+      const body = (await res.json().catch(() => null)) as {
+        summary?: { ok?: boolean; errors?: { scope?: string; message?: string }[] };
+      } | null;
+      const issues = (body?.summary?.errors ?? []).flatMap((e) =>
+        typeof e?.message === "string" ? [[e.scope, e.message].filter(Boolean).join(": ")] : [],
+      );
+      setScanIssues(issues);
+      setScan(body?.summary?.ok === false ? "partial" : "idle");
       await refetch();
       router.refresh();
     } catch {
@@ -321,6 +331,12 @@ export function SecurityFindingsView() {
                 The scan failed to start. Try again.
               </p>
             ) : null}
+            {scan === "partial" ? (
+              <p role="alert" className="text-[12px] leading-[1.5] text-accent-yellow">
+                Scan finished with errors{scanIssues[0] ? ` — ${scanIssues[0]}` : ""}. Some
+                providers may be missing findings.
+              </p>
+            ) : null}
           </div>
         }
       />
@@ -329,6 +345,12 @@ export function SecurityFindingsView() {
 
   return (
     <div>
+      {scan === "partial" ? (
+        <p role="alert" className="mb-3 text-[12px] leading-[1.5] text-accent-yellow">
+          Scan finished with errors{scanIssues[0] ? ` — ${scanIssues[0]}` : ""}. Some providers
+          may be missing findings.
+        </p>
+      ) : null}
       <FilterBar
         search={search}
         onSearchChange={setSearch}

@@ -73,7 +73,7 @@ export async function runSecurityScan(
     scanTasks.push({ provider: "github", run: () => scanGithubVulns({ org: env.GITHUB_ORG }) });
   }
 
-  const settled = await Promise.all(scanTasks.map((t) => t.run().catch(() => null)));
+  const settled = await Promise.allSettled(scanTasks.map((t) => t.run()));
 
   const findings: SecurityFinding[] = [];
   const errors: SecurityScanSummary["errors"] = [];
@@ -81,13 +81,21 @@ export async function runSecurityScan(
 
   settled.forEach((res, i) => {
     const provider = scanTasks[i].provider;
-    if (res === null) {
-      errors.push({ provider, scope: `${provider}:scan`, message: "adapter threw" });
+    if (res.status === "rejected") {
+      const reason = res.reason as { message?: string };
+      console.error(`[security-scan] ${provider} adapter failed wholesale:`, res.reason);
+      errors.push({
+        provider,
+        scope: `${provider}:scan`,
+        message: reason?.message ?? String(res.reason),
+      });
       return;
     }
-    findings.push(...res.findings);
-    byProvider[provider] = (byProvider[provider] ?? 0) + res.findings.length;
-    for (const e of res.errors) errors.push({ provider, scope: e.scope, message: e.message });
+    findings.push(...res.value.findings);
+    byProvider[provider] = (byProvider[provider] ?? 0) + res.value.findings.length;
+    for (const e of res.value.errors) {
+      errors.push({ provider, scope: e.scope, message: e.message });
+    }
   });
 
   await persistFindings(db, findings, capturedAt);
@@ -170,7 +178,9 @@ const PROVIDER_SOURCES: Record<string, Array<{ source: string; scopePrefixes: st
   aws: [
     { source: "inspector2", scopePrefixes: ["inspector2", "aws:scan"] },
     { source: "securityhub", scopePrefixes: ["securityhub", "aws:scan"] },
-    { source: "ecr-image-scan", scopePrefixes: ["ecr-scans", "aws:scan"] },
+    // "ecr:" covers per-repo failures (scope `ecr:${region}:${repo}`) so a repo that
+    // failed to enumerate never gets its open findings falsely swept to "fixed".
+    { source: "ecr-image-scan", scopePrefixes: ["ecr-scans", "ecr:", "aws:scan"] },
   ],
   azure: [{ source: "defender", scopePrefixes: ["azure"] }],
   github: [
@@ -181,12 +191,12 @@ const PROVIDER_SOURCES: Record<string, Array<{ source: string; scopePrefixes: st
 
 function resolveScannedSources(
   scanTasks: Array<{ provider: string }>,
-  settled: Array<VulnScanResult | null>,
+  settled: Array<PromiseSettledResult<VulnScanResult>>,
   errors: SecurityScanSummary["errors"],
 ): string[] {
   const scanned = new Set<string>();
   settled.forEach((res, i) => {
-    if (res === null) return; // adapter threw wholesale — nothing scanned
+    if (res.status === "rejected") return; // adapter threw wholesale — nothing scanned
     for (const { source } of PROVIDER_SOURCES[scanTasks[i].provider] ?? []) scanned.add(source);
   });
   for (const [provider, sources] of Object.entries(PROVIDER_SOURCES)) {

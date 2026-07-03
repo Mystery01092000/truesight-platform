@@ -76,7 +76,7 @@ export function KbUploader() {
         <h2 className="text-[15px] font-medium leading-[1.4] tracking-[0.2px] text-ink">
           Upload document
         </h2>
-        <p className="mt-1 text-[13px] leading-[1.5] text-mute">
+        <p className="mt-1 text-label leading-[1.5] text-mute">
           Drop a file to upload to S3 and ingest into the knowledge base.
         </p>
 
@@ -114,7 +114,7 @@ export function KbUploader() {
         {message && (
           <div
             className={cn(
-              "mt-4 flex items-start gap-2 rounded-md p-3 text-[13px] leading-[1.5]",
+              "mt-4 flex items-start gap-2 rounded-md p-3 text-label leading-[1.5]",
               message.type === "success"
                 ? "bg-accent-green-soft text-accent-green"
                 : "bg-accent-red-soft text-accent-red",

@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from "motion/react";
 
 import { PillTabs, type PillTabItem } from "@/components/ui/PillTabs";
 import { PROVIDER_HUE } from "@/components/ui/ProviderChip";
+import { formatCurrency } from "@/lib/utils/format";
 import type { CostBreakdownSlice, CostGroupKey } from "@/app/(app)/cost/data";
 
 /**
@@ -32,9 +33,7 @@ const AZURE_HUE = PROVIDER_HUE.azure;
 
 /** Compact money formatter — exact to cents under $10k, compact above. */
 function fmt(n: number): string {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toLocaleString("en-US", { maximumFractionDigits: 1 })}M`;
-  if (n >= 10_000) return `$${(n / 1_000).toLocaleString("en-US", { maximumFractionDigits: 1 })}k`;
-  return `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return n >= 10_000 ? formatCurrency(n, { compact: true }) : formatCurrency(n, { decimals: 2 });
 }
 
 export type CostBreakdownProps = {
@@ -61,7 +60,7 @@ export function CostBreakdown({ groups, awsTotal, azureTotal }: CostBreakdownPro
 
       <div className="mt-5">
         {slices.length === 0 ? (
-          <p className="py-8 text-center text-[13px] leading-[1.5] text-mute">
+          <p className="py-8 text-center text-label leading-[1.5] text-mute">
             No spend recorded in this window for this grouping.
           </p>
         ) : mode === "day" ? (
@@ -123,7 +122,7 @@ function StackedBars({ slices }: { slices: CostBreakdownSlice[] }) {
               key={s.key}
               className="grid grid-cols-[minmax(0,180px)_1fr_88px] items-center gap-3"
             >
-              <span className="truncate text-[13px] leading-[1.5] text-body" title={s.key}>
+              <span className="truncate text-label leading-[1.5] text-body" title={s.key}>
                 {s.key}
               </span>
               <svg
@@ -164,7 +163,7 @@ function StackedBars({ slices }: { slices: CostBreakdownSlice[] }) {
                     />
                   ))}
               </svg>
-              <span className="text-right font-mono text-[13px] tabular-nums text-ink">
+              <span className="text-right font-mono text-label tabular-nums text-ink">
                 {fmt(s.total)}
               </span>
             </div>

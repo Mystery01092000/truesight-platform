@@ -8,8 +8,7 @@ import { Reveal } from "@/components/ui/Reveal";
 import { Badge } from "@/components/ui/Badge";
 import { getKbStatus, type KbStatusResponse } from "@/lib/kb/client";
 import type { KbSourceType } from "@/lib/kb/types";
-
-const nf = new Intl.NumberFormat("en-US");
+import { formatDate, formatNumber } from "@/lib/utils/format";
 
 const SOURCE_LABEL: Record<KbSourceType, string> = {
   s3: "S3",
@@ -56,21 +55,19 @@ export function KbStatusCards() {
   const stats = [
     {
       label: "Documents",
-      value: status ? nf.format(status.documentCount) : "—",
+      value: status ? formatNumber(status.documentCount) : "—",
       icon: FileText,
       hint: "ingested sources",
     },
     {
       label: "Chunks",
-      value: status ? nf.format(status.chunkCount) : "—",
+      value: status ? formatNumber(status.chunkCount) : "—",
       icon: Layers,
       hint: "searchable vectors",
     },
     {
       label: "Last ingest",
-      value: status?.lastIngestedAt
-        ? new Date(status.lastIngestedAt).toLocaleString()
-        : "—",
+      value: status?.lastIngestedAt ? formatDate(status.lastIngestedAt) : "—",
       icon: Clock,
       hint: "most recent sync",
     },
@@ -81,7 +78,7 @@ export function KbStatusCards() {
       {stats.map((s, i) => (
         <Reveal key={s.label} delay={i * 0.06}>
           <Surface level={1} radius="lg" className="p-5">
-            <div className="flex items-center gap-2 text-[13px] text-mute">
+            <div className="flex items-center gap-2 text-label text-mute">
               <s.icon size={14} strokeWidth={1.75} />
               {s.label}
             </div>
@@ -95,7 +92,7 @@ export function KbStatusCards() {
 
       <Reveal delay={0.18} className="sm:col-span-3">
         <Surface level={1} radius="lg" className="p-5">
-          <h3 className="text-[13px] text-mute">Source breakdown</h3>
+          <h3 className="text-label text-mute">Source breakdown</h3>
           {status && status.sources.length > 0 ? (
             <div className="mt-3 flex flex-wrap gap-2">
               {status.sources.map((s) => (
@@ -104,12 +101,13 @@ export function KbStatusCards() {
                     className={`size-1.5 rounded-full ${SOURCE_DOT[s.source]}`}
                     aria-hidden
                   />
-                  {SOURCE_LABEL[s.source]} <span className="text-ash">{nf.format(s.count)}</span>
+                  {SOURCE_LABEL[s.source]}{" "}
+                  <span className="text-ash">{formatNumber(s.count)}</span>
                 </Badge>
               ))}
             </div>
           ) : (
-            <p className="mt-2 text-[13px] text-ash">No sources ingested yet.</p>
+            <p className="mt-2 text-label text-ash">No sources ingested yet.</p>
           )}
         </Surface>
       </Reveal>

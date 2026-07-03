@@ -8,6 +8,7 @@ import { Ticket, ArrowLeft, Check } from "lucide-react";
 
 import { Surface } from "@/components/ui/Surface";
 import { Reveal } from "@/components/ui/Reveal";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Button, buttonClass } from "@/components/ui/Button";
 import { TextInput } from "@/components/ui/TextInput";
 import { GuidedFlow, type GuidedStep } from "@/components/ui/GuidedFlow";
@@ -234,22 +235,12 @@ export function NewTicketFlow() {
   return (
     <div className="mx-auto max-w-3xl">
       <Reveal>
-        <header className="mb-6 flex items-start gap-3.5">
-          <span
-            className="grid size-11 shrink-0 place-items-center rounded-lg border border-iris bg-iris-soft"
-            aria-hidden
-          >
-            <Ticket size={22} strokeWidth={1.75} className="text-iris" />
-          </span>
-          <div>
-            <h1 className="text-[24px] font-medium leading-[1.4] tracking-[0.2px] text-ink">
-              Raise access request
-            </h1>
-            <p className="mt-1 text-[14px] leading-[1.6] text-mute">
-              Tell us what you need and we&rsquo;ll route it through approval.
-            </p>
-          </div>
-        </header>
+        <PageHeader
+          title="Raise access request"
+          iconTone="iris"
+          icon={<Ticket size={22} strokeWidth={1.75} className="text-iris" />}
+          description="Tell us what you need and we'll route it through approval."
+        />
       </Reveal>
 
       <Reveal delay={0.06}>
@@ -455,7 +446,7 @@ export function NewTicketFlow() {
 
                   <ReviewSection title="Tools & access" onEdit={() => setStep(1)}>
                     {tools.length === 0 ? (
-                      <p className="text-[13px] text-mute">No tools selected.</p>
+                      <p className="text-label text-mute">No tools selected.</p>
                     ) : (
                       <ul className="space-y-2">
                         {tools.map((t) => (
@@ -463,7 +454,7 @@ export function NewTicketFlow() {
                             <span className="text-[14px] font-medium leading-[1.5] text-on-dark">
                               {TOOL_LABELS[t]}
                             </span>
-                            <span className="text-[13px] capitalize leading-[1.5] text-body">
+                            <span className="text-label capitalize leading-[1.5] text-body">
                               {accessModes[t] ?? "no mode"}
                             </span>
                             {resourceIdentities[t]?.trim() && (
@@ -514,7 +505,7 @@ export function NewTicketFlow() {
                 {serverError && (
                   <p
                     role="alert"
-                    className="rounded-md border border-critical-soft bg-critical-soft px-3 py-2 text-[13px] leading-[1.5] text-critical"
+                    className="rounded-md border border-critical-soft bg-critical-soft px-3 py-2 text-label leading-[1.5] text-critical"
                   >
                     {serverError}
                   </p>
@@ -549,7 +540,7 @@ function FieldRow({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-[13px] leading-[1.5] text-body">
+      <label className="mb-1.5 block text-label leading-[1.5] text-body">
         {label}
         {required && <span className="ml-0.5 text-iris">*</span>}
       </label>
@@ -626,7 +617,7 @@ function ReviewSection({
   return (
     <section className="p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="text-[13px] font-medium uppercase tracking-[0.4px] text-mute">{title}</h3>
+        <h3 className="text-label font-medium uppercase tracking-[0.4px] text-mute">{title}</h3>
         <button
           type="button"
           onClick={onEdit}

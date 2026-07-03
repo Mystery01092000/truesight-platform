@@ -3,6 +3,7 @@ import "server-only";
 import { and, asc, desc, eq, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { driftFindings, resources, integrationAccounts, integrationSync } from "@/db/schema";
+import { COST_SOURCES } from "@/lib/integrations/cost-sources";
 import {
   sortEnvironments,
   toKind,
@@ -108,7 +109,13 @@ export async function getAzureAccount(): Promise<AzureAccount> {
       displayName: integrationAccounts.displayName,
     })
     .from(integrationAccounts)
-    .where(eq(integrationAccounts.provider, "azure"))
+    .where(
+      and(
+        eq(integrationAccounts.provider, "azure"),
+        // Never resolve the cost-source registry row as "the subscription".
+        ne(integrationAccounts.externalId, COST_SOURCES.azure.externalId),
+      ),
+    )
     .limit(1);
 
   if (!acct) return { subscriptionId: null, displayName: null, lastSyncAt: null, syncStatus: null };

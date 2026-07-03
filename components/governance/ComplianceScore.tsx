@@ -65,7 +65,7 @@ export function ComplianceScore({
         <span className="font-display text-[26px] font-medium leading-none tabular-nums text-ink">
           <RollupNumber value={clamped} suffix="%" duration={900} />
         </span>
-        <span className="mt-1 text-[11px] tracking-[0.3px] text-mute">posture</span>
+        <span className="mt-1 text-micro tracking-[0.3px] text-mute">posture</span>
       </div>
     </div>
   );

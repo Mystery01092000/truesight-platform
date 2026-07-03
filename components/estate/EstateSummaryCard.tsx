@@ -62,7 +62,7 @@ export function EstateSummaryCard({
               value={m.value}
               className="font-mono text-[22px] font-medium leading-none text-ink"
             />
-            <span className="text-[11px] font-medium uppercase leading-[1.4] tracking-[0.06em] text-ash">
+            <span className="text-micro font-medium uppercase leading-[1.4] tracking-[0.06em] text-ash">
               {m.label}
             </span>
           </span>
@@ -86,13 +86,13 @@ export function EstateSummaryCard({
           <StatusBadge status="degraded" label={`${degraded} degraded`} className="shrink-0 tabular-nums" />
         )}
         {envs.map((env) => (
-          <Badge key={env} className="font-mono text-[11px]">
+          <Badge key={env} className="font-mono text-micro">
             {env}
           </Badge>
         ))}
-        {envRest > 0 && <Badge className="font-mono text-[11px] tabular-nums">+{envRest}</Badge>}
+        {envRest > 0 && <Badge className="font-mono text-micro tabular-nums">+{envRest}</Badge>}
         {environments.length === 0 && (
-          <span className="text-[11px] leading-[1.4] text-ash">no env tags</span>
+          <span className="text-micro leading-[1.4] text-ash">no env tags</span>
         )}
       </div>
     </Link>

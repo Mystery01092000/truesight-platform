@@ -11,11 +11,13 @@ import {
   TOPO_LAYOUT_LABEL,
   TOPO_PROVIDERS,
   TOPO_PROVIDER_LABEL,
+  type TopoCoverage,
   type TopoEnvScope,
   type TopoLayoutMode,
   type TopoProvider,
 } from "@/lib/topology/types";
 import { RESOURCE_KIND_ACCENT, type AccentToken } from "@/lib/taxonomy";
+import { PROVIDER_HUE } from "@/components/ui/ProviderChip";
 import { cn } from "@/lib/utils/cn";
 
 /**
@@ -93,6 +95,41 @@ export function TopoToolbar({
           {nodes} nodes · {edges} edges
         </span>
       </div>
+    </div>
+  );
+}
+
+/* ── Scope legend — estate coverage chips ─────────────────────────────── */
+
+/**
+ * Quiet coverage chips stating what the weave actually spans — "AWS · All
+ * accounts", "Azure · Production" — derived server-side (`stats.coverage`),
+ * never hardcoded. Rendered by the canvas as top-left chrome; pointer-inert so
+ * it never blocks panning.
+ */
+export function TopoScopeLegend({
+  coverage,
+  className,
+}: {
+  coverage: TopoCoverage[];
+  className?: string;
+}) {
+  if (coverage.length === 0) return null;
+  return (
+    <div className={cn("pointer-events-none flex flex-wrap items-center gap-1.5", className)}>
+      {coverage.map((c) => (
+        <span
+          key={c.provider}
+          className="inline-flex h-6 items-center gap-1.5 rounded-full border border-hairline bg-surface/80 px-2.5 text-micro text-ash backdrop-blur-sm"
+        >
+          <span
+            className="size-1.5 shrink-0 rounded-[2px]"
+            style={{ backgroundColor: PROVIDER_HUE[c.provider] }}
+            aria-hidden
+          />
+          {TOPO_PROVIDER_LABEL[c.provider]} · {c.label}
+        </span>
+      ))}
     </div>
   );
 }
@@ -195,7 +232,7 @@ function LegendPopover() {
                   style={{ background: ACCENT_COLOR[a] }}
                   aria-hidden
                 />
-                <span className="text-[11px] text-mute">{ACCENT_LABEL[a]}</span>
+                <span className="text-micro text-mute">{ACCENT_LABEL[a]}</span>
               </div>
             ))}
           </div>
@@ -210,7 +247,7 @@ function LegendPopover() {
                     style={{ background: h.color }}
                     aria-hidden
                   />
-                  <span className="text-[11px] text-mute">{h.label}</span>
+                  <span className="text-micro text-mute">{h.label}</span>
                 </div>
               ))}
             </div>
@@ -228,7 +265,7 @@ function LegendPopover() {
                     )}
                     aria-hidden
                   />
-                  <span className="text-[11px] text-mute">{d.label}</span>
+                  <span className="text-micro text-mute">{d.label}</span>
                 </div>
               ))}
             </div>
@@ -250,7 +287,7 @@ function LegendPopover() {
                       strokeDasharray={e.dash}
                     />
                   </svg>
-                  <span className="text-[11px] text-mute">{e.label}</span>
+                  <span className="text-micro text-mute">{e.label}</span>
                 </div>
               ))}
             </div>
@@ -260,7 +297,7 @@ function LegendPopover() {
             <span className="grid size-3.5 shrink-0 place-items-center rounded-[3px] border border-dashed border-hairline bg-surface-card">
               <Layers size={8} className="text-mute" aria-hidden />
             </span>
-            <span className="text-[11px] text-mute">Grouped resources — click to expand</span>
+            <span className="text-micro text-mute">Grouped resources — click to expand</span>
           </div>
         </div>
       ) : null}

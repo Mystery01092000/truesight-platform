@@ -40,7 +40,7 @@ export function ProviderChip({ provider, label = true, className }: ProviderChip
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-xs px-1.5 py-0.5 text-[11px] font-medium leading-[1.4] tracking-[0.04em]",
+        "inline-flex items-center gap-1.5 rounded-xs px-1.5 py-0.5 text-micro font-medium leading-[1.4] tracking-[0.04em]",
         "bg-surface-elevated text-mute",
         className,
       )}

@@ -89,7 +89,7 @@ export function VerifiedChecklist({
                 <Icon size={12} strokeWidth={2.5} className={tone.icon} />
               </span>
               <div className="min-w-0 flex-1">
-                <div className="text-[13px] font-medium leading-[1.4] text-ink">
+                <div className="text-label font-medium leading-[1.4] text-ink">
                   {entry.label}
                 </div>
                 {entry.description ? (

@@ -11,7 +11,9 @@ import { accessTickets, ticketResources, ticketApprovals, ticketStatusLog } from
 import { Surface } from "@/components/ui/Surface";
 import { Reveal } from "@/components/ui/Reveal";
 import { buttonClass } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Timeline, type TimelineItem } from "@/components/ui/Timeline";
+import { formatDate } from "@/lib/utils/format";
 import { TicketStatusBadge } from "@/components/ticketing/TicketStatusBadge";
 import { TicketActions } from "@/components/ticketing/TicketActions";
 import { TOOL_LABELS, STATUS_LABELS, type TicketStatus } from "@/lib/ticketing/types";
@@ -145,25 +147,17 @@ export default async function TicketDetailPage({
             Tickets
           </Link>
         </div>
-        <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-start gap-3.5">
-            <span
-              className="grid size-11 shrink-0 place-items-center rounded-lg border border-iris bg-iris-soft"
-              aria-hidden
-            >
-              <Ticket size={22} strokeWidth={1.75} className="text-iris" />
+        <PageHeader
+          title={`${(ticket.tools as string[]).join(" · ")} access`}
+          iconTone="iris"
+          icon={<Ticket size={22} strokeWidth={1.75} className="text-iris" />}
+          description={
+            <span className="font-mono text-[12px] text-ash">
+              {ticket.id} · raised {formatDate(ticket.createdAt)}
             </span>
-            <div>
-              <h1 className="text-[22px] font-medium leading-[1.3] tracking-[0.2px] text-ink">
-                {(ticket.tools as string[]).join(" · ")} access
-              </h1>
-              <p className="mt-1 font-mono text-[12px] text-ash">
-                {ticket.id} · raised {new Date(ticket.createdAt).toLocaleString()}
-              </p>
-            </div>
-          </div>
-          <TicketStatusBadge status={status} />
-        </header>
+          }
+          actions={<TicketStatusBadge status={status} />}
+        />
       </Reveal>
 
       {/* Actions */}
@@ -203,9 +197,9 @@ export default async function TicketDetailPage({
                 <table className="w-full border-collapse text-left">
                   <thead>
                     <tr className="border-b border-hairline bg-surface-elevated">
-                      <th className="px-3.5 py-2 text-[13px] font-medium tracking-[0.2px] text-mute">Tool</th>
-                      <th className="px-3.5 py-2 text-[13px] font-medium tracking-[0.2px] text-mute">Access</th>
-                      <th className="px-3.5 py-2 text-[13px] font-medium tracking-[0.2px] text-mute">Resource</th>
+                      <th className="px-3.5 py-2 text-label font-medium tracking-[0.2px] text-mute">Tool</th>
+                      <th className="px-3.5 py-2 text-label font-medium tracking-[0.2px] text-mute">Access</th>
+                      <th className="px-3.5 py-2 text-label font-medium tracking-[0.2px] text-mute">Resource</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -222,7 +216,7 @@ export default async function TicketDetailPage({
                             {TOOL_LABELS[r.tool as keyof typeof TOOL_LABELS] ?? r.tool}
                           </td>
                           <td className="px-3.5 py-2.5 text-[14px] capitalize text-body">{r.accessMode}</td>
-                          <td className="px-3.5 py-2.5 font-mono text-[13px] text-body">
+                          <td className="px-3.5 py-2.5 font-mono text-label text-body">
                             {r.resourceIdentity ?? "—"}
                           </td>
                         </tr>
@@ -266,7 +260,7 @@ export default async function TicketDetailPage({
                           </div>
                         )}
                         {a.notes && (
-                          <p className="mt-2 border-t border-hairline pt-2 text-[13px] leading-[1.5] text-mute">
+                          <p className="mt-2 border-t border-hairline pt-2 text-label leading-[1.5] text-mute">
                             {a.notes}
                           </p>
                         )}
@@ -275,7 +269,7 @@ export default async function TicketDetailPage({
                   );
                 })}
                 {approvals.length === 0 && (
-                  <li className="text-[13px] text-mute">No approvals recorded.</li>
+                  <li className="text-label text-mute">No approvals recorded.</li>
                 )}
               </ol>
             </Surface>

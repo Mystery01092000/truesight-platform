@@ -8,6 +8,7 @@ import { can } from "@/lib/auth/rbac";
 import { db } from "@/db";
 import { accessTickets } from "@/db/schema";
 import { Reveal } from "@/components/ui/Reveal";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { AdminConsole, type AdminTicket } from "@/components/ticketing/AdminConsole";
 import type { TicketStatus } from "@/lib/ticketing/types";
 
@@ -38,22 +39,12 @@ export default async function TicketAdminPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <Reveal>
-        <header className="mb-6 flex items-start gap-3.5">
-          <span
-            className="grid size-11 shrink-0 place-items-center rounded-lg border border-iris bg-iris-soft"
-            aria-hidden
-          >
-            <ShieldCheck size={22} strokeWidth={1.75} className="text-iris" />
-          </span>
-          <div>
-            <h1 className="text-[24px] font-medium leading-[1.4] tracking-[0.2px] text-ink">
-              Ticket admin
-            </h1>
-            <p className="mt-1 text-[14px] leading-[1.6] text-mute">
-              Every developer-tools access request across the org. Approve, advance or complete.
-            </p>
-          </div>
-        </header>
+        <PageHeader
+          title="Ticket admin"
+          iconTone="iris"
+          icon={<ShieldCheck size={22} strokeWidth={1.75} className="text-iris" />}
+          description="Every developer-tools access request across the org. Approve, advance or complete."
+        />
       </Reveal>
 
       <Reveal delay={0.06}>

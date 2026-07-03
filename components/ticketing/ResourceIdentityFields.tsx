@@ -32,7 +32,7 @@ export function ResourceIdentityFields({
         const current = value[tool] ?? (cfg.autoFillFromTeam ? team : "");
         return (
           <div key={tool}>
-            <label className="mb-1.5 block text-[13px] leading-[1.5] text-body">
+            <label className="mb-1.5 block text-label leading-[1.5] text-body">
               {TOOL_LABELS[tool]} — {cfg.resourceLabel}
             </label>
             <TextInput

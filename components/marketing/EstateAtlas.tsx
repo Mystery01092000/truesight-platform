@@ -1,8 +1,8 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils/cn";
 import { WatcherScene } from "@/components/brand/WatcherScene";
+import { useLandingStats } from "@/components/marketing/useLandingStats";
 
 /* ────────────────────────────────────────────────────────────────────────── *
  * EstateAtlas — the landing hero centrepiece. The cinematic WatcherScene (the
@@ -14,21 +14,6 @@ import { WatcherScene } from "@/components/brand/WatcherScene";
  * multi-cloud label with the live claim dropped. Never a fabricated signal.
  * ────────────────────────────────────────────────────────────────────────── */
 
-type LandingStats = {
-  resources: number;
-  accounts: number;
-  drift: number;
-  coverage: number;
-  providers: { aws: number; azure: number; github: number };
-  updatedAt: string;
-};
-
-async function fetchLandingStats(): Promise<LandingStats> {
-  const res = await fetch("/api/landing-stats", { headers: { accept: "application/json" } });
-  if (!res.ok) throw new Error(`landing-stats ${res.status}`);
-  return (await res.json()) as LandingStats;
-}
-
 const PROVIDERS = [
   { key: "aws" as const, label: "AWS", dot: "bg-accent-yellow" },
   { key: "azure" as const, label: "Azure", dot: "bg-accent-blue" },
@@ -36,13 +21,7 @@ const PROVIDERS = [
 ];
 
 export function EstateAtlas() {
-  const { data, isError, isLoading } = useQuery({
-    queryKey: ["landing-stats"],
-    queryFn: fetchLandingStats,
-    staleTime: 30_000,
-    refetchInterval: 60_000,
-    retry: 1,
-  });
+  const { data, isError, isLoading } = useLandingStats();
 
   const live = !!data;
 

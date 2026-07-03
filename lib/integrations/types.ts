@@ -63,6 +63,15 @@ export interface AdapterError {
   retryable: boolean;
 }
 
+/** A cost-source pull failure, scoped to the account/subscription that failed. */
+export interface CostSourceError {
+  /** e.g. `aws:123456789012` | `azure:<subscriptionId>` | `azure:config` */
+  scope: string;
+  message: string;
+  code?: string;
+  statusCode?: number;
+}
+
 export interface DiscoveryResult {
   resources: CloudResource[];
   edges: GraphEdge[];

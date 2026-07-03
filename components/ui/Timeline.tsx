@@ -56,7 +56,7 @@ export function Timeline({
       {items.map((item, i) => {
         const marker = chat ? (
           <span
-            className="absolute -left-10 top-0 flex size-7 items-center justify-center rounded-full border border-hairline bg-surface-elevated text-[11px] font-medium text-mute [&>svg]:size-3.5"
+            className="absolute -left-10 top-0 flex size-7 items-center justify-center rounded-full border border-hairline bg-surface-elevated text-micro font-medium text-mute [&>svg]:size-3.5"
             aria-hidden
           >
             {item.marker}
@@ -73,17 +73,17 @@ export function Timeline({
           <>
             {marker}
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-              <div className="flex flex-wrap items-center gap-2 text-[13px] leading-[1.5] text-body">
+              <div className="flex flex-wrap items-center gap-2 text-label leading-[1.5] text-body">
                 {item.title}
               </div>
               {item.timestamp && (
-                <span className="font-mono text-[11px] tabular-nums text-stone">
+                <span className="font-mono text-micro tabular-nums text-stone">
                   {item.timestamp}
                 </span>
               )}
             </div>
             {item.body && (
-              <div className="mt-1 text-[13px] leading-[1.5] text-mute">{item.body}</div>
+              <div className="mt-1 text-label leading-[1.5] text-mute">{item.body}</div>
             )}
           </>
         );

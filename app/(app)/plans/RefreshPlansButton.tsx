@@ -40,7 +40,7 @@ export function RefreshPlansButton() {
         <RefreshCw size={14} className={cn(busy && "animate-spin")} aria-hidden />
         {busy ? "Sweeping bucket…" : "Refresh from S3"}
       </Button>
-      <span role="alert" aria-live="polite" className="text-[11px] leading-[1.4] text-critical">
+      <span role="alert" aria-live="polite" className="text-micro leading-[1.4] text-critical">
         {error}
       </span>
     </div>

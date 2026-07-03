@@ -36,7 +36,7 @@ export function FrameworkCard({
             </p>
           ) : null}
         </div>
-        <span className="shrink-0 font-mono text-[13px] tabular-nums text-body">
+        <span className="shrink-0 font-mono text-label tabular-nums text-body">
           {passed}/{total}
         </span>
       </div>
@@ -48,8 +48,8 @@ export function FrameworkCard({
         />
       </div>
       <div className="mt-2 flex items-center justify-between">
-        <span className="text-[11px] text-mute">passing controls</span>
-        <span className="font-mono text-[11px] tabular-nums text-mute">{pct}%</span>
+        <span className="text-micro text-mute">passing controls</span>
+        <span className="font-mono text-micro tabular-nums text-mute">{pct}%</span>
       </div>
     </Surface>
   );

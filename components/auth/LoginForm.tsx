@@ -84,7 +84,7 @@ export function LoginForm({
       className={compact ? "w-full max-w-sm p-6" : "w-full max-w-sm p-8"}
     >
       {compact ? (
-        <span className="text-[13px] font-medium tracking-[0.3px] text-mute">
+        <span className="text-label font-medium tracking-[0.3px] text-mute">
           Sign in
         </span>
       ) : (
@@ -104,7 +104,7 @@ export function LoginForm({
       <form action={formAction} className={cn("flex flex-col gap-4", compact ? "mt-5" : "mt-8")}>
         <input type="hidden" name="next" value={next} />
         <label className="flex flex-col gap-1.5">
-          <span className="text-[13px] text-mute">Email</span>
+          <span className="text-label text-mute">Email</span>
           <TextInput
             ref={emailRef}
             name="email"
@@ -118,7 +118,7 @@ export function LoginForm({
           />
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-[13px] text-mute">Password</span>
+          <span className="text-label text-mute">Password</span>
           <TextInput
             name="password"
             type="password"
@@ -131,7 +131,7 @@ export function LoginForm({
         {(state.error || ssoError) && (
           <p
             role="alert"
-            className="rounded-md bg-accent-red-soft px-3 py-2 text-[13px] leading-[1.5] text-accent-red"
+            className="rounded-md bg-accent-red-soft px-3 py-2 text-label leading-[1.5] text-accent-red"
           >
             {state.error ?? ssoError}
           </p>

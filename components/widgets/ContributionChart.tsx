@@ -39,7 +39,7 @@ export function ContributionChart({ contributors, className }: ContributionChart
       </div>
 
       {rows.length === 0 ? (
-        <p className="mt-4 text-[13px] text-mute">No contribution data yet.</p>
+        <p className="mt-4 text-label text-mute">No contribution data yet.</p>
       ) : (
         <ol className="mt-4 flex flex-col gap-2.5">
           {rows.map((c, i) => (
@@ -49,8 +49,8 @@ export function ContributionChart({ contributors, className }: ContributionChart
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="truncate font-mono text-[13px] text-body">{c.name}</span>
-                  <span className="shrink-0 font-mono text-[13px] text-ink tabular-nums">
+                  <span className="truncate font-mono text-label text-body">{c.name}</span>
+                  <span className="shrink-0 font-mono text-label text-ink tabular-nums">
                     <RollupNumber value={c.commits} />
                   </span>
                 </div>

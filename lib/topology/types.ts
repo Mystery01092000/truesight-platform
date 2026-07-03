@@ -103,6 +103,14 @@ export type TopoEdge = {
   kind: EdgeKind;
 };
 
+/** Per-provider estate coverage of the woven graph — the scope-context read
+ *  (e.g. AWS · "All accounts", Azure · "Production"). Derived server-side from
+ *  the accounts actually present versus the registered integration accounts. */
+export type TopoCoverage = {
+  provider: Exclude<TopoProvider, "all">;
+  label: string;
+};
+
 export type TopoStats = {
   scope: TopoEnvScope;
   provider: TopoProvider;
@@ -110,6 +118,7 @@ export type TopoStats = {
   edges: number;
   accounts: { account: string; label: string; n: number }[];
   byKind: { kind: ResourceKind; n: number }[];
+  coverage: TopoCoverage[];
   /** Count of resources in this scope that carry drift classification != in_sync. */
   drifted: number;
 };

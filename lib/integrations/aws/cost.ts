@@ -9,6 +9,7 @@ import {
 import { serverEnv } from "@/lib/config/env";
 import { cacheable } from "@/lib/cache";
 import type { NewCostSnapshot } from "@/db/schema";
+import type { CostSourceError } from "@/lib/integrations/types";
 
 import { createClientFactory } from "./client";
 
@@ -63,41 +64,60 @@ interface AccountConfig {
   label: string;
 }
 
+export interface AwsCostResult {
+  rows: AwsCostRow[];
+  errors: CostSourceError[];
+  /** False when no AWS accounts are configured — the pull never ran. */
+  configured: boolean;
+}
+
 /**
  * Discover AWS costs across every configured account (management + prod). Each account
  * is queried independently and its results merged; a per-account failure is recorded as
- * an empty result + a logged warning rather than aborting the whole pull.
+ * a `CostSourceError` scoped to that account rather than aborting the whole pull. A
+ * result carrying errors is never cached, so a transient failure can't pin a degraded
+ * pull for the whole TTL.
  */
-export async function getAwsCosts(opts: AwsCostOptions): Promise<AwsCostRow[]> {
+export async function getAwsCosts(opts: AwsCostOptions): Promise<AwsCostResult> {
   const cacheKey = `argus:aws:costs:${opts.startDate}:${opts.endDate}:${opts.granularity ?? "DAILY"}:${opts.tagKey ?? ""}`;
-  return cacheable(cacheKey, CACHE_TTL_SECONDS, async () => {
-    const env = serverEnv();
-    const accounts: AccountConfig[] = [];
-    if (env.AWS_MGMT_ACCOUNT_ID) {
-      accounts.push({ accountId: env.AWS_MGMT_ACCOUNT_ID, label: "AWS Management" });
-    }
-    if (env.AWS_PROD_ACCOUNT_ID) {
-      accounts.push({ accountId: env.AWS_PROD_ACCOUNT_ID, label: "AWS Production" });
-    }
-    if (accounts.length === 0) return [];
-
-    const granularity = opts.granularity ?? "DAILY";
-    const out: AwsCostRow[] = [];
-    for (const acct of accounts) {
-      try {
-        const rows = await queryAccount(acct.accountId, opts, granularity);
-        out.push(...rows);
-      } catch (err) {
-        // A single account failing (missing CE permissions, SCP, etc.) must not take
-        // down the whole cost sync — degrade to that account's omission + a log line.
-        console.warn(
-          `[aws-cost:${acct.accountId}] failed to read Cost Explorer:`,
-          (err as Error)?.message ?? err,
-        );
+  return cacheable(
+    cacheKey,
+    CACHE_TTL_SECONDS,
+    async (): Promise<AwsCostResult> => {
+      const env = serverEnv();
+      const accounts: AccountConfig[] = [];
+      if (env.AWS_MGMT_ACCOUNT_ID) {
+        accounts.push({ accountId: env.AWS_MGMT_ACCOUNT_ID, label: "AWS Management" });
       }
-    }
-    return out;
-  });
+      if (env.AWS_PROD_ACCOUNT_ID) {
+        accounts.push({ accountId: env.AWS_PROD_ACCOUNT_ID, label: "AWS Production" });
+      }
+      if (accounts.length === 0) return { rows: [], errors: [], configured: false };
+
+      const granularity = opts.granularity ?? "DAILY";
+      const rows: AwsCostRow[] = [];
+      const errors: CostSourceError[] = [];
+      for (const acct of accounts) {
+        try {
+          rows.push(...(await queryAccount(acct.accountId, opts, granularity)));
+        } catch (err) {
+          const e = err as Error & { $metadata?: { httpStatusCode?: number } };
+          errors.push({
+            scope: `aws:${acct.accountId}`,
+            message: e?.message ?? String(err),
+            code: e?.name,
+            statusCode: e?.$metadata?.httpStatusCode,
+          });
+          console.warn(
+            `[aws-cost:${acct.accountId}] failed to read Cost Explorer:`,
+            e?.message ?? err,
+          );
+        }
+      }
+      return { rows, errors, configured: true };
+    },
+    { shouldCache: (v) => v.configured && v.errors.length === 0 },
+  );
 }
 
 /** Query one account's Cost Explorer, grouped by SERVICE (+ optional TAG). */

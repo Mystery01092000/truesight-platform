@@ -209,7 +209,7 @@ export function ResourceExplorer({
                 className={cn("size-2 shrink-0 rounded-full", STATUS_RAIL[r.status])}
               />
               <span className="sr-only">{b.label}:</span>
-              <span className="truncate font-mono text-[13px] leading-[1.6] text-ink transition-colors duration-150 ease-smooth group-hover/row:text-on-dark">
+              <span className="truncate font-mono text-label leading-[1.6] text-ink transition-colors duration-150 ease-smooth group-hover/row:text-on-dark">
                 {r.name}
               </span>
             </Link>
@@ -265,7 +265,7 @@ export function ResourceExplorer({
         header: "Env",
         cell: ({ row }) =>
           row.original.environment ? (
-            <Badge className="font-mono text-[11px]">{row.original.environment}</Badge>
+            <Badge className="font-mono text-micro">{row.original.environment}</Badge>
           ) : (
             <span className="text-ash">—</span>
           ),
@@ -362,13 +362,13 @@ function TagChips({ tags }: { tags?: Record<string, string> }) {
   return (
     <span className="flex items-center gap-1" title={full}>
       {shown.map(([k, v]) => (
-        <Badge key={k} className="max-w-[150px] font-mono text-[11px]">
+        <Badge key={k} className="max-w-[150px] font-mono text-micro">
           <span className="truncate">
             {k}={v}
           </span>
         </Badge>
       ))}
-      {rest > 0 && <Badge className="font-mono text-[11px] tabular-nums">+{rest}</Badge>}
+      {rest > 0 && <Badge className="font-mono text-micro tabular-nums">+{rest}</Badge>}
     </span>
   );
 }
@@ -459,7 +459,7 @@ function ServiceCardGrid({
           section.cards.length > 0 && (
             <section key={section.title ?? "all"}>
               {section.title && (
-                <h3 className="mb-3 text-[11px] font-medium uppercase leading-[1.4] tracking-[0.06em] text-ash">
+                <h3 className="mb-3 text-micro font-medium uppercase leading-[1.4] tracking-[0.06em] text-ash">
                   {section.title}
                 </h3>
               )}
@@ -518,16 +518,16 @@ function ServiceCard({
         {envs.length > 0 ? (
           <>
             {envs.map((env) => (
-              <Badge key={env} className="font-mono text-[11px]">
+              <Badge key={env} className="font-mono text-micro">
                 {env}
               </Badge>
             ))}
             {envRest > 0 && (
-              <Badge className="font-mono text-[11px] tabular-nums">+{envRest}</Badge>
+              <Badge className="font-mono text-micro tabular-nums">+{envRest}</Badge>
             )}
           </>
         ) : (
-          <span className="text-[11px] leading-[1.4] text-ash">no env tags</span>
+          <span className="text-micro leading-[1.4] text-ash">no env tags</span>
         )}
       </div>
     </button>

@@ -2,6 +2,7 @@ import "server-only";
 import { sql, desc, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { integrationAccounts, resourceEdges, driftFindings } from "@/db/schema";
+import { COST_SOURCE_EXTERNAL_IDS } from "@/lib/integrations/cost-sources";
 import {
   RESOURCE_KINDS,
   type ResourceKind,
@@ -22,7 +23,9 @@ import type {
   TopoGraph,
   TopoGroup,
   TopoStats,
+  TopoCoverage,
 } from "./types";
+import { TOPO_PROVIDERS } from "./types";
 
 /**
  * Server-side topology graph builder. Reads the real `resources` + `resource_edges`
@@ -209,6 +212,7 @@ export async function getTopology(
         edges: edges.length,
         accounts: [],
         byKind: [],
+        coverage: [],
         drifted: 0,
       },
     });
@@ -266,6 +270,33 @@ export async function getTopology(
     .map(([account, n]) => ({ account, label: labelFor(account), n }))
     .sort((a, b) => b.n - a.n);
 
+  // Per-provider scope-context read for the canvas legend: a single present
+  // account keeps its display name ("Azure · Production"); full coverage of the
+  // registered integration accounts reads "All accounts"; anything partial
+  // falls back to an honest count. Never hardcoded — derived from the weave.
+  const coverage: TopoCoverage[] = TOPO_PROVIDERS.filter(
+    (p): p is TopoCoverage["provider"] => p !== "all",
+  ).flatMap((p) => {
+    const present = new Set(
+      finalNodes.filter((n) => n.data.provider === p).map((n) => n.data.account),
+    );
+    if (present.size === 0) return [];
+    const registered = accountRows.filter(
+      (a) =>
+        a.provider === p &&
+        a.enabled &&
+        // Cost-source registry rows never carry resources — not coverage targets.
+        !COST_SOURCE_EXTERNAL_IDS.includes(a.externalId),
+    );
+    const label =
+      present.size === 1
+        ? labelFor([...present][0] ?? null)
+        : registered.length > 0 && registered.every((a) => present.has(a.externalId))
+          ? "All accounts"
+          : `${present.size} accounts`;
+    return [{ provider: p, label }];
+  });
+
   const stats: TopoStats = {
     scope,
     provider,
@@ -273,6 +304,7 @@ export async function getTopology(
     edges: laid.edges.length,
     accounts,
     byKind,
+    coverage,
     drifted: finalNodes.filter((n) => n.data.drift !== "in_sync" && n.data.drift !== "unknown").length,
   };
 

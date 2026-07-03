@@ -83,7 +83,7 @@ export function PlatformAdminsCard({ admins }: { admins: AdminRow[] }) {
         accessorKey: "email",
         header: "Email",
         cell: ({ row }) => (
-          <span className="font-mono text-[13px] leading-[1.5] text-body">
+          <span className="font-mono text-label leading-[1.5] text-body">
             {row.original.email}
           </span>
         ),
@@ -97,14 +97,14 @@ export function PlatformAdminsCard({ admins }: { admins: AdminRow[] }) {
         accessorKey: "note",
         header: "Note",
         cell: ({ row }) => (
-          <span className="text-[13px] leading-[1.5] text-mute">{row.original.note ?? "—"}</span>
+          <span className="text-label leading-[1.5] text-mute">{row.original.note ?? "—"}</span>
         ),
       },
       {
         accessorKey: "createdLabel",
         header: "Added",
         cell: ({ row }) => (
-          <span className="font-mono text-[11px] leading-[1.4] text-ash tabular-nums">
+          <span className="font-mono text-micro leading-[1.4] text-ash tabular-nums">
             {row.original.createdLabel}
           </span>
         ),
@@ -136,7 +136,7 @@ export function PlatformAdminsCard({ admins }: { admins: AdminRow[] }) {
       <h2 className="text-[15px] font-medium leading-[1.4] tracking-[0.2px] text-ink">
         Platform admins
       </h2>
-      <p className="mt-1 text-[13px] leading-[1.5] text-mute">
+      <p className="mt-1 text-label leading-[1.5] text-mute">
         Emails on this allowlist are granted the mapped role at login. The last remaining admin
         can never be removed.
       </p>
@@ -180,7 +180,7 @@ export function PlatformAdminsCard({ admins }: { admins: AdminRow[] }) {
         </Button>
       </form>
 
-      <p role="alert" aria-live="polite" className="mt-2 min-h-4 text-[11px] leading-[1.4] text-critical">
+      <p role="alert" aria-live="polite" className="mt-2 min-h-4 text-micro leading-[1.4] text-critical">
         {error}
       </p>
     </div>

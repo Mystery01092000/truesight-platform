@@ -48,7 +48,7 @@ void main() {
   // domain warp for a flowing, cloud-like field
   vec2 q = vec2(fbm(p * 1.4 + t), fbm(p * 1.4 - t + 5.2));
   float f = fbm(p * 2.1 + q * 1.3 + t * 0.6);
-  vec3 iris = vec3(0.486, 0.553, 1.0);   // #7c8dff
+  vec3 iris = vec3(0.486, 0.553, 1.0);   // mirrors --color-iris #7c8dff (GLSL can't read CSS vars)
   vec3 deep = vec3(0.30, 0.16, 0.55);    // violet undertone
   // Crush the lows so only high-density ridges glow — wispy filaments of light
   // over deep black, not a flat grey wash.

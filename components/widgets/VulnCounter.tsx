@@ -38,7 +38,7 @@ export function VulnCounter({ severity, count, className }: VulnCounterProps) {
     <div className={cn("rounded-lg border border-hairline bg-surface p-4", className)}>
       <div className="flex items-center gap-2">
         <span className={cn("size-2 shrink-0 rounded-full", DOT[severity])} aria-hidden />
-        <span className="text-[13px] font-medium leading-[1.5] tracking-[0.015em] text-mute">
+        <span className="text-label font-medium leading-[1.5] tracking-[0.015em] text-mute">
           {LABEL[severity]}
         </span>
       </div>

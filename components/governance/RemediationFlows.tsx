@@ -43,7 +43,7 @@ function StatusChip({ value }: { value: string | null | undefined }) {
     return <StatusBadge status={value as StatusKind} dot={false} className="shrink-0" />;
   }
   return (
-    <span className="shrink-0 rounded-xs bg-surface-elevated px-1.5 py-0.5 text-[11px] text-mute">
+    <span className="shrink-0 rounded-xs bg-surface-elevated px-1.5 py-0.5 text-micro text-mute">
       {value}
     </span>
   );
@@ -69,7 +69,7 @@ function CleanState({ text }: { text: string }) {
   return (
     <div className="flex items-center gap-2.5 py-1">
       <CheckCircle2 size={16} className="shrink-0 text-accent-green" />
-      <span className="text-[13px] leading-[1.5] text-body">{text}</span>
+      <span className="text-label leading-[1.5] text-body">{text}</span>
     </div>
   );
 }
@@ -97,12 +97,12 @@ function FindingRow({
     <>
       <span className="truncate font-mono text-[12px] text-body">{urn}</span>
       {badge ? (
-        <span className="shrink-0 rounded-xs bg-surface-elevated px-1.5 py-0.5 text-[11px] text-mute">
+        <span className="shrink-0 rounded-xs bg-surface-elevated px-1.5 py-0.5 text-micro text-mute">
           {badge}
         </span>
       ) : null}
       {exposed ? (
-        <span className="shrink-0 rounded-xs bg-critical-soft px-1.5 py-0.5 text-[11px] text-critical">
+        <span className="shrink-0 rounded-xs bg-critical-soft px-1.5 py-0.5 text-micro text-critical">
           Exposed
         </span>
       ) : null}
@@ -170,7 +170,7 @@ export function RemediationFlows({
           <CleanState text="No drift detected — all resources match their Terraform state." />
         ) : dIdx === 0 ? (
           <StepBody>
-            <p className="text-[13px] leading-[1.5] text-body">
+            <p className="text-label leading-[1.5] text-body">
               <span className="font-mono tabular-nums text-ink">{driftFindings.length}</span>{" "}
               resource{driftFindings.length === 1 ? "" : "s"} ha
               {driftFindings.length === 1 ? "s" : "ve"} drifted from declared state.
@@ -204,7 +204,7 @@ export function RemediationFlows({
           </StepBody>
         ) : dIdx === 2 ? (
           <StepBody>
-            <ul className="ml-1 list-disc space-y-1.5 pl-3.5 text-[13px] leading-[1.55] text-body">
+            <ul className="ml-1 list-disc space-y-1.5 pl-3.5 text-label leading-[1.55] text-body">
               <li>
                 If the cloud drifted from the source, re-apply{" "}
                 <span className="font-mono text-[12px] text-ink">terraform apply</span>.
@@ -217,7 +217,7 @@ export function RemediationFlows({
           </StepBody>
         ) : (
           <StepBody>
-            <p className="text-[13px] leading-[1.5] text-body">
+            <p className="text-label leading-[1.5] text-body">
               Trigger a sync from the estate page. Argus will re-evaluate drift and
               update this flow automatically.
             </p>
@@ -242,7 +242,7 @@ export function RemediationFlows({
           <CleanState text="No critical or high-severity exposures detected across the estate." />
         ) : sIdx === 0 ? (
           <StepBody>
-            <p className="text-[13px] leading-[1.5] text-body">
+            <p className="text-label leading-[1.5] text-body">
               <span className="font-mono tabular-nums text-ink">{securityFindings.length}</span>{" "}
               finding{securityFindings.length === 1 ? "" : "s"} need attention.
             </p>
@@ -275,7 +275,7 @@ export function RemediationFlows({
           </StepBody>
         ) : sIdx === 2 ? (
           <StepBody>
-            <ul className="ml-1 list-disc space-y-1.5 pl-3.5 text-[13px] leading-[1.55] text-body">
+            <ul className="ml-1 list-disc space-y-1.5 pl-3.5 text-label leading-[1.55] text-body">
               <li>Apply the remediation for the finding category (policy, config, or rotation).</li>
               <li>Tighten the security group / network rule if the resource is exposed.</li>
               <li>Quarantine the resource if remediation cannot be applied immediately.</li>
@@ -283,7 +283,7 @@ export function RemediationFlows({
           </StepBody>
         ) : (
           <StepBody>
-            <p className="text-[13px] leading-[1.5] text-body">
+            <p className="text-label leading-[1.5] text-body">
               The next sync re-scans posture and updates the score. Closed findings
               drop off automatically.
             </p>

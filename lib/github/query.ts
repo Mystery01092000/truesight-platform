@@ -165,17 +165,30 @@ function urnKind(urn: string): string {
 
 /** Read the full GitHub org graph from the KB and roll it up into insights. */
 export async function getGithubInsights(): Promise<GithubInsights | null> {
-  const rows = await db
-    .select({
-      urn: resources.urn,
-      account: resources.account,
-      name: resources.name,
-      type: resources.type,
-      attributes: resources.attributes,
-    })
-    .from(resources)
-    .where(and(eq(resources.provider, "github"), eq(resources.present, true)))
-    .orderBy(asc(resources.name));
+  // The resource rows, `contains` edges and account lookup are independent —
+  // fetch them in one round-trip batch instead of sequentially.
+  const [rows, edges, [acct]] = await Promise.all([
+    db
+      .select({
+        urn: resources.urn,
+        account: resources.account,
+        name: resources.name,
+        type: resources.type,
+        attributes: resources.attributes,
+      })
+      .from(resources)
+      .where(and(eq(resources.provider, "github"), eq(resources.present, true)))
+      .orderBy(asc(resources.name)),
+    db
+      .select({ source: resourceEdges.sourceUrn, target: resourceEdges.targetUrn })
+      .from(resourceEdges)
+      .where(and(eq(resourceEdges.kind, "contains"), like(resourceEdges.sourceUrn, "github:%"))),
+    db
+      .select({ id: integrationAccounts.id })
+      .from(integrationAccounts)
+      .where(eq(integrationAccounts.provider, "github"))
+      .limit(1),
+  ]);
 
   if (rows.length === 0) return null;
 
@@ -194,11 +207,6 @@ export async function getGithubInsights(): Promise<GithubInsights | null> {
   }
 
   // Attach members + repos to their teams via `contains` edges.
-  const edges = await db
-    .select({ source: resourceEdges.sourceUrn, target: resourceEdges.targetUrn })
-    .from(resourceEdges)
-    .where(and(eq(resourceEdges.kind, "contains"), like(resourceEdges.sourceUrn, "github:%")));
-
   for (const e of edges) {
     const team = teamMap.get(e.source);
     if (!team) continue;
@@ -244,13 +252,9 @@ export async function getGithubInsights(): Promise<GithubInsights | null> {
 
   const contributions = members.reduce((n, m) => n + m.contributions, 0);
 
-  // Last sync for the GitHub account.
+  // Last sync for the GitHub account (depends on the account id, so it stays
+  // sequential after the batch above).
   let lastSync: GithubInsights["lastSync"] = null;
-  const [acct] = await db
-    .select({ id: integrationAccounts.id })
-    .from(integrationAccounts)
-    .where(eq(integrationAccounts.provider, "github"))
-    .limit(1);
   if (acct) {
     const [s] = await db
       .select({ status: integrationSync.status, startedAt: integrationSync.startedAt })

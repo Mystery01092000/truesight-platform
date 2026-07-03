@@ -17,6 +17,7 @@ import {
 import { motion, useReducedMotion } from "motion/react";
 import { ResourceNode } from "./nodes/ResourceNode";
 import { GroupNode, type GroupNodeData } from "./nodes/GroupNode";
+import { TopoScopeLegend } from "./TopoToolbar";
 import { FlowEdge } from "./edges/FlowEdge";
 import { FlowField } from "./FlowField";
 import {
@@ -319,9 +320,9 @@ function CanvasInner({ graph, ambient }: { graph: TopoGraph; ambient: boolean })
               pannable
               zoomable
               nodeStrokeWidth={0}
-              bgColor="#0b0c0d"
-              maskColor="rgba(7,8,10,0.66)"
-              maskStrokeColor="#2a2d2e"
+              bgColor="var(--color-surface)"
+              maskColor="color-mix(in srgb, var(--color-canvas) 66%, transparent)"
+              maskStrokeColor="var(--color-hairline-emphasis)"
               maskStrokeWidth={2}
               className="topo-minimap"
               nodeColor={(n) =>
@@ -331,6 +332,13 @@ function CanvasInner({ graph, ambient }: { graph: TopoGraph; ambient: boolean })
               }
             />
           </ReactFlow>
+
+          {/* Estate coverage read, pinned to the canvas corner — states what
+              scope the weave spans (e.g. AWS · All accounts, Azure · Production). */}
+          <TopoScopeLegend
+            coverage={graph.stats.coverage}
+            className="absolute left-3 top-3 z-10"
+          />
 
           <DetailPanel
             node={selectedNode}

@@ -44,16 +44,18 @@ export async function scanAwsVulns(opts: ScanAwsVulnsOpts): Promise<VulnScanResu
   const factory = createClientFactory(opts.accountId);
   const defaultRegion = factory.region;
 
+  const findings: SecurityFinding[] = [];
+  const errors: VulnScanResult["errors"] = [];
+
   const scopes: Array<[string, () => Promise<SecurityFinding[]>]> = [
     [`inspector2:${opts.accountId}`, () => scanInspector2(factory)],
     [`securityhub:${opts.accountId}`, () => scanSecurityHub(factory)],
-    [`ecr-scans:${opts.accountId}`, () => scanEcrImages(factory, defaultRegion)],
+    // Per-repo partial failures inside the ECR scan are pushed onto `errors` directly.
+    [`ecr-scans:${opts.accountId}`, () => scanEcrImages(factory, defaultRegion, errors)],
   ];
 
   const settled = await Promise.allSettled(scopes.map(([, fn]) => fn()));
 
-  const findings: SecurityFinding[] = [];
-  const errors: VulnScanResult["errors"] = [];
   settled.forEach((res, i) => {
     if (res.status === "fulfilled") {
       findings.push(...res.value);
@@ -213,7 +215,11 @@ interface EcrImageRow {
  * surface findings here. We enumerate repos, pull the most recent scanned images,
  * and read their scan findings — bounded so a large registry can't stall the scan.
  */
-async function scanEcrImages(factory: AwsClientFactory, region: string): Promise<SecurityFinding[]> {
+async function scanEcrImages(
+  factory: AwsClientFactory,
+  region: string,
+  errors: VulnScanResult["errors"],
+): Promise<SecurityFinding[]> {
   const ecr = factory.get(ECRClient, { region });
   const findings: SecurityFinding[] = [];
 
@@ -276,12 +282,16 @@ async function scanEcrImages(factory: AwsClientFactory, region: string): Promise
                   source: "ecr-image-scan",
                 },
               });
-            } catch {
-              // A single image lookup failure never aborts the whole registry.
+            } catch (err) {
+              // A single image lookup failure never aborts the whole registry, but the
+              // scope must be recorded so the "not seen ⇒ fixed" sweep skips this repo.
+              errors.push({ scope: `ecr:${region}:${repo.name}`, message: errMessage(err) });
             }
           }
-        } catch {
-          // Per-repo failure (e.g. no scan config) is non-fatal.
+        } catch (err) {
+          // Per-repo failure (e.g. no scan config) is non-fatal, but must be visible —
+          // security-sync also uses this scope to skip the "not seen ⇒ fixed" sweep.
+          errors.push({ scope: `ecr:${region}:${repo.name}`, message: errMessage(err) });
         }
       }),
     ),

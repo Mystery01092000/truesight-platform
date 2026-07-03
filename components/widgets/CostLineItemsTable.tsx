@@ -6,6 +6,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/ui/DataTable";
 import { FilterBar, type FilterFacet } from "@/components/ui/FilterBar";
 import { ProviderChip, PROVIDER_LABEL } from "@/components/ui/ProviderChip";
+import { formatCurrency } from "@/lib/utils/format";
 import type { CloudProvider } from "@/lib/taxonomy";
 import type { CostFacets, CostLineItem } from "@/app/(app)/cost/data";
 
@@ -20,7 +21,7 @@ import type { CostFacets, CostLineItem } from "@/app/(app)/cost/data";
 const EMPTY_VALUES: Record<string, string> = { provider: "", account: "", service: "" };
 
 function fmtAmount(n: number): string {
-  return `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return formatCurrency(n, { decimals: 2 });
 }
 
 export type CostLineItemsTableProps = {
@@ -80,7 +81,7 @@ export function CostLineItemsTable({ rows, facets }: CostLineItemsTableProps) {
         accessorKey: "day",
         header: "Day",
         cell: ({ getValue }) => (
-          <span className="font-mono text-[13px] tabular-nums text-mute">
+          <span className="font-mono text-label tabular-nums text-mute">
             {getValue<string>()}
           </span>
         ),
@@ -94,7 +95,7 @@ export function CostLineItemsTable({ rows, facets }: CostLineItemsTableProps) {
         accessorKey: "account",
         header: "Account",
         cell: ({ getValue }) => (
-          <span className="block max-w-[200px] truncate font-mono text-[13px] text-body">
+          <span className="block max-w-[200px] truncate font-mono text-label text-body">
             {getValue<string>()}
           </span>
         ),

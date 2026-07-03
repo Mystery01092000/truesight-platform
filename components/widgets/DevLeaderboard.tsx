@@ -10,6 +10,7 @@ import { FilterBar, type FilterFacet } from "@/components/ui/FilterBar";
 import { Badge } from "@/components/ui/Badge";
 import { Sparkline } from "@/components/ui/Sparkline";
 import { cn } from "@/lib/utils/cn";
+import { formatNumber } from "@/lib/utils/format";
 
 /**
  * DevLeaderboard — the Developer Portal directory: a FilterBar (login search +
@@ -34,7 +35,6 @@ export type DeveloperRow = {
 type RankedRow = DeveloperRow & { rank: number };
 
 const UNASSIGNED = "__unassigned";
-const nf = new Intl.NumberFormat("en-US");
 
 function initials(login: string): string {
   const parts = login.replace(/^@/, "").split(/[\s._-]/).filter(Boolean);
@@ -148,7 +148,7 @@ export function DevLeaderboard({
             className="group/dev inline-flex items-center gap-2.5"
           >
             <DevAvatar login={row.original.login} />
-            <span className="font-mono text-[13px] text-ink underline-offset-4 transition-colors duration-150 ease-smooth group-hover/dev:underline">
+            <span className="font-mono text-label text-ink underline-offset-4 transition-colors duration-150 ease-smooth group-hover/dev:underline">
               {row.original.login}
             </span>
           </Link>
@@ -169,8 +169,8 @@ export function DevLeaderboard({
         accessorKey: "totalLoc",
         header: "Net LOC",
         cell: ({ row }) => (
-          <span className="font-mono text-[13px] text-ink tabular-nums">
-            {nf.format(row.original.totalLoc)}
+          <span className="font-mono text-label text-ink tabular-nums">
+            {formatNumber(row.original.totalLoc)}
           </span>
         ),
       },
@@ -178,8 +178,8 @@ export function DevLeaderboard({
         accessorKey: "commits",
         header: "Commits",
         cell: ({ row }) => (
-          <span className="font-mono text-[13px] text-mute tabular-nums">
-            {nf.format(row.original.commits)}
+          <span className="font-mono text-label text-mute tabular-nums">
+            {formatNumber(row.original.commits)}
           </span>
         ),
       },
@@ -187,8 +187,8 @@ export function DevLeaderboard({
         accessorKey: "repoCount",
         header: "Repos",
         cell: ({ row }) => (
-          <span className="font-mono text-[13px] text-mute tabular-nums">
-            {row.original.repoCount > 0 ? nf.format(row.original.repoCount) : "—"}
+          <span className="font-mono text-label text-mute tabular-nums">
+            {row.original.repoCount > 0 ? formatNumber(row.original.repoCount) : "—"}
           </span>
         ),
       },
@@ -204,7 +204,7 @@ export function DevLeaderboard({
               {langs.map((l) => (
                 <span
                   key={l.language}
-                  className="rounded-full bg-surface-elevated px-2 py-0.5 font-mono text-[11px] text-body"
+                  className="rounded-full bg-surface-elevated px-2 py-0.5 font-mono text-micro text-body"
                 >
                   {l.language}
                 </span>
