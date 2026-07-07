@@ -19,7 +19,8 @@
     "db:azure-sync": "tsx db/azure-sync-cli.ts",
     "db:cost-sync": "tsx --conditions=react-server db/cost-sync-cli.ts",
     "kb:reembed": "tsx --conditions=react-server db/kb-reembed-cli.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:loc-refresh": "tsx --conditions=react-server db/loc-refresh-cli.ts"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1077.0",
