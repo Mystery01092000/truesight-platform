@@ -115,6 +115,7 @@ function runTerraform(
       cwd,
       stdio: ["ignore", "pipe", "pipe"],
       env: {
+        NODE_ENV: process.env.NODE_ENV,
         PATH: process.env.PATH ?? "",
         HOME: process.env.HOME ?? "/tmp",
         TF_IN_AUTOMATION: "1",
