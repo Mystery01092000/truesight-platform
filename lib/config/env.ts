@@ -52,6 +52,17 @@ const schema = z.object({
   GITHUB_ORG: z.string().default("arcane"),
   GITHUB_PAT: z.string().optional(),
 
+  // Forge deploy credentials — WRITE access, used ONLY by terraform runs.
+  DEPLOY_AWS_ACCESS_KEY_ID: z.string().optional(),
+  DEPLOY_AWS_SECRET_ACCESS_KEY: z.string().optional(),
+  DEPLOY_AWS_REGION: z.string().optional(),
+  DEPLOY_AZURE_CLIENT_ID: z.string().optional(),
+  DEPLOY_AZURE_CLIENT_SECRET: z.string().optional(),
+  DEPLOY_AZURE_TENANT_ID: z.string().optional(),
+  DEPLOY_AZURE_SUBSCRIPTION_ID: z.string().optional(),
+  DEPLOY_DB_PASSWORD: z.string().optional(),
+  DEPLOY_VM_PASSWORD: z.string().optional(),
+
   // Terraform state (read-only)
   TERRAFORM_STATE_BUCKET: z.string().default("terraform-iac-data"),
 
@@ -114,6 +125,15 @@ export function serverEnv(): ServerEnv {
     GITHUB_OWNER_TYPE: process.env.GITHUB_OWNER_TYPE,
     GITHUB_ORG: process.env.GITHUB_ORG,
     GITHUB_PAT: process.env.GITHUB_PAT,
+    DEPLOY_AWS_ACCESS_KEY_ID: process.env.DEPLOY_AWS_ACCESS_KEY_ID,
+    DEPLOY_AWS_SECRET_ACCESS_KEY: process.env.DEPLOY_AWS_SECRET_ACCESS_KEY,
+    DEPLOY_AWS_REGION: process.env.DEPLOY_AWS_REGION,
+    DEPLOY_AZURE_CLIENT_ID: process.env.DEPLOY_AZURE_CLIENT_ID,
+    DEPLOY_AZURE_CLIENT_SECRET: process.env.DEPLOY_AZURE_CLIENT_SECRET,
+    DEPLOY_AZURE_TENANT_ID: process.env.DEPLOY_AZURE_TENANT_ID,
+    DEPLOY_AZURE_SUBSCRIPTION_ID: process.env.DEPLOY_AZURE_SUBSCRIPTION_ID,
+    DEPLOY_DB_PASSWORD: process.env.DEPLOY_DB_PASSWORD,
+    DEPLOY_VM_PASSWORD: process.env.DEPLOY_VM_PASSWORD,
     TERRAFORM_STATE_BUCKET: process.env.TERRAFORM_STATE_BUCKET,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     KB_BUCKET_NAME: process.env.KB_BUCKET_NAME,
