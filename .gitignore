@@ -61,3 +61,6 @@ ds-bundle/
 
 # runtime lock
 .observer.lock
+
+# forge terraform workspaces
+var/
