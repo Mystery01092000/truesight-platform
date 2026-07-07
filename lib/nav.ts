@@ -1,4 +1,5 @@
-import { LayoutDashboard, Cloud, Cloudy, Workflow, Users, BookOpen, Wallet, ShieldAlert, ScrollText, Code2, Ticket, GitBranch, Settings } from "lucide-react";
+import {
+  Hammer, LayoutDashboard, Cloud, Cloudy, Workflow, Users, BookOpen, Wallet, ShieldAlert, ScrollText, Code2, Ticket, GitBranch, Settings } from "lucide-react";
 
 /**
  * Primary app navigation — one entry per pillar. Icons are lucide components.
@@ -21,6 +22,7 @@ export const NAV_ITEMS = [
   { href: "/security", label: "Security", icon: ShieldAlert },
   { href: "/compliance", label: "Compliance", icon: ScrollText },
   { href: "/plans", label: "Plans", icon: GitBranch },
+  { href: "/forge", label: "Forge", icon: Hammer },
   { href: "/developers", label: "Developers", icon: Code2 },
   { href: "/tickets", label: "Tickets", icon: Ticket },
   { href: "/kb", label: "Knowledge Base", icon: BookOpen },
