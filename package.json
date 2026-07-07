@@ -2,7 +2,7 @@
   "name": "truesight-platform",
   "version": "0.1.0",
   "private": true,
-  "description": "Truesight — Cloud governance with no blind spots. Enterprise IaaS experience layer across DevOps.",
+  "description": "Truesight \u2014 Cloud governance with no blind spots. Enterprise IaaS experience layer across DevOps.",
   "author": "Arcane Platform Team <platform@arcane.tech>",
   "license": "UNLICENSED",
   "scripts": {
@@ -18,7 +18,8 @@
     "db:github-sync": "tsx db/github-sync-cli.ts",
     "db:azure-sync": "tsx db/azure-sync-cli.ts",
     "db:cost-sync": "tsx --conditions=react-server db/cost-sync-cli.ts",
-    "kb:reembed": "tsx --conditions=react-server db/kb-reembed-cli.ts"
+    "kb:reembed": "tsx --conditions=react-server db/kb-reembed-cli.ts",
+    "test": "vitest run"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1077.0",
@@ -80,6 +81,7 @@
     "eslint-config-next": "16.2.9",
     "tailwindcss": "4.3.2",
     "tsx": "4.22.4",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "vitest": "^4.1.10"
   }
 }
