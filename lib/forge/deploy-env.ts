@@ -14,7 +14,7 @@ const MAPPING: Record<string, string> = {
   DEPLOY_VM_PASSWORD: "TF_VAR_forge_vm_password",
 };
 
-export function resolveDeployEnv(source: NodeJS.ProcessEnv = process.env): {
+export function resolveDeployEnv(source: Record<string, string | undefined> = process.env): {
   env: Record<string, string>;
   clouds: { aws: boolean; azure: boolean };
 } {
