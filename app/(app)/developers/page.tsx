@@ -36,7 +36,7 @@ export default async function DevelopersPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <Header
-        org="centricitywealthtech"
+        org="arcane"
         sub="Per-developer LOC metrics, contribution rankings and stack coverage."
       />
 

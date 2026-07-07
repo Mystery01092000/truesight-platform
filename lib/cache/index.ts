@@ -48,16 +48,16 @@ class MemoryCacheDriver implements CacheDriver {
 }
 
 // Persist across HMR / route invocations in a single process.
-const globalForCache = globalThis as unknown as { __argusCache?: CacheDriver };
+const globalForCache = globalThis as unknown as { __truesightCache?: CacheDriver };
 
 function driver(): CacheDriver {
-  if (!globalForCache.__argusCache) {
+  if (!globalForCache.__truesightCache) {
     const redisUrl = serverEnv().REDIS_URL;
-    globalForCache.__argusCache = redisUrl
+    globalForCache.__truesightCache = redisUrl
       ? new RedisCacheDriver(redisUrl)
       : new MemoryCacheDriver();
   }
-  return globalForCache.__argusCache;
+  return globalForCache.__truesightCache;
 }
 
 export interface CacheableOptions<T> {

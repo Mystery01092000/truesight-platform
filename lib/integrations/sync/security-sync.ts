@@ -38,7 +38,7 @@ export interface RunSecurityScanOptions {
  * resolved findings don't linger.
  *
  * READ-ONLY against the estate: every adapter issues list/get/describe operations
- * exclusively; the only write is into Argus's own Postgres.
+ * exclusively; the only write is into Truesight's own Postgres.
  */
 export async function runSecurityScan(
   opts: RunSecurityScanOptions = {},

@@ -153,7 +153,7 @@ export function PlatformAdminsCard({ admins }: { admins: AdminRow[] }) {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="person@centricity.co.in"
+            placeholder="person@arcane.tech"
             aria-label="Email to add"
             icon={<Mail />}
             className="text-[14px]"

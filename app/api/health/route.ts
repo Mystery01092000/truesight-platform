@@ -21,7 +21,7 @@ export async function GET() {
   const body = {
     status: dbOk ? "ok" : "degraded",
     db: dbOk ? "ok" : "unreachable",
-    service: "argus",
+    service: "truesight",
     time: new Date().toISOString(),
   };
   return NextResponse.json(body, { status: dbOk ? 200 : 503 });

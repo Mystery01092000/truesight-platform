@@ -1,7 +1,7 @@
 import type { Framework } from "./types";
 
 /**
- * Standard compliance frameworks evaluated by Argus. Each framework declares a
+ * Standard compliance frameworks evaluated by Truesight. Each framework declares a
  * set of controls; every control carries a `ref` that tells the query layer
  * which finding table backs its verified state (`drift`, `security`, or
  * `compliance`). Checklist items reference these same `ruleId`s via their

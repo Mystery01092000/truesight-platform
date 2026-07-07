@@ -113,7 +113,7 @@ export default async function AzureResourceGroupPage({
           <Reveal delay={0.12}>
             <AzureResourceTable
               resources={resources}
-              storageKey={`argus:azure:rg:${resourceGroup}`}
+              storageKey={`truesight:azure:rg:${resourceGroup}`}
             />
           </Reveal>
         </>

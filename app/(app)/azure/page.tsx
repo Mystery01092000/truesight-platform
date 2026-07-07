@@ -67,7 +67,7 @@ export default async function AzurePage() {
           <EmptyState
             icon={<Cloudy />}
             title="No Azure resources discovered yet"
-            description="Argus hasn't mapped this subscription. Run the Azure sync to discover resource groups, services and resources read-only via Resource Graph — they'll appear here grouped by resource group and service."
+            description="Truesight hasn't mapped this subscription. Run the Azure sync to discover resource groups, services and resources read-only via Resource Graph — they'll appear here grouped by resource group and service."
             action={
               <Link href="/overview" className={buttonClass("install", "sm")}>
                 Go to overview

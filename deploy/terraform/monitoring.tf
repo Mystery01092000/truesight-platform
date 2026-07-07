@@ -26,7 +26,7 @@ resource "aws_cloudwatch_metric_alarm" "alb_5xx" {
   threshold           = var.alarm_5xx_threshold
   comparison_operator = "GreaterThanOrEqualToThreshold"
   treat_missing_data  = "notBreaching"
-  alarm_description   = "Argus ALB returning >= ${var.alarm_5xx_threshold} 5xx per 5 min."
+  alarm_description   = "Truesight ALB returning >= ${var.alarm_5xx_threshold} 5xx per 5 min."
   dimensions          = { LoadBalancer = aws_lb.this.arn_suffix }
   alarm_actions       = [aws_sns_topic.alarms.arn]
   ok_actions          = [aws_sns_topic.alarms.arn]
@@ -44,7 +44,7 @@ resource "aws_cloudwatch_metric_alarm" "tg_unhealthy" {
   threshold           = 1
   comparison_operator = "GreaterThanOrEqualToThreshold"
   treat_missing_data  = "notBreaching"
-  alarm_description   = "Argus target group has unhealthy tasks."
+  alarm_description   = "Truesight target group has unhealthy tasks."
   dimensions = {
     TargetGroup  = aws_lb_target_group.this.arn_suffix
     LoadBalancer = aws_lb.this.arn_suffix
@@ -65,7 +65,7 @@ resource "aws_cloudwatch_metric_alarm" "ecs_cpu" {
   threshold           = var.alarm_cpu_threshold
   comparison_operator = "GreaterThanThreshold"
   treat_missing_data  = "notBreaching"
-  alarm_description   = "Argus ECS service CPU > ${var.alarm_cpu_threshold}%."
+  alarm_description   = "Truesight ECS service CPU > ${var.alarm_cpu_threshold}%."
   dimensions = {
     ClusterName = module.ecs_cluster.cluster_name
     ServiceName = module.ecs_service.service_name
@@ -85,7 +85,7 @@ resource "aws_cloudwatch_metric_alarm" "ecs_memory" {
   threshold           = var.alarm_memory_threshold
   comparison_operator = "GreaterThanThreshold"
   treat_missing_data  = "notBreaching"
-  alarm_description   = "Argus ECS service memory > ${var.alarm_memory_threshold}%."
+  alarm_description   = "Truesight ECS service memory > ${var.alarm_memory_threshold}%."
   dimensions = {
     ClusterName = module.ecs_cluster.cluster_name
     ServiceName = module.ecs_service.service_name
@@ -106,7 +106,7 @@ resource "aws_cloudwatch_metric_alarm" "rds_cpu" {
   threshold           = var.alarm_cpu_threshold
   comparison_operator = "GreaterThanThreshold"
   treat_missing_data  = "notBreaching"
-  alarm_description   = "Argus RDS CPU > ${var.alarm_cpu_threshold}%."
+  alarm_description   = "Truesight RDS CPU > ${var.alarm_cpu_threshold}%."
   dimensions          = { DBInstanceIdentifier = module.rds.instance_id }
   alarm_actions       = [aws_sns_topic.alarms.arn]
   ok_actions          = [aws_sns_topic.alarms.arn]
@@ -123,7 +123,7 @@ resource "aws_cloudwatch_metric_alarm" "rds_free_storage" {
   threshold           = var.rds_free_storage_bytes_threshold
   comparison_operator = "LessThanThreshold"
   treat_missing_data  = "notBreaching"
-  alarm_description   = "Argus RDS free storage below threshold."
+  alarm_description   = "Truesight RDS free storage below threshold."
   dimensions          = { DBInstanceIdentifier = module.rds.instance_id }
   alarm_actions       = [aws_sns_topic.alarms.arn]
   ok_actions          = [aws_sns_topic.alarms.arn]

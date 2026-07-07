@@ -48,7 +48,7 @@ export type ResourceExplorerProps = {
    * into `${hrefBase}/[id]`. Omit on drill-down pages already scoped to one group.
    */
   groupColumn?: { header: string; hrefBase: string };
-  /** Namespace for persisted view/facet state, e.g. `argus:aws:estate`. */
+  /** Namespace for persisted view/facet state, e.g. `truesight:aws:estate`. */
   storageKey: string;
   className?: string;
 };
@@ -543,7 +543,7 @@ function ExplorerEmpty({ onClear }: { onClear: () => void }) {
     <EmptyState
       icon={<SearchX />}
       title="No resources match this filter"
-      description="Argus found nothing in the estate for this combination. Loosen the search or clear the facets."
+      description="Truesight found nothing in the estate for this combination. Loosen the search or clear the facets."
       action={
         <Button variant="install" size="sm" onClick={onClear}>
           Clear filters

@@ -244,7 +244,7 @@ export function CapabilityGrid() {
   return (
     <div
       role="group"
-      aria-label="Argus capabilities"
+      aria-label="Truesight capabilities"
       onPointerMove={markActivity}
       onPointerDown={markActivity}
       onKeyDown={markActivity}

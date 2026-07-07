@@ -79,7 +79,7 @@ export interface AwsCostResult {
  * pull for the whole TTL.
  */
 export async function getAwsCosts(opts: AwsCostOptions): Promise<AwsCostResult> {
-  const cacheKey = `argus:aws:costs:${opts.startDate}:${opts.endDate}:${opts.granularity ?? "DAILY"}:${opts.tagKey ?? ""}`;
+  const cacheKey = `truesight:aws:costs:${opts.startDate}:${opts.endDate}:${opts.granularity ?? "DAILY"}:${opts.tagKey ?? ""}`;
   return cacheable(
     cacheKey,
     CACHE_TTL_SECONDS,

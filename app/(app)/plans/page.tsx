@@ -143,7 +143,7 @@ export default async function PlansPage() {
         <Reveal delay={0.1}>
           <EmptyState
             icon={<GitBranch size={24} strokeWidth={1.5} />}
-            title="Argus hasn't discovered any plan executions yet"
+            title="Truesight hasn't discovered any plan executions yet"
             description="Plan artifacts are swept read-only from the Terraform state bucket. Refresh from S3 to run a discovery sweep."
             action={canRefresh ? <RefreshPlansButton /> : undefined}
           />

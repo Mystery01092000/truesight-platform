@@ -30,7 +30,7 @@ const LOCK_KEY = "kb:reembed";
 
 async function main(): Promise<void> {
   const url =
-    process.env.DATABASE_URL ?? "postgres://argus:argus@localhost:5433/argus";
+    process.env.DATABASE_URL ?? "postgres://truesight:truesight@localhost:5433/truesight";
   const client = postgres(url, { max: 1 });
   const db = drizzle(client, { schema, casing: "snake_case" });
 

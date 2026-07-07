@@ -6,7 +6,7 @@ import postgres from 'postgres';
 import * as schema from './schema';
 
 /**
- * Server-only Drizzle client for Argus.
+ * Server-only Drizzle client for Truesight.
  *
  * `import 'server-only'` guarantees this module (and the DB credentials it reads)
  * can never be pulled into a client bundle. Standalone scripts (`db/migrate.ts`,
@@ -22,7 +22,7 @@ import * as schema from './schema';
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
   throw new Error(
-    'DATABASE_URL is not set. Expected e.g. postgres://argus:argus@localhost:5432/argus',
+    'DATABASE_URL is not set. Expected e.g. postgres://truesight:truesight@localhost:5432/truesight',
   );
 }
 
@@ -41,17 +41,17 @@ function createDb(sql: ReturnType<typeof createClient>) {
 type Client = ReturnType<typeof createClient>;
 type Db = ReturnType<typeof createDb>;
 
-const globalForDb = globalThis as unknown as { __argusDb?: { client: Client; db: Db } };
+const globalForDb = globalThis as unknown as { __truesightDb?: { client: Client; db: Db } };
 
 const cached =
-  globalForDb.__argusDb ??
+  globalForDb.__truesightDb ??
   (() => {
     const client = createClient(connectionString);
     return { client, db: createDb(client) };
   })();
 
 if (process.env.NODE_ENV !== 'production') {
-  globalForDb.__argusDb = cached;
+  globalForDb.__truesightDb = cached;
 }
 
 export const client: Client = cached.client;

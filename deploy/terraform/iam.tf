@@ -36,7 +36,7 @@ resource "aws_iam_role_policy_attachment" "execution_managed" {
 # Read the SSM SecureStrings that back the container `secrets` at task start.
 data "aws_iam_policy_document" "execution_secrets" {
   statement {
-    sid       = "ReadArgusSsmSecrets"
+    sid       = "ReadTruesightSsmSecrets"
     effect    = "Allow"
     actions   = ["ssm:GetParameters", "ssm:GetParameter"]
     resources = [local.ssm_arn]
@@ -69,9 +69,9 @@ resource "aws_iam_role" "task" {
 }
 
 data "aws_iam_policy_document" "task" {
-  # Runtime read of Argus secrets.
+  # Runtime read of Truesight secrets.
   statement {
-    sid       = "ReadArgusSsm"
+    sid       = "ReadTruesightSsm"
     effect    = "Allow"
     actions   = ["ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath"]
     resources = [local.ssm_arn]
@@ -90,12 +90,12 @@ data "aws_iam_policy_document" "task" {
     }
   }
 
-  # Cross-account estate discovery — assume only the read-only Argus roles.
+  # Cross-account estate discovery — assume only the read-only Truesight roles.
   statement {
-    sid       = "AssumeArgusReadonly"
+    sid       = "AssumeTruesightReadonly"
     effect    = "Allow"
     actions   = ["sts:AssumeRole"]
-    resources = var.argus_readonly_role_arns
+    resources = var.truesight_readonly_role_arns
   }
 
   # Knowledge Base S3 artefacts (docs, chunks, embedding state).

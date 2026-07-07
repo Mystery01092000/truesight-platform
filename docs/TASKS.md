@@ -1,4 +1,4 @@
-# Argus — Task Breakdown (autonomous agentic execution)
+# Truesight — Task Breakdown (autonomous agentic execution)
 
 Granular, ordered, per-task work items. **Any agent can pick a single task and ship it in isolation.**
 Each task has a stable ID, the files it touches, a short description, dependencies, and explicit
@@ -8,7 +8,7 @@ Each task has a stable ID, the files it touches, a short description, dependenci
 
 - Work phases in order (0 → 8); within a phase, respect `Depends`. Cross-phase deps are listed.
 - **Global gate on every task:** `npm run typecheck` and `npm run lint` pass; no stub/mock/placeholder/"coming soon" ships; secrets never committed.
-- **Real data always** — a UI task is only done when it renders real backend data (local `.env.cwt` real read-only creds), never fixtures.
+- **Real data always** — a UI task is only done when it renders real backend data (local `.env.local` real read-only creds), never fixtures.
 - Legend: **Files** = create/touch · **Depends** = task IDs · **Do** = intent · **Accept** = verifiable done-criteria.
 
 ### Cross-cutting capabilities → owning tasks
@@ -57,7 +57,7 @@ Guided governance workflows + verified checklist → **T-6.8** · SSO slot → *
 - **Accept:** Surface renders 4 distinct levels without shadows; Button matches spec; components typecheck and render in a scratch page.
 
 ### T-1.4 — Logo, icon set, aperture state
-- **Files:** `components/brand/ArgusLogo.tsx`, `components/estate/AppIconTile.tsx`, `components/brand/ApertureState.tsx`
+- **Files:** `components/brand/TruesightLogo.tsx`, `components/estate/AppIconTile.tsx`, `components/brand/ApertureState.tsx`
 - **Depends:** T-1.3, T-1.6
 - **Do:** Custom iris/aperture mark (concentric hairline arcs + pupil); `ResourceKind`-mapped glyph tinted with provider accent inside `AppIconTile` (only saturation in system); ambient aperture "watching" animation.
 - **Accept:** Logo renders as favicon + ⌘K icon; `AppIconTile` tints per `ResourceKind` from taxonomy; aperture animates and honors reduced-motion.
@@ -78,7 +78,7 @@ Guided governance workflows + verified checklist → **T-6.8** · SSO slot → *
 - **Files:** `lib/config/env.ts`, `.env.example`
 - **Depends:** —
 - **Do:** `zod`-parsed env (DB URL, session secret, admin creds, AWS/Azure/GitHub creds + role ARNs, `REDIS_URL?`). Fail fast on missing required in prod.
-- **Accept:** Importing config with a complete `.env.cwt` succeeds; missing required var throws a clear error; `.env.example` lists every key (no values).
+- **Accept:** Importing config with a complete `.env.local` succeeds; missing required var throws a clear error; `.env.example` lists every key (no values).
 
 ### T-1.8 — Cache layer
 - **Files:** `lib/cache/cached.ts`, `lib/cache/driver.ts`, `lib/cache/memory.ts`, `lib/cache/redis.ts`
@@ -95,14 +95,14 @@ Guided governance workflows + verified checklist → **T-6.8** · SSO slot → *
 ### T-1.10 — Migrate + seed admin
 - **Files:** `db/migrate.ts`, `db/seed.ts`, `db/migrations/*`
 - **Depends:** T-1.9
-- **Do:** `db:migrate` applies migrations (used as one-off task, never at boot); `db:seed` inserts admin `admin` / `akshatcentricity2026` (bcrypt) role `DEVOPS_SUPER_ADMIN`.
+- **Do:** `db:migrate` applies migrations (used as one-off task, never at boot); `db:seed` inserts admin `admin` / `truesight-dev-2026` (bcrypt) role `DEVOPS_SUPER_ADMIN`.
 - **Accept:** Against local `docker compose` Postgres, `npm run db:migrate && npm run db:seed` succeed; `users` has one bcrypt-hashed admin row.
 
 ### T-1.11 — Session (jose JWT)
 - **Files:** `lib/auth/session.ts`
 - **Depends:** T-1.7
-- **Do:** Sign compact HS256 JWT (`SESSION_SECRET`) → httpOnly `Secure` `SameSite=Lax` cookie `argus_session`, 8h sliding; `getSession()` / `setSession()` / `clearSession()`.
-- **Accept:** `setSession` writes `argus_session` cookie with correct flags; `getSession` verifies + returns `AuthedUser`; tampered/expired token → null.
+- **Do:** Sign compact HS256 JWT (`SESSION_SECRET`) → httpOnly `Secure` `SameSite=Lax` cookie `truesight_session`, 8h sliding; `getSession()` / `setSession()` / `clearSession()`.
+- **Accept:** `setSession` writes `truesight_session` cookie with correct flags; `getSession` verifies + returns `AuthedUser`; tampered/expired token → null.
 
 ### T-1.12 — Auth providers + RBAC
 - **Files:** `lib/auth/providers/types.ts`, `credentials.ts`, `azure-entra.ts` (stub slot), `lib/auth/rbac.ts`
@@ -120,7 +120,7 @@ Guided governance workflows + verified checklist → **T-6.8** · SSO slot → *
 - **Files:** `app/(auth)/login/page.tsx`, `app/(auth)/login/actions.ts`
 - **Depends:** T-1.12, T-1.13, T-1.3
 - **Do:** Minimal-content login using UI primitives; Server Action authenticates via credentials provider, sets session, redirects to app.
-- **Accept:** Admin login sets `argus_session` cookie and lands on an app route; invalid login shows an inline error; logout clears cookie.
+- **Accept:** Admin login sets `truesight_session` cookie and lands on an app route; invalid login shows an inline error; logout clears cookie.
 
 ### T-1.15 — Health endpoint
 - **Files:** `app/api/health/route.ts`
@@ -132,13 +132,13 @@ Guided governance workflows + verified checklist → **T-6.8** · SSO slot → *
 - **Files:** `Dockerfile`, `docker-compose.yml`, `.gitignore`, `.dockerignore`
 - **Depends:** T-1.1, T-1.15
 - **Do:** Multi-stage `node:26-alpine` (deps → builder `npm run build` → non-root `nextjs` runner copying `.next/standalone`+`static`+`public`, `HEALTHCHECK /api/health`, `CMD node server.js`). Compose: postgres:16 (+ optional redis:7). Node/Next `.gitignore` (`.env*`, `node_modules`, `.next`, `deploy/terraform/.terraform`, `*.tfstate*`).
-- **Accept:** `docker build -t argus:test .` succeeds; `docker run --env-file .env.cwt -p 3000:3000 argus:test` serves `/api/health` 200; `git status` never shows `.env.cwt`.
+- **Accept:** `docker build -t truesight:test .` succeeds; `docker run --env-file .env.local -p 3000:3000 truesight:test` serves `/api/health` 200; `git status` never shows `.env.local`.
 
 ### T-1.17 — Bootstrap GitHub PAT
-- **Files:** `.env.cwt` (local, gitignored)
+- **Files:** `.env.local` (local, gitignored)
 - **Depends:** T-1.7
-- **Do:** `gh auth token` → write `GITHUB_PAT=` into `.env.cwt` (scopes `repo`, `read:org`, `workflow`).
-- **Accept:** `GITHUB_PAT` present in local env; `.env.cwt` gitignored; a `gh api /user` style check authenticates.
+- **Do:** `gh auth token` → write `GITHUB_PAT=` into `.env.local` (scopes `repo`, `read:org`, `workflow`).
+- **Accept:** `GITHUB_PAT` present in local env; `.env.local` gitignored; a `gh api /user` style check authenticates.
 
 ---
 
@@ -155,8 +155,8 @@ Guided governance workflows + verified checklist → **T-6.8** · SSO slot → *
 ### T-2.2 — AWS read-only client factory
 - **Files:** `lib/integrations/aws/client.ts`
 - **Depends:** T-2.1, T-1.7
-- **Do:** STS `AssumeRole` (mgmt base creds → `argus-readonly`/`ViewOnlyAccess` per account) via `fromTemporaryCredentials`; memoized v3 client factory (`retryMode:'adaptive'`).
-- **Accept:** Returns scoped clients per account×region; assumes `argus-readonly` (verified via STS `GetCallerIdentity`); no write-capable client constructed; creds memoized (no re-assume per call).
+- **Do:** STS `AssumeRole` (mgmt base creds → `truesight-readonly`/`ViewOnlyAccess` per account) via `fromTemporaryCredentials`; memoized v3 client factory (`retryMode:'adaptive'`).
+- **Accept:** Returns scoped clients per account×region; assumes `truesight-readonly` (verified via STS `GetCallerIdentity`); no write-capable client constructed; creds memoized (no re-assume per call).
 
 ### T-2.3 — AWS discovery adapter
 - **Files:** `lib/integrations/aws/adapter.ts`, `lib/integrations/aws/describe.ts`
@@ -188,7 +188,7 @@ Guided governance workflows + verified checklist → **T-6.8** · SSO slot → *
 - **Do:** RSC reads cache-first → latest snapshot; renders estate tiles; degrade-never-blank banner on partial.
 - **Accept:** `/aws` renders ≥1 real prod resource; partial discovery shows "degraded — N scopes unavailable" not a blank/broken screen; first paint immediate.
 
-### T-2.8 — "Ask Argus" search
+### T-2.8 — "Ask Truesight" search
 - **Files:** `components/command/CommandPalette.tsx`, `app/api/search/route.ts`
 - **Depends:** T-2.7, T-1.5
 - **Do:** ⌘K palette searches real resources (by name/kind/account/tag) with suggestion chips ("Show drifted resources in prod", "Where's my spend going?").
@@ -267,20 +267,20 @@ Guided governance workflows + verified checklist → **T-6.8** · SSO slot → *
 ### T-4.1 — Azure client
 - **Files:** `lib/integrations/azure/client.ts`
 - **Depends:** T-2.1, T-1.7
-- **Do:** `@azure/identity` `ClientSecretCredential` (SP); resolve `Centricity-Oneinvictus` subscription GUID by displayName at runtime.
+- **Do:** `@azure/identity` `ClientSecretCredential` (SP); resolve `Arcane-Prod` subscription GUID by displayName at runtime.
 - **Accept:** Authenticates read-only; resolves sub GUID by name; `serverExternalPackages` keeps `@azure/identity` server-side.
 
 ### T-4.2 — Azure adapter
 - **Files:** `lib/integrations/azure/adapter.ts`
 - **Depends:** T-4.1
-- **Do:** `@azure/arm-resourcegraph` single KQL over `rg-centricity-prod` → `CloudResource` via taxonomy mapping.
+- **Do:** `@azure/arm-resourcegraph` single KQL over `rg-arcane-prod` → `CloudResource` via taxonomy mapping.
 - **Accept:** `discover()` returns ≥1 real Azure resource with valid `urn` + `ResourceKind`; partial/errors handled like AWS.
 
 ### T-4.3 — Azure explorer route
 - **Files:** `app/(app)/azure/page.tsx`
 - **Depends:** T-4.2, T-2.6
 - **Do:** Reuse estate components at parity with AWS.
-- **Accept:** `/azure` renders ≥1 real resource from `rg-centricity-prod` using the same tile components; degrade-never-blank banner honored.
+- **Accept:** `/azure` renders ≥1 real resource from `rg-arcane-prod` using the same tile components; degrade-never-blank banner honored.
 
 ---
 
@@ -290,7 +290,7 @@ Guided governance workflows + verified checklist → **T-6.8** · SSO slot → *
 - **Files:** `lib/integrations/github/client.ts`
 - **Depends:** T-2.1, T-1.17
 - **Do:** `octokit` + `@octokit/graphql` + throttling/retry plugins using `GITHUB_PAT`.
-- **Accept:** Authenticated `octokit` reaches `centricitywealthtech`; throttling plugin active; PAT read from env only.
+- **Accept:** Authenticated `octokit` reaches `arcane`; throttling plugin active; PAT read from env only.
 
 ### T-5.2 — GitHub adapter
 - **Files:** `lib/integrations/github/adapter.ts`
@@ -381,7 +381,7 @@ Guided governance workflows + verified checklist → **T-6.8** · SSO slot → *
 ### T-7.3 — Aperture scanning state (SSE-driven)
 - **Files:** `components/brand/ApertureState.tsx`, `components/topology/ScanningOverlay.tsx`
 - **Depends:** T-3.7, T-1.4
-- **Do:** Procedural aperture pulsing/sweeping **driven by real `/api/topology/stream` discovery progress** (Rive/Lottie for ambient; SVG/Canvas for data flows), with voice ("Argus is watching 3 accounts…").
+- **Do:** Procedural aperture pulsing/sweeping **driven by real `/api/topology/stream` discovery progress** (Rive/Lottie for ambient; SVG/Canvas for data flows), with voice ("Truesight is watching 3 accounts…").
 - **Accept:** Sweep advances with real SSE events (not a fixed loop); progress copy reflects actual counts; reduced-motion → static.
 
 ### T-7.4 — Data-flow motion pass
@@ -411,25 +411,25 @@ Guided governance workflows + verified checklist → **T-6.8** · SSO slot → *
 ### T-8.1 — TF data + remote state
 - **Files:** `deploy/terraform/main.tf`, `variables.tf`, `data.tf`, `backend`
 - **Depends:** Phases 1–7 verified locally
-- **Do:** Backend `s3://terraform-iac-data` key `argus/prod/terraform.tfstate`, lock `keystone-terraform-locks`; providers prod (assume `OrganizationAccountAccessRole` in 404063516552) + `management` alias (664224997032); `default_tags` = Owner/Team/Project/Environment/ManagedBy; `terraform_remote_state` VPC + regional ACM lookup.
+- **Do:** Backend `s3://terraform-iac-data` key `truesight/prod/terraform.tfstate`, lock `keystone-terraform-locks`; providers prod (assume `OrganizationAccountAccessRole` in 404063516552) + `management` alias (664224997032); `default_tags` = Owner/Team/Project/Environment/ManagedBy; `terraform_remote_state` VPC + regional ACM lookup.
 - **Accept:** `terraform init` + `plan` succeed reading (not writing) VPC outputs; default tags present on planned resources.
 
 ### T-8.2 — ECR
 - **Files:** `deploy/terraform/ecr.tf`
 - **Depends:** T-8.1
-- **Do:** ECR repo `cwt-prod/argus`, `scan_on_push=true`, lifecycle keep-10.
-- **Accept:** `plan` creates only the `argus` ECR repo with scan + lifecycle.
+- **Do:** ECR repo `arcane-prod/truesight`, `scan_on_push=true`, lifecycle keep-10.
+- **Accept:** `plan` creates only the `truesight` ECR repo with scan + lifecycle.
 
 ### T-8.3 — IAM
 - **Files:** `deploy/terraform/iam.tf`
 - **Depends:** T-8.1
-- **Do:** ECS exec + task roles; task role scoped to `ssm:GetParameters*` on `/cwt/prod/argus/*` + `kms:Decrypt` + cross-account `sts:AssumeRole` to `argus-readonly`.
-- **Accept:** `plan` shows least-privilege task role (no write to estate); assume-role target is `argus-readonly` only.
+- **Do:** ECS exec + task roles; task role scoped to `ssm:GetParameters*` on `/arcane/prod/truesight/*` + `kms:Decrypt` + cross-account `sts:AssumeRole` to `truesight-readonly`.
+- **Accept:** `plan` shows least-privilege task role (no write to estate); assume-role target is `truesight-readonly` only.
 
 ### T-8.4 — Security groups
 - **Files:** `deploy/terraform/security-groups.tf`
 - **Depends:** T-8.1
-- **Do:** `argus-ecs-sg`, `argus-alb-sg`, RDS SG (5432 from ecs-sg only).
+- **Do:** `truesight-ecs-sg`, `truesight-alb-sg`, RDS SG (5432 from ecs-sg only).
 - **Accept:** `plan` restricts RDS ingress to ecs-sg; ALB SG allows 80/443 only.
 
 ### T-8.5 — RDS
@@ -441,19 +441,19 @@ Guided governance workflows + verified checklist → **T-6.8** · SSO slot → *
 ### T-8.6 — ALB
 - **Files:** `deploy/terraform/alb.tf`
 - **Depends:** T-8.1, T-8.4
-- **Do:** Small dedicated ALB, TG :3000, HTTPS :443 (regional ACM `*.centricitywealth.tech`), :80→443 redirect, health `/api/health`.
+- **Do:** Small dedicated ALB, TG :3000, HTTPS :443 (regional ACM `*.arcane.tech`), :80→443 redirect, health `/api/health`.
 - **Accept:** `plan` creates ALB + TG + listeners with health check path `/api/health`.
 
 ### T-8.7 — ECS service
 - **Files:** `deploy/terraform/ecs.tf`
 - **Depends:** T-8.2, T-8.3, T-8.5, T-8.6
-- **Do:** `argus-prod-cluster` + ecs-service module (git-sourced ref): cpu 256/mem 512, desired 1/max 2, on-demand, private subnets, secrets from SSM, health `/api/health`.
-- **Accept:** `plan` creates cluster + service wired to TG; secrets reference `/cwt/prod/argus/*`; on-demand capacity.
+- **Do:** `truesight-prod-cluster` + ecs-service module (git-sourced ref): cpu 256/mem 512, desired 1/max 2, on-demand, private subnets, secrets from SSM, health `/api/health`.
+- **Accept:** `plan` creates cluster + service wired to TG; secrets reference `/arcane/prod/truesight/*`; on-demand capacity.
 
 ### T-8.8 — DNS
 - **Files:** `deploy/terraform/dns.tf`
 - **Depends:** T-8.6
-- **Do:** Route53 A/ALIAS `argus-infraspace…` → ALB via `aws.management` alias (zone `Z08590081H9KT0BUGB1O9`).
+- **Do:** Route53 A/ALIAS `truesight…` → ALB via `aws.management` alias (zone `Z08590081H9KT0BUGB1O9`).
 - **Accept:** `plan` creates the record through the management provider alias only.
 
 ### T-8.9 — Monitoring
@@ -465,17 +465,17 @@ Guided governance workflows + verified checklist → **T-6.8** · SSO slot → *
 ### T-8.10 — SSM secrets
 - **Files:** `deploy/terraform/ssm.tf`
 - **Depends:** T-8.1
-- **Do:** SecureString placeholders under `/cwt/prod/argus/*` (`DATABASE_URL`, `SESSION_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD_HASH`, AWS/Azure creds + `role_arn`s, `GITHUB_PAT`) with `lifecycle{ignore_changes=[value]}`; String build-args under `/cwt/prod/argus/build-args/`. Real values filled out-of-band from `.env.cwt`.
+- **Do:** SecureString placeholders under `/arcane/prod/truesight/*` (`DATABASE_URL`, `SESSION_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD_HASH`, AWS/Azure creds + `role_arn`s, `GITHUB_PAT`) with `lifecycle{ignore_changes=[value]}`; String build-args under `/arcane/prod/truesight/build-args/`. Real values filled out-of-band from `.env.local`.
 - **Accept:** `plan` creates placeholders with `ignore_changes`; no real secret value in code/state diff.
 
-### T-8.11 — argus-readonly role
+### T-8.11 — truesight-readonly role
 - **Files:** `deploy/terraform/readonly-role/*` (or documented manual trust)
 - **Depends:** T-8.1
-- **Do:** Provision `argus-readonly` (AWS-managed `ViewOnlyAccess`) in prod + dev with trust to the task role.
+- **Do:** Provision `truesight-readonly` (AWS-managed `ViewOnlyAccess`) in prod + dev with trust to the task role.
 - **Accept:** Role exists/planned with ViewOnlyAccess + correct trust; task role can assume it (verified post-apply via `GetCallerIdentity`).
 
 ### T-8.12 — Jenkins pipeline + registration
-- **Files:** `Jenkinsfile`, `services/argus.yaml` (jenkins-terraform repo)
+- **Files:** `Jenkinsfile`, `services/truesight.yaml` (jenkins-terraform repo)
 - **Depends:** T-1.16
 - **Do:** `@Library('cwt-jenkins-library')`, `GitHubPushTrigger` webhook, `agent{label 'docker'}`; stages Checkout → Install → Lint & Typecheck → Test → Build → Resolve Env (main→prod) → `cwtDockerBuildPush` → `cwtEcsDeploy` → `cwtHealthCheck` → live smoke test.
 - **Accept:** A push to `main` triggers the pipeline; build+push+deploy+health stages green; migrations run as a one-off task, not at boot.
@@ -490,22 +490,22 @@ Guided governance workflows + verified checklist → **T-6.8** · SSO slot → *
 - **Files:** — (operational)
 - **Depends:** T-8.1–T-8.13
 - **Do:** After human review of `plan`: apply foundation → RDS → first image → ECS+ALB → Route53; run the live checklist.
-- **Accept:** See **Definition of Done** below — all live checks pass; `terraform plan` post-apply shows zero drift and touches only `argus-*` resources (proves no estate modification); monthly cost projection ≤ $50.
+- **Accept:** See **Definition of Done** below — all live checks pass; `terraform plan` post-apply shows zero drift and touches only `truesight-*` resources (proves no estate modification); monthly cost projection ≤ $50.
 
 ---
 
 ## Definition of Done (comprehensive shipping)
 
-Argus is shipped only when **every route on the live URL renders fully-verified, real, working data —
+Truesight is shipped only when **every route on the live URL renders fully-verified, real, working data —
 no stub, placeholder, mock, or "coming soon" on any route.**
 
 **Live checks (all must pass):**
-- `dig argus-infraspace.centricitywealth.tech` resolves to the ALB.
-- `curl -sSI https://argus-infraspace.centricitywealth.tech/` → `200`; TLS chain valid (SAN `*.centricitywealth.tech`, TLS 1.2+).
+- `dig truesight.arcane.tech` resolves to the ALB.
+- `curl -sSI https://truesight.arcane.tech/` → `200`; TLS chain valid (SAN `*.arcane.tech`, TLS 1.2+).
 - `/api/health` → `{status:ok, db:ok}`.
 - `aws ecs describe-services` → running == desired.
-- Admin login works; protected routes return 401 without the `argus_session` cookie.
-- **`terraform plan` shows zero drift and touches only `argus-*` resources** (proves no estate modification).
+- Admin login works; protected routes return 401 without the `truesight_session` cookie.
+- **`terraform plan` shows zero drift and touches only `truesight-*` resources** (proves no estate modification).
 - Monthly cost projection ≤ $50 (~$44 target).
 
 **Walk every route and confirm real backend data + working motion:**

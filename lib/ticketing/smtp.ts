@@ -72,7 +72,7 @@ function buildHtml(ticket: AccessTicket, accessDetails: AccessDetail[]): string 
         Team: ${ticket.team} · Project: ${ticket.project}
       </p>
       <p style="margin:16px 0 0;color:#888;font-size:12px;">
-        — Argus · Centricity DevOps
+        — Truesight · Arcane DevOps
       </p>
     </div>
   `;
@@ -92,7 +92,7 @@ export async function sendAccessDetailsEmail(
     return;
   }
 
-  const from = process.env.SMTP_FROM ?? process.env.SMTP_USER ?? "Argus <no-reply@argus.local>";
+  const from = process.env.SMTP_FROM ?? process.env.SMTP_USER ?? "Truesight <no-reply@truesight.local>";
   const text =
     `Your developer-tools access request (${ticket.id}) is ready.\n\n` +
     accessDetails
@@ -108,7 +108,7 @@ export async function sendAccessDetailsEmail(
     await transporter().sendMail({
       from,
       to,
-      subject: `[Argus] Access ready — ${toolsList(ticket.tools)}`,
+      subject: `[Truesight] Access ready — ${toolsList(ticket.tools)}`,
       text,
       html: buildHtml(ticket, accessDetails),
     });

@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * Argus design system — encodes DESIGN.md (Raycast-inspired dark chrome) as Tailwind v4
+ * Truesight design system — encodes DESIGN.md (Raycast-inspired dark chrome) as Tailwind v4
  * theme tokens. Every color/radius/spacing decision in the app resolves from here.
  * Dark-only by design. Elevation comes from the 4-step surface ladder, never shadows.
  */
@@ -64,7 +64,7 @@
   --shadow-overlay: 0 24px 64px -16px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.06);
   --color-scrim: rgba(4, 5, 8, 0.62);
 
-  /* ── Iris — the signature brand accent (Argus, the watching eye). Distinct
+  /* ── Iris — the signature brand accent (Truesight, the watching eye). Distinct
      from the functional status accents: reserved for the aperture, the live
      data-flow, selection focus and the wordmark pupil. ─────────────────── */
   --color-iris: #7c8dff;
@@ -173,7 +173,7 @@
 
 /*
  * The ss03 stylistic set (single-story g) is the brand's signature type detail.
- * calt/kern/liga are Inter's default niceties; ss03 is what makes it "Argus/Raycast".
+ * calt/kern/liga are Inter's default niceties; ss03 is what makes it "Truesight/Raycast".
  */
 html {
   color-scheme: dark;
@@ -354,7 +354,7 @@ h4 {
     animation: none;
   }
 }
-/* React Flow chrome, themed to the Argus surface ladder. */
+/* React Flow chrome, themed to the Truesight surface ladder. */
 .topo-minimap {
   background: var(--color-surface) !important;
   border: 1px solid var(--color-hairline);

@@ -11,7 +11,7 @@
 # ---- ALB SG ------------------------------------------------------------------
 resource "aws_security_group" "alb" {
   name        = "${local.name_prefix}-alb-sg"
-  description = "Argus prod ALB - HTTP/HTTPS from internet"
+  description = "Truesight prod ALB - HTTP/HTTPS from internet"
   vpc_id      = var.vpc_id
   tags        = { Name = "${local.name_prefix}-alb-sg" }
 }
@@ -42,7 +42,7 @@ resource "aws_vpc_security_group_egress_rule" "alb_egress" {
 # ---- ECS task SG -------------------------------------------------------------
 resource "aws_security_group" "ecs" {
   name        = "${local.name_prefix}-ecs-sg"
-  description = "Argus prod ECS tasks - from ALB only"
+  description = "Truesight prod ECS tasks - from ALB only"
   vpc_id      = var.vpc_id
   tags        = { Name = "${local.name_prefix}-ecs-sg" }
 }
@@ -66,7 +66,7 @@ resource "aws_vpc_security_group_egress_rule" "ecs_egress" {
 # ---- RDS SG ------------------------------------------------------------------
 resource "aws_security_group" "rds" {
   name        = "${local.name_prefix}-rds-sg"
-  description = "Argus prod RDS - PostgreSQL 5432 from ECS tasks only"
+  description = "Truesight prod RDS - PostgreSQL 5432 from ECS tasks only"
   vpc_id      = var.vpc_id
   tags        = { Name = "${local.name_prefix}-rds-sg" }
 }
@@ -83,7 +83,7 @@ resource "aws_vpc_security_group_ingress_rule" "rds_from_ecs" {
 # ---- Redis SG ------------------------------------------------------------------
 resource "aws_security_group" "redis" {
   name        = "${local.name_prefix}-redis-sg"
-  description = "Argus prod Redis - 6379 from ECS tasks only"
+  description = "Truesight prod Redis - 6379 from ECS tasks only"
   vpc_id      = var.vpc_id
   tags        = { Name = "${local.name_prefix}-redis-sg" }
 }

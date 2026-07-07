@@ -47,7 +47,7 @@ export default async function AwsPage() {
           <EmptyState
             icon={<Cloud />}
             title="No AWS resources discovered yet"
-            description="Argus hasn't mapped this estate. Trigger a sync to discover accounts, services and resources read-only — they'll appear here grouped by account and service."
+            description="Truesight hasn't mapped this estate. Trigger a sync to discover accounts, services and resources read-only — they'll appear here grouped by account and service."
             action={
               <Link href="/overview" className={buttonClass("install", "sm")}>
                 Go to overview
@@ -82,7 +82,7 @@ export default async function AwsPage() {
                 resources={resources}
                 provider="aws"
                 groupColumn={{ header: "Account", hrefBase: "/aws" }}
-                storageKey="argus:aws:estate"
+                storageKey="truesight:aws:estate"
               />
             </Reveal>
           </section>

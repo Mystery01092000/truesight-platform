@@ -1,5 +1,5 @@
 # =============================================================================
-# Knowledge Base S3 backend — durable object + embedding storage for Argus.
+# Knowledge Base S3 backend — durable object + embedding storage for Truesight.
 #
 # Stores KB artefacts (raw docs, chunks, embedding vectors, ingestion state)
 # with versioning for auditability. Lifecycle expires old noncurrent versions
@@ -7,7 +7,7 @@
 # =============================================================================
 
 resource "aws_s3_bucket" "knowledge_base" {
-  bucket = "argus-prod-kb-backend"
+  bucket = "truesight-prod-kb-backend"
 }
 
 resource "aws_s3_bucket_versioning" "knowledge_base" {
@@ -54,7 +54,7 @@ resource "aws_s3_bucket_public_access_block" "knowledge_base" {
 
 data "aws_iam_policy_document" "knowledge_base_bucket" {
   statement {
-    sid    = "AllowArgusEcsTaskRole"
+    sid    = "AllowTruesightEcsTaskRole"
     effect = "Allow"
 
     principals {
@@ -82,13 +82,13 @@ resource "aws_s3_bucket_policy" "knowledge_base" {
 }
 
 # -----------------------------------------------------------------------------
-# ACTIVE KB bucket — knowledge-base-iac-argus-backend (matches the app's
-# KB_BUCKET_NAME default in lib/config/env.ts). The legacy argus-prod-kb-backend
+# ACTIVE KB bucket — knowledge-base-iac-truesight-backend (matches the app's
+# KB_BUCKET_NAME default in lib/config/env.ts). The legacy truesight-prod-kb-backend
 # bucket above is KEPT until its objects are migrated; KB_BUCKET_NAME (ssm.tf)
 # points here.
 # -----------------------------------------------------------------------------
 resource "aws_s3_bucket" "kb_backend" {
-  bucket = "knowledge-base-iac-argus-backend"
+  bucket = "knowledge-base-iac-truesight-backend"
 }
 
 resource "aws_s3_bucket_versioning" "kb_backend" {
@@ -135,7 +135,7 @@ resource "aws_s3_bucket_public_access_block" "kb_backend" {
 
 data "aws_iam_policy_document" "kb_backend_bucket" {
   statement {
-    sid    = "AllowArgusEcsTaskRole"
+    sid    = "AllowTruesightEcsTaskRole"
     effect = "Allow"
 
     principals {

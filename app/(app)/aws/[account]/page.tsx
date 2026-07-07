@@ -101,7 +101,7 @@ export default async function AwsAccountPage({
             <ResourceExplorer
               resources={resources}
               provider="aws"
-              storageKey={`argus:aws:account:${acct}`}
+              storageKey={`truesight:aws:account:${acct}`}
             />
           </Reveal>
         </>

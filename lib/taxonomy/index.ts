@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * Argus canonical taxonomy.
+ * Truesight canonical taxonomy.
  *
  * Every enum is declared once as a `readonly` const array (usable at runtime for
  * iteration, `<option>` rendering, Zod validation) and re-derived as a union type

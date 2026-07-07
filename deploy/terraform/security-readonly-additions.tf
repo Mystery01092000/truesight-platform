@@ -1,7 +1,7 @@
 # =============================================================================
 # Security / vulnerability scanner — read-only permission additions.
 #
-# The Argus security scanner (lib/integrations/*/vuln.ts) reads posture findings
+# The Truesight security scanner (lib/integrations/*/vuln.ts) reads posture findings
 # from three AWS services using the SAME read-only credentials the discovery
 # adapters already use. These are LIST/GET/DESCRIBE operations only — the scanner
 # never mutates cloud state.
@@ -13,7 +13,7 @@
 #
 # This policy is attached to the ECS TASK role (the running app's identity) so
 # same-account direct-credential scans (management + prod) are covered. The same
-# actions MUST also be granted on the cross-account `argus-readonly` role wherever
+# actions MUST also be granted on the cross-account `truesight-readonly` role wherever
 # it is defined (iac-self-service-terraform) for assume-role discovery targets.
 # =============================================================================
 
@@ -47,7 +47,7 @@ data "aws_iam_policy_document" "security_readonly" {
 
 resource "aws_iam_policy" "security_readonly" {
   name        = "${local.name_prefix}-security-readonly"
-  description = "Read-only access to Inspector2, Security Hub and ECR image scan findings for the Argus security scanner."
+  description = "Read-only access to Inspector2, Security Hub and ECR image scan findings for the Truesight security scanner."
   policy      = data.aws_iam_policy_document.security_readonly.json
   tags        = { Name = "${local.name_prefix}-security-readonly" }
 }

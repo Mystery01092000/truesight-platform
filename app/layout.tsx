@@ -10,7 +10,7 @@ const inter = Inter({
 });
 
 // Display voice — a sharp technical grotesk for headings, the wordmark and
-// hero numerals. This is the character face; it carries the Argus identity.
+// hero numerals. This is the character face; it carries the Truesight identity.
 const display = Space_Grotesk({
   subsets: ["latin"],
   variable: "--ff-display",
@@ -29,14 +29,14 @@ const mono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Argus — Cloud governance with no blind spots",
-    template: "%s · Argus",
+    default: "Truesight — Cloud governance with no blind spots",
+    template: "%s · Truesight",
   },
   description:
     "The enterprise IaaS experience layer across DevOps. One visual, self-discovering pane across AWS, Azure, GitHub, Terraform, cost and security.",
-  applicationName: "Argus",
+  applicationName: "Truesight",
   authors: [{ name: "Rishabh Arya" }],
-  metadataBase: new URL("https://argus-infraspace.centricitywealth.tech"),
+  metadataBase: new URL("https://truesight.arcane.tech"),
 };
 
 export const viewport: Viewport = {

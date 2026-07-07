@@ -1,8 +1,8 @@
 import { cn } from "@/lib/utils/cn";
 
 /**
- * WatcherScene — the signature cinematic visual: the Argus aperture watching a
- * living cross-cloud estate. A central iris (Panoptes' eye) sits over a drifting
+ * WatcherScene — the signature cinematic visual: the Truesight aperture watching a
+ * living cross-cloud estate. A central iris (the unveiled eye) sits over a drifting
  * constellation of infrastructure nodes — AWS on the left arc, Azure on the
  * right, GitHub at the poles — with edges flowing inward as the watcher ingests
  * them, a lighthouse beam sweeping the field, and discovery pings rippling as
@@ -81,7 +81,7 @@ const STARS: { x: number; y: number; r: number }[] = [
 const PINGS = [0, 5, 10];
 
 function ApertureEye() {
-  // A scaled-up Argus mark at the field's centre — the same iris geometry as the
+  // A scaled-up Truesight mark at the field's centre — the same iris geometry as the
   // wordmark, so the hero eye and the nav mark read as one identity.
   const blades = Array.from({ length: 6 }, (_, i) => {
     const a = (Math.PI / 3) * i + Math.PI / 6;
@@ -136,7 +136,7 @@ export function WatcherScene({ className, fit = "slice" }: WatcherSceneProps) {
         preserveAspectRatio={`xMidYMid ${fit}`}
         className="watcher-scene size-full"
         role="img"
-        aria-label="Argus watching a live estate of AWS and Azure resources"
+        aria-label="Truesight watching a live estate of AWS and Azure resources"
       >
         {/* Distant stars */}
         {STARS.map((s, i) => (

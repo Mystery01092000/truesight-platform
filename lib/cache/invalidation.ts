@@ -20,13 +20,13 @@ const SYNC_PREFIXES = [
 
 // Survive Next.js dev HMR: register the subscription once per process.
 const globalForInvalidation = globalThis as unknown as {
-  __argusCacheInvalidation?: boolean;
+  __truesightCacheInvalidation?: boolean;
 };
 
 /** Wire estate events to cache invalidation (idempotent; called from instrumentation). */
 export async function registerCacheInvalidation(): Promise<void> {
-  if (globalForInvalidation.__argusCacheInvalidation) return;
-  globalForInvalidation.__argusCacheInvalidation = true;
+  if (globalForInvalidation.__truesightCacheInvalidation) return;
+  globalForInvalidation.__truesightCacheInvalidation = true;
   try {
     await subscribeEstate(() => {
       for (const prefix of SYNC_PREFIXES) {
@@ -37,7 +37,7 @@ export async function registerCacheInvalidation(): Promise<void> {
     });
   } catch (err) {
     // Best-effort, like the SSE listener: caches simply expire via TTL instead.
-    globalForInvalidation.__argusCacheInvalidation = false;
+    globalForInvalidation.__truesightCacheInvalidation = false;
     console.error("[cache/invalidation] Failed to subscribe to estate events:", err);
   }
 }

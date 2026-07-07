@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/utils/cn";
 
 /**
- * KbAskPanel — the "Ask Argus" RAG island. Streams a grounded answer from
+ * KbAskPanel — the "Ask Truesight" RAG island. Streams a grounded answer from
  * POST /api/kb/answer (SSE: delta* → done|error) with a graceful fallback to
  * the non-stream JSON variant when streaming is unavailable. Citations render
  * as numbered chips linking to their source documents. Retrieval is read-only
@@ -241,7 +241,7 @@ export function KbAskPanel() {
             <Sparkles size={13} strokeWidth={1.75} className="text-iris" />
           </span>
           <h2 className="text-[15px] font-medium leading-[1.4] tracking-[0.2px] text-ink">
-            Ask Argus
+            Ask Truesight
           </h2>
         </div>
         <span className="text-[12px] text-mute">
@@ -256,7 +256,7 @@ export function KbAskPanel() {
           placeholder="Ask about the estate — drift, deployments, Terraform, GitHub..."
           icon={<Sparkles size={16} strokeWidth={1.75} />}
           className="flex-1"
-          aria-label="Ask Argus a question"
+          aria-label="Ask Truesight a question"
         />
         <Button type="submit" disabled={loading || !query.trim()}>
           {loading ? "Answering..." : "Ask"}
@@ -264,7 +264,7 @@ export function KbAskPanel() {
       </form>
 
       {phase === "waiting" && (
-        <div className="mt-4" aria-label="Argus is thinking" role="status">
+        <div className="mt-4" aria-label="Truesight is thinking" role="status">
           <Skeleton.Text lines={3} />
         </div>
       )}
@@ -274,7 +274,7 @@ export function KbAskPanel() {
           <div className="mt-4">
             <AnswerText text={answer} citations={citations} />
             {phase === "streaming" && (
-              <span role="status" aria-label="Argus is streaming the answer">
+              <span role="status" aria-label="Truesight is streaming the answer">
                 <Skeleton.Block className="mt-2 h-3.5 w-24" />
               </span>
             )}
@@ -283,7 +283,7 @@ export function KbAskPanel() {
 
       {emptyAnswer && (
         <p className="mt-4 text-label leading-[1.6] text-mute">
-          Argus has no indexed context for that question yet. Ingest more sources,
+          Truesight has no indexed context for that question yet. Ingest more sources,
           then ask again.
         </p>
       )}

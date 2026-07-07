@@ -3,7 +3,7 @@ import { Surface } from "@/components/ui/Surface";
 
 /**
  * Knowledge Base loading state — icon header, three status tiles, the Ask
- * Argus panel, then the search + uploader split, all as shimmer stand-ins.
+ * Truesight panel, then the search + uploader split, all as shimmer stand-ins.
  */
 export default function KbLoading() {
   return (

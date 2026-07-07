@@ -72,7 +72,7 @@ export default async function CostPage({
         <Reveal delay={0.08}>
           <EmptyState
             icon={<Wallet size={24} strokeWidth={1.5} />}
-            title="Argus hasn't captured cost data yet"
+            title="Truesight hasn't captured cost data yet"
             description="Run a cost sync to pull actual spend from AWS Cost Explorer and Azure Cost Management — read-only. Spend will appear here grouped by provider, account, service and day."
             action={<CostSyncButton />}
           />

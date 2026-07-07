@@ -30,7 +30,7 @@ export default function LandingPage() {
               </span>
               <span className="inline-flex items-center gap-2 rounded-sm border border-hairline bg-surface px-2.5 py-1">
                 <span className="size-1.5 rounded-full bg-accent-blue/80" />
-                azure · rg-centricity-prod
+                azure · rg-arcane-prod
               </span>
             </div>
           </Reveal>
@@ -41,7 +41,7 @@ export default function LandingPage() {
           </Reveal>
           <Reveal delay={0.1}>
             <p className="max-w-lg text-[17px] leading-[1.6] text-body">
-              Argus discovers your AWS and Azure estates read-only, diffs them against
+              Truesight discovers your AWS and Azure estates read-only, diffs them against
               Terraform state, and keeps the evidence in one pane. No agents to run, no
               state handed over, no blind spots.
             </p>
@@ -101,7 +101,7 @@ export default function LandingPage() {
               single surface. Stateless by design, live by default.
             </p>
             <a href="#signin" className={buttonClass("primary", "md")}>
-              Enter Argus
+              Enter Truesight
               <ArrowRight size={16} strokeWidth={2} />
             </a>
           </Surface>

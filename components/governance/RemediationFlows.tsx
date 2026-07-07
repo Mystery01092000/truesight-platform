@@ -218,7 +218,7 @@ export function RemediationFlows({
         ) : (
           <StepBody>
             <p className="text-label leading-[1.5] text-body">
-              Trigger a sync from the estate page. Argus will re-evaluate drift and
+              Trigger a sync from the estate page. Truesight will re-evaluate drift and
               update this flow automatically.
             </p>
           </StepBody>

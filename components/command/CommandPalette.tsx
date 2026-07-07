@@ -11,7 +11,7 @@ import { COMMAND_ROUTES } from "@/lib/nav";
 import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 
 /**
- * "Ask Argus" — the ⌘K command palette that IS the primary navigation metaphor
+ * "Ask Truesight" — the ⌘K command palette that IS the primary navigation metaphor
  * (Raycast-native). Guided self-discovery: quick-nav + suggestion prompts, not a
  * blank search box. Opens on ⌘K / Ctrl-K.
  */
@@ -44,7 +44,7 @@ export function CommandPalette() {
     return cap == null || isOn(cap);
   };
   // Recents persist across sessions (localStorage) — survive reload + re-login.
-  const [recent, setRecent] = usePersistedState<string[]>("argus:recent-routes", []);
+  const [recent, setRecent] = usePersistedState<string[]>("truesight:recent-routes", []);
   const recents = recent.filter(visible);
 
   useEffect(() => {
@@ -84,14 +84,14 @@ export function CommandPalette() {
             className="w-full max-w-xl"
           >
             <Command
-              label="Ask Argus"
+              label="Ask Truesight"
               className="w-full overflow-hidden rounded-xl border border-hairline bg-surface"
             >
         <div className="flex items-center gap-2 border-b border-hairline px-3">
           <Search size={16} className="text-mute" />
           <Command.Input
             autoFocus
-            placeholder="Ask Argus or jump to…"
+            placeholder="Ask Truesight or jump to…"
             className="h-11 w-full bg-transparent text-[16px] text-on-dark placeholder:text-ash focus:outline-none"
           />
         </div>

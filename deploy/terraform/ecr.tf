@@ -1,6 +1,6 @@
 # =============================================================================
-# ECR — container registry for the Argus image.
-# Repo: cwt-prod/argus  (matches Jenkins `cwtDockerBuildPush` target).
+# ECR — container registry for the Truesight image.
+# Repo: arcane-prod/truesight  (matches Jenkins `cwtDockerBuildPush` target).
 # Module enforces scan_on_push=true, keep last 10 tagged images, expire
 # untagged after 7 days.
 # =============================================================================
@@ -10,11 +10,11 @@ module "ecr" {
   # monorepo (sibling repo iac-self-service-terraform @ dev / commit 841eddd) —
   # the same relative-path pattern environments/nr-platform-prod uses.
   # For standalone CI of this repo, swap to the pinned git source:
-  #   git::https://github.com/centricitywealthtech/iac-self-service-terraform.git//terraform/modules/compute/ecr?ref=main
+  #   git::https://github.com/arcane/iac-self-service-terraform.git//terraform/modules/compute/ecr?ref=main
   source = "../../../iac-self-service-terraform/terraform/modules/compute/ecr"
 
-  namespace = var.ecr_namespace                      # cwt-prod
-  services  = [var.app_name, "${var.app_name}-sync"] # -> cwt-prod/argus + cwt-prod/argus-sync
+  namespace = var.ecr_namespace                      # arcane-prod
+  services  = [var.app_name, "${var.app_name}-sync"] # -> arcane-prod/truesight + arcane-prod/truesight-sync
 
   # MUTABLE so the rolling `latest` tag can be re-pushed; immutable sha-<git>
   # tags are what deployments actually pin.

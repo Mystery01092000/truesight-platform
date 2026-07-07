@@ -84,7 +84,7 @@ export default async function SecurityPage() {
           title="Security & Vulnerabilities"
           iconTone="iris"
           icon={<ShieldAlert size={22} strokeWidth={1.75} className="text-iris" />}
-          description="Argus watches your estate read-only — Inspector2, Security Hub, ECR, Defender for Cloud, Dependabot and CodeQL."
+          description="Truesight watches your estate read-only — Inspector2, Security Hub, ECR, Defender for Cloud, Dependabot and CodeQL."
         />
       </Reveal>
 

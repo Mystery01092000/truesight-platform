@@ -2,14 +2,14 @@
 # Auto-refresh KB pipeline — EventBridge-scheduled estate re-sync.
 #
 # Every `var.sync_schedule_expression` (default 30 min) an isolated Fargate task
-# (image cwt-prod/argus-sync) re-discovers the complete estate — AWS (both
+# (image arcane-prod/truesight-sync) re-discovers the complete estate — AWS (both
 # accounts, all regions), Azure (whole subscription), GitHub (org) — and writes
 # INCREMENTALLY into the KB (resources upsert-by-urn + snapshot-on-change), so
 # the Postgres snapshot the screens read stays fresh without a manual refresh.
 #
 # The sync runs in ITS OWN task (never the web task), reusing the app's
-# execution + task roles (SSM read + KMS decrypt + sts:AssumeRole argus-readonly),
-# the private subnets (NAT egress), the ECS SG, and the same /cwt/prod/argus/*
+# execution + task roles (SSM read + KMS decrypt + sts:AssumeRole truesight-readonly),
+# the private subnets (NAT egress), the ECS SG, and the same /arcane/prod/truesight/*
 # secrets. The image is built + pushed to ECR by the Jenkins pipeline.
 # =============================================================================
 
@@ -17,7 +17,7 @@ module "scheduled_sync" {
   source = "../../../iac-self-service-terraform/terraform/modules/compute/ecs-scheduled-task"
 
   task_name = "sync"
-  namespace = local.name_prefix # argus-prod  -> rule "argus-prod-sync"
+  namespace = local.name_prefix # truesight-prod  -> rule "truesight-prod-sync"
 
   cluster_arn        = module.ecs_cluster.cluster_id
   subnet_ids         = var.private_subnet_ids
@@ -31,7 +31,7 @@ module "scheduled_sync" {
   schedule_expression = var.sync_schedule_expression
 
   # Reuse the app roles: execution reads the SSM secrets below (+ KMS decrypt);
-  # task assumes argus-readonly for cross-account discovery.
+  # task assumes truesight-readonly for cross-account discovery.
   execution_role_arn = aws_iam_role.execution.arn
   task_role_arn      = aws_iam_role.task.arn
 
@@ -67,7 +67,7 @@ module "scheduled_sync" {
 # -----------------------------------------------------------------------------
 # Knowledge Base ingestion — scheduled Fargate task.
 #
-# Reuses the Argus app image and the same cluster/roles/networking as the web
+# Reuses the Truesight app image and the same cluster/roles/networking as the web
 # service. The container entrypoint is expected to honour KB_INGEST_PATH and
 # run a one-time ingestion pipeline (e.g. fetch /api/kb/ingest or invoke the
 # equivalent internal routine). Command is left empty so the image's built-in
@@ -77,7 +77,7 @@ module "scheduled_kb_ingest" {
   source = "../../../iac-self-service-terraform/terraform/modules/compute/ecs-scheduled-task"
 
   task_name = "kb-ingest"
-  namespace = local.name_prefix # argus-prod -> rule "argus-prod-kb-ingest"
+  namespace = local.name_prefix # truesight-prod -> rule "truesight-prod-kb-ingest"
 
   cluster_arn        = module.ecs_cluster.cluster_id
   subnet_ids         = var.private_subnet_ids

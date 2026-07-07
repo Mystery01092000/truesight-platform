@@ -20,7 +20,7 @@ export default function KbPage() {
           title="Knowledge Base"
           iconTone="iris"
           icon={<BookOpen size={22} strokeWidth={1.75} className="text-iris" />}
-          description="Query, manage and extend Argus memory across docs, snapshots, GitHub and Terraform state."
+          description="Query, manage and extend Truesight memory across docs, snapshots, GitHub and Terraform state."
         />
       </Reveal>
 

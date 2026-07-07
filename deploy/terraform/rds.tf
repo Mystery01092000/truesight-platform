@@ -1,5 +1,5 @@
 # =============================================================================
-# RDS PostgreSQL — small, single-AZ, Graviton (db.t4g.small) for Argus.
+# RDS PostgreSQL — small, single-AZ, Graviton (db.t4g.small) for Truesight.
 # Lives in the prod DATA subnets; reachable ONLY from the ECS task SG (5432).
 # The module provisions its own KMS key, subnet group, parameter group and a
 # Secrets Manager secret holding the generated master credential.
@@ -9,8 +9,8 @@ module "rds" {
   # Shared estate module (local path; git-source alt in ecr.tf header).
   source = "../../../iac-self-service-terraform/terraform/modules/database/rds-postgres"
 
-  namespace = local.name_prefix # argus-prod
-  name      = "db"              # -> identifier argus-prod-db
+  namespace = local.name_prefix # truesight-prod
+  name      = "db"              # -> identifier truesight-prod-db
 
   subnet_ids             = var.data_subnet_ids
   vpc_security_group_ids = [aws_security_group.rds.id]
@@ -20,7 +20,7 @@ module "rds" {
   engine_version = "16.9"
 
   instance_class        = var.db_instance_class # db.t4g.small
-  initial_database_name = var.db_name           # argus
+  initial_database_name = var.db_name           # truesight
   allocated_storage     = var.db_allocated_storage
   max_allocated_storage = var.db_max_allocated_storage
 

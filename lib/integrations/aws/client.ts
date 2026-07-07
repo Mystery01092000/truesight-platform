@@ -52,7 +52,7 @@ export interface AwsClientFactory {
 }
 
 const DEFAULT_REGION = "ap-south-1";
-const ROLE_SESSION = "argus-readonly-discovery";
+const ROLE_SESSION = "truesight-readonly-discovery";
 
 function envRegion(): string {
   return process.env.AWS_REGION?.trim() || DEFAULT_REGION;
@@ -63,7 +63,7 @@ export function resolveAccountCredentials(accountId: string): ResolvedAccount {
   const region = envRegion();
   const mgmtId = process.env.AWS_MGMT_ACCOUNT_ID?.trim();
   const prodId = process.env.AWS_PROD_ACCOUNT_ID?.trim();
-  const roleName = process.env.AWS_READONLY_ROLE_NAME?.trim() || "argus-readonly";
+  const roleName = process.env.AWS_READONLY_ROLE_NAME?.trim() || "truesight-readonly";
 
   const mgmtKey = process.env.AWS_ACCESS_KEY_ID;
   const mgmtSecret = process.env.AWS_SECRET_ACCESS_KEY;

@@ -4,7 +4,7 @@ import { runKbIngest } from "@/lib/kb/ingest";
 
 /**
  * One-off CLI to populate the Knowledge Base from all configured sources.
- * Intended to run inside the Argus toolbox/sync Fargate task on a schedule.
+ * Intended to run inside the Truesight toolbox/sync Fargate task on a schedule.
  *
  * Exit codes:
  *   0 — success (documents may be empty if no sources are configured)

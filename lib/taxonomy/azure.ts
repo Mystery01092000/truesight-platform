@@ -1,7 +1,7 @@
 import type { ResourceKind, ServiceCategory } from './index';
 
 /**
- * Maps an Azure resource type onto Argus's canonical taxonomy.
+ * Maps an Azure resource type onto Truesight's canonical taxonomy.
  *
  * Azure resource types are namespaced as `Microsoft.<Provider>/<resourceType>`,
  * e.g. `Microsoft.Network/virtualNetworks`, `Microsoft.Compute/virtualMachines`,

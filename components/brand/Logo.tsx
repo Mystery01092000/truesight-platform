@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils/cn";
 
 /**
- * The Argus mark — Panoptes, the all-seeing watcher. An aperture/iris: two
+ * The Truesight mark — the unveiled, all-seeing eye. An aperture/iris: two
  * concentric hairline rings with radial blades converging on a solid pupil.
  * Monochrome (inherits currentColor). When `watching`, a ring pulses out of the
  * pupil (animate-pulse-ring) — the signature "it's watching" tell.
@@ -97,7 +97,7 @@ export function Logo({
             wordmarkClassName,
           )}
         >
-          Argus
+          Truesight
         </span>
       )}
     </span>

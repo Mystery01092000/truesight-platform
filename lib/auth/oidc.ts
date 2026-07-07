@@ -164,9 +164,9 @@ export async function validateIdToken(
 /* ----------------------- OIDC transaction cookies ------------------------ */
 
 const OIDC_COOKIES = {
-  state: "argus_oidc_state",
-  verifier: "argus_oidc_verifier",
-  nonce: "argus_oidc_nonce",
+  state: "truesight_oidc_state",
+  verifier: "truesight_oidc_verifier",
+  nonce: "truesight_oidc_nonce",
 } as const;
 
 // Scoped to the SSO routes only, and short-lived: one login round-trip.

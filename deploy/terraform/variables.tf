@@ -1,12 +1,12 @@
 # =============================================================================
-# Argus | Production deployment — input variables
+# Truesight | Production deployment — input variables
 # All defaults are the GROUND-TRUTH prod values (verified against the live
 # estate). Override via a *.tfvars file only for exceptional cases.
 # =============================================================================
 
 # ---- Accounts / region -------------------------------------------------------
 variable "aws_region" {
-  description = "AWS region for all Argus resources."
+  description = "AWS region for all Truesight resources."
   type        = string
   default     = "ap-south-1"
 }
@@ -43,7 +43,7 @@ variable "management_role_arn" {
 variable "app_name" {
   description = "Short application name used in resource names."
   type        = string
-  default     = "argus"
+  default     = "truesight"
 }
 
 variable "environment" {
@@ -53,14 +53,14 @@ variable "environment" {
 }
 
 variable "ecr_namespace" {
-  description = "ECR registry namespace. Repo becomes <namespace>/<app_name> (cwt-prod/argus) — matches the Jenkins cwtDockerBuildPush target."
+  description = "ECR registry namespace. Repo becomes <namespace>/<app_name> (arcane-prod/truesight) — matches the Jenkins cwtDockerBuildPush target."
   type        = string
-  default     = "cwt-prod"
+  default     = "arcane-prod"
 }
 
 # ---- Existing networking (READ-ONLY — never modified) ------------------------
 variable "vpc_id" {
-  description = "Existing prod VPC ID (cwt-prod, 10.20.0.0/16)."
+  description = "Existing prod VPC ID (arcane-prod, 10.20.0.0/16)."
   type        = string
   default     = "vpc-00cf281ecbac12e72"
 }
@@ -94,13 +94,13 @@ variable "data_subnet_ids" {
 
 # ---- DNS / TLS ---------------------------------------------------------------
 variable "domain_name" {
-  description = "Public FQDN served by Argus."
+  description = "Public FQDN served by Truesight."
   type        = string
-  default     = "argus-infraspace.centricitywealth.tech"
+  default     = "truesight.arcane.tech"
 }
 
 variable "hosted_zone_id" {
-  description = "Route53 public hosted zone (centricitywealth.tech) in the management account."
+  description = "Route53 public hosted zone (arcane.tech) in the management account."
   type        = string
   default     = "Z08590081H9KT0BUGB1O9"
 }
@@ -108,13 +108,13 @@ variable "hosted_zone_id" {
 variable "acm_domain" {
   description = "Regional ACM certificate domain to look up for the HTTPS listener."
   type        = string
-  default     = "*.centricitywealth.tech"
+  default     = "*.arcane.tech"
 }
 
 variable "origin_domain_name" {
   description = "Origin-facing FQDN CloudFront uses to reach the ALB (covered by the wildcard ALB cert)."
   type        = string
-  default     = "argus-origin.centricitywealth.tech"
+  default     = "truesight-origin.arcane.tech"
 }
 
 # ---- Container / ECS ---------------------------------------------------------
@@ -176,7 +176,7 @@ variable "db_instance_class" {
 variable "db_name" {
   description = "Initial PostgreSQL database name."
   type        = string
-  default     = "argus"
+  default     = "truesight"
 }
 
 variable "db_allocated_storage" {
@@ -195,7 +195,7 @@ variable "db_max_allocated_storage" {
 variable "app_secret_keys" {
   description = <<-EOT
     Runtime secret names injected into the task from SSM SecureStrings at
-    /cwt/prod/argus/<KEY>. Created as PLACEHOLDERs with ignore_changes on value;
+    /arcane/prod/truesight/<KEY>. Created as PLACEHOLDERs with ignore_changes on value;
     real values are filled out-of-band, never committed.
   EOT
   type        = list(string)
@@ -213,7 +213,7 @@ variable "app_secret_keys" {
     "AWS_SECRET_ACCESS_KEY",
     # Direct prod-account read keys — resolveAccountCredentials() uses these for
     # the prod account (direct-prod mode); without them prod discovery falls back
-    # to AssumeRole argus-readonly@prod, which the base principal cannot assume.
+    # to AssumeRole truesight-readonly@prod, which the base principal cannot assume.
     "AWS_PROD_ACCESS_KEY_ID",
     "AWS_PROD_SECRET_ACCESS_KEY",
     "AWS_READONLY_ROLE_ARN",
@@ -229,40 +229,40 @@ variable "app_secret_keys" {
 }
 
 variable "ssm_prefix" {
-  description = "SSM parameter path prefix for Argus secrets."
+  description = "SSM parameter path prefix for Truesight secrets."
   type        = string
-  default     = "/cwt/prod/argus"
+  default     = "/arcane/prod/truesight"
 }
 
-variable "argus_readonly_role_arns" {
+variable "truesight_readonly_role_arns" {
   description = "Cross-account read-only roles the task may assume for estate discovery."
   type        = list(string)
-  default     = ["arn:aws:iam::*:role/argus-readonly"]
+  default     = ["arn:aws:iam::*:role/truesight-readonly"]
 }
 
 # ---- Discovery config (non-secret) -------------------------------------------
 variable "github_org" {
   description = "GitHub org discovered for the GitHub insights pillar."
   type        = string
-  default     = "centricitywealthtech"
+  default     = "arcane"
 }
 
 variable "azure_resource_group" {
   description = "Azure resource group scanned by the estate explorer."
   type        = string
-  default     = "rg-centricity-prod"
+  default     = "rg-arcane-prod"
 }
 
 variable "azure_subscription_name" {
   description = "Azure subscription display name (resolved to a GUID at runtime)."
   type        = string
-  default     = "Centricity-Oneinvictus"
+  default     = "Arcane-Prod"
 }
 
 # ---- Auto-refresh sync schedule ----------------------------------------------
 variable "sync_schedule_expression" {
   description = <<-EOT
-    EventBridge schedule for the estate auto-refresh (the argus-prod-sync Fargate
+    EventBridge schedule for the estate auto-refresh (the truesight-prod-sync Fargate
     task re-discovers AWS + Azure + GitHub into the KB, incrementally). Tunable:
     `rate(10 minutes)` for freshest, `cron(0/30 8-20 ? * MON-FRI *)` for business
     hours. Default balances freshness vs GitHub/Azure API limits and cost.
@@ -317,7 +317,7 @@ variable "rds_free_storage_bytes_threshold" {
 
 variable "enable_readonly_cost_grant" {
   description = <<-EOT
-    Attach the Cost Explorer read policy to the shared argus-readonly discovery
+    Attach the Cost Explorer read policy to the shared truesight-readonly discovery
     role. The role is provisioned per-account by iac-self-service-terraform and
     does not exist in this account yet — enable once it does.
   EOT

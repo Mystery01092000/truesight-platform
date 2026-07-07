@@ -3,14 +3,14 @@ import { Surface } from "@/components/ui/Surface";
 
 /**
  * EmptyState — the single consistent degraded/empty/error surface across every
- * pillar. Speaks in the Argus persona ("Argus hasn't mapped this estate yet")
+ * pillar. Speaks in the Truesight persona ("Truesight hasn't mapped this estate yet")
  * instead of generic "no data" copy. Monochrome glyph + prose + one optional
  * CTA. Never a broken screen — always a guided next step.
  */
 export type EmptyStateProps = {
   /** The glyph icon node (a lucide component rendered at its natural size). */
   icon?: React.ReactNode;
-  /** Primary message, e.g. "Argus hasn't mapped this estate yet." */
+  /** Primary message, e.g. "Truesight hasn't mapped this estate yet." */
   title: string;
   /** Supporting prose, e.g. "Trigger a sync to discover your cloud resources." */
   description?: string;

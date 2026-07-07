@@ -28,5 +28,5 @@ export const NAV_ITEMS = [
   { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
-/** Command-palette destinations ("Ask Argus" quick-nav). */
+/** Command-palette destinations ("Ask Truesight" quick-nav). */
 export const COMMAND_ROUTES = NAV_ITEMS.map((i) => ({ href: i.href, label: i.label, icon: i.icon }));

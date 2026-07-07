@@ -138,7 +138,7 @@ export default async function OverviewPage() {
       <Reveal>
         <PageHeader
           title="Overview"
-          description="One pane across your DevOps lifecycle. Argus watches — read-only — and never changes your estate."
+          description="One pane across your DevOps lifecycle. Truesight watches — read-only — and never changes your estate."
         />
       </Reveal>
       <CurateHint />
@@ -193,10 +193,10 @@ export default async function OverviewPage() {
           {resourceCount === 0 ? (
             <div>
               <h2 className="font-display text-[18px] font-medium leading-[1.4] text-ink">
-                Argus hasn&rsquo;t mapped this estate yet
+                Truesight hasn&rsquo;t mapped this estate yet
               </h2>
               <p className="mt-1.5 max-w-prose text-[14px] leading-[1.6] text-body">
-                Point Argus at an AWS account or Azure subscription and it will map the estate
+                Point Truesight at an AWS account or Azure subscription and it will map the estate
                 read-only — resources, dependencies, drift, cost, and security — then paint it
                 onto the topology canvas. Press{" "}
                 <span className="font-mono text-on-dark">⌘K</span> to jump anywhere.
@@ -210,7 +210,7 @@ export default async function OverviewPage() {
                 </h2>
                 <p className="mt-1.5 text-[14px] leading-[1.6] text-body">
                   Last synced <span className="font-mono text-on-dark">{formatSyncTime(lastSync?.startedAt?.toISOString() ?? null)}</span>.
-                  Argus is watching{" "}
+                  Truesight is watching{" "}
                   <span className="font-mono text-on-dark">{resourceCount}</span> resources
                   across <span className="font-mono text-on-dark">{accountCount}</span> integrations.
                 </p>

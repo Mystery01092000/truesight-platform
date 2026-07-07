@@ -294,7 +294,7 @@ export function SecurityFindingsView() {
       <div role="alert">
         <EmptyState
           icon={<ShieldAlert size={24} strokeWidth={1.5} />}
-          title="Argus couldn't load the findings feed"
+          title="Truesight couldn't load the findings feed"
           description="The vulnerabilities API didn't respond. Retry, or check your session and try again."
           action={
             <Button variant="tertiary" size="sm" onClick={() => refetch()}>
@@ -314,7 +314,7 @@ export function SecurityFindingsView() {
     return (
       <EmptyState
         icon={<ShieldAlert size={24} strokeWidth={1.5} />}
-        title="Argus hasn't captured any vulnerabilities yet"
+        title="Truesight hasn't captured any vulnerabilities yet"
         description="Run a security scan to sweep Inspector2, Security Hub, Defender for Cloud, Dependabot and CodeQL across the estate."
         action={
           <div className="flex flex-col items-center gap-2">

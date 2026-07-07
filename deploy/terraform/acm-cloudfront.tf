@@ -1,6 +1,6 @@
 # =============================================================================
 # ACM (us-east-1) — CloudFront viewer certificate for
-# argus-infraspace.centricitywealth.tech. CloudFront only accepts certs from
+# truesight.arcane.tech. CloudFront only accepts certs from
 # us-east-1, hence the aws.us_east_1 provider. DNS validation records land in
 # the management-account hosted zone (same pattern as dns.tf).
 # =============================================================================

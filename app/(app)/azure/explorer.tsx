@@ -41,7 +41,7 @@ export function AzureEstateExplorer({ resources }: { resources: AzureResource[] 
       resources={rows}
       provider="azure"
       groupColumn={{ header: "Resource group", hrefBase: "/azure" }}
-      storageKey="argus:azure:estate"
+      storageKey="truesight:azure:estate"
     />
   );
 }
@@ -49,7 +49,7 @@ export function AzureEstateExplorer({ resources }: { resources: AzureResource[] 
 /** Resource-group drill-down explorer — already scoped, no RG column. */
 export function AzureResourceTable({
   resources,
-  storageKey = "argus:azure:rg",
+  storageKey = "truesight:azure:rg",
 }: {
   resources: AzureResource[];
   /** Per-resource-group namespace so persisted facets don't leak across RGs. */

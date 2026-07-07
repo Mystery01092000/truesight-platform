@@ -6,7 +6,7 @@ import { useLandingStats } from "@/components/marketing/useLandingStats";
 
 /* ────────────────────────────────────────────────────────────────────────── *
  * EstateAtlas — the landing hero centrepiece. The cinematic WatcherScene (the
- * Argus aperture over a live cross-cloud constellation) framed as a console,
+ * Truesight aperture over a live cross-cloud constellation) framed as a console,
  * with a quiet live ribbon along the base. The ribbon shows *presence*, not
  * counts: each provider dot lights when the synced estate confirms resources in
  * that cloud — so the "Live" claim stays honest without leading with ambiguous

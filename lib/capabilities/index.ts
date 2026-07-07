@@ -43,7 +43,7 @@ export const CAPABILITY_META: Record<CapabilityKey, CapabilityMeta> = {
   },
 };
 
-export const CAPABILITY_STORAGE_KEY = "argus.capabilities.v1";
+export const CAPABILITY_STORAGE_KEY = "truesight.capabilities.v1";
 
 /** The capability that owns a route, or null for the never-gated estate core. */
 export function capabilityForRoute(href: string): CapabilityKey | null {

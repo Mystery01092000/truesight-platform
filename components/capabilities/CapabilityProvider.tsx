@@ -49,7 +49,7 @@ export function CapabilityProvider({ children }: { children: React.ReactNode }) 
     ALL_ON,
   );
   const [hintDismissed, setHintDismissed] = usePersistedState<boolean>(
-    "argus.capabilities.hint.v1",
+    "truesight.capabilities.hint.v1",
     false,
   );
   const [paneOpen, setPaneOpen] = useState(false);

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # ---------------------------------------------------------------------------
-# Argus platform — Next.js 16 standalone production image.
+# Truesight platform — Next.js 16 standalone production image.
 # Multi-stage: deps → builder → runner. Final image runs `node server.js`
 # from the Next.js standalone output as a non-root user.
 # ---------------------------------------------------------------------------

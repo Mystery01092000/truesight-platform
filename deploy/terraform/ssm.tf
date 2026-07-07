@@ -21,7 +21,7 @@ resource "aws_ssm_parameter" "kb_bucket_name" {
   name        = "${var.ssm_prefix}/KB_BUCKET_NAME"
   type        = "String"
   value       = aws_s3_bucket.kb_backend.id
-  description = "S3 bucket used by the Argus Knowledge Base backend."
+  description = "S3 bucket used by the Truesight Knowledge Base backend."
   tags        = { Name = "${var.ssm_prefix}/KB_BUCKET_NAME", Service = var.app_name }
 }
 
@@ -31,7 +31,7 @@ resource "aws_ssm_parameter" "redis_url" {
   name        = "${var.ssm_prefix}/REDIS_URL"
   type        = "SecureString"
   value       = local.redis_url
-  description = "Full rediss:// connection URL (auth token embedded) for the Argus cache."
+  description = "Full rediss:// connection URL (auth token embedded) for the Truesight cache."
   tags        = { Name = "${var.ssm_prefix}/REDIS_URL", Service = var.app_name }
 }
 

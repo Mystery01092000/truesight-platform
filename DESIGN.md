@@ -74,7 +74,7 @@ The one sanctioned exception to the no-shadow rule — surfaces that *float over
 ### Font Family
 **Inter** is the system's primary face, loaded with the `Inter Fallback` system fallback variant. Critically, Raycast enables `font-feature-settings: "calt", "kern", "liga", "ss03"` site-wide — the **ss03 stylistic set** swaps in Inter's alternate `g` glyph (single-story open `g`), which is the brand's signature typographic detail. Standard ligatures (`liga`), kerning (`kern`), and contextual alternates (`calt`) are also active. The display tier additionally enables `ss02` and `ss08` and disables standard `liga` to render the hero "Raycast Pro" wordmark with its distinctive geometric construction.
 
-Argus extends this into a **three-voice system**: **Inter** (`{font.sans}`) is the quiet body workhorse, **Space Grotesk** (`{font.display}`) is the character face for headings and the wordmark, and **JetBrains Mono** (`{font.mono}`, always `tabular-nums`) is the instrument face for all machine data — counts, IDs, timestamps, deltas. Any live-updating numeral renders in mono so columns never reflow.
+Truesight extends this into a **three-voice system**: **Inter** (`{font.sans}`) is the quiet body workhorse, **Space Grotesk** (`{font.display}`) is the character face for headings and the wordmark, and **JetBrains Mono** (`{font.mono}`, always `tabular-nums`) is the instrument face for all machine data — counts, IDs, timestamps, deltas. Any live-updating numeral renders in mono so columns never reflow.
 
 ### Type-Scale Tokens
 Four utility-grade tokens (emitted as `text-display` / `text-title` / `text-label` / `text-micro`) carry size, line-height, letter-spacing and weight together:
@@ -380,7 +380,7 @@ The only "imagery" in the system is in-product Raycast UI screenshots and small 
 - **Mobile screenshots not captured** — responsive behavior synthesizes Raycast's mobile pattern (hamburger drawer, single-column grid, hero downscale) from desktop evidence and the breakpoint stack.
 - ~~**Hover states not documented**~~ — **Resolved**: hover/press feedback is standardized under the Motion System (`{motion.fast}` 150ms on `--ease-smooth`; color/border shifts only, never scale beyond `active:scale-[0.98]`).
 - **In-product app chrome** (the actual Raycast launcher running on macOS) is referenced in marketing screenshots but not documented as a separate UI system here. The marketing site is documented; the in-product app surface is its own design system.
-- **Dark mode is the only mode** — no light variant exists in the captured surfaces (and by design in Argus).
+- **Dark mode is the only mode** — no light variant exists in the captured surfaces (and by design in Truesight).
 - **Form validation states** beyond the focused-input border treatment are not present in the captured surfaces.
-- ~~**Authenticated chrome** not in the captured pages~~ — **Resolved**: Argus now defines the authenticated-app primitives on the same vocabulary — DataTable (+ Pagination, global filter, virtualized mode), FilterBar, StatTile, Timeline (status/chat), Drawer (scrim + `{shadow.overlay}`), and composable Skeletons.
+- ~~**Authenticated chrome** not in the captured pages~~ — **Resolved**: Truesight now defines the authenticated-app primitives on the same vocabulary — DataTable (+ Pagination, global filter, virtualized mode), FilterBar, StatTile, Timeline (status/chat), Drawer (scrim + `{shadow.overlay}`), and composable Skeletons.
 - ~~**Overlay treatment undefined**~~ — **Resolved**: `{colors.scrim}` + `{shadow.overlay}` are the one sanctioned floating-surface exception to the no-shadow rule.

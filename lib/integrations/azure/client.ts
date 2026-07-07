@@ -3,7 +3,7 @@ import { SubscriptionClient } from "@azure/arm-resources-subscriptions";
 import { ResourceGraphClient } from "@azure/arm-resourcegraph";
 
 /**
- * Azure credential resolution + read-only client factories for Argus.
+ * Azure credential resolution + read-only client factories for Truesight.
  *
  * READ-ONLY by construction: this module only wires up a Service Principal
  * credential and the two clients discovery needs — the Subscriptions client

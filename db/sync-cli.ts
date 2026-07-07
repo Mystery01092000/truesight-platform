@@ -17,7 +17,7 @@ import type { IntegrationAdapter } from "@/lib/integrations/types";
  * adapters and runs a READ-ONLY sync.
  */
 async function main(): Promise<void> {
-  const url = process.env.DATABASE_URL ?? "postgres://argus:argus@localhost:5433/argus";
+  const url = process.env.DATABASE_URL ?? "postgres://truesight:truesight@localhost:5433/truesight";
   const region = process.env.AWS_REGION ?? "ap-south-1";
 
   const sql = postgres(url, { max: 1 });

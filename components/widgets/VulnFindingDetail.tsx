@@ -16,7 +16,7 @@ import type { Severity } from "@/lib/taxonomy";
  * /api/vulnerabilities, so timestamps arrive as ISO strings). Layout: badge
  * strip → title → meta grid (package / CVE / seen window / URN) → description →
  * the proposed mitigation, promoted onto an elevated surface → resource links
- * (external console link, NVD, and the derived Argus inventory route).
+ * (external console link, NVD, and the derived Truesight inventory route).
  */
 export type VulnFinding = {
   id: string;
@@ -37,7 +37,7 @@ export type VulnFinding = {
 };
 
 /**
- * Derive the Argus inventory route from a canonical URN
+ * Derive the Truesight inventory route from a canonical URN
  * (`provider:account:region:service:nativeId`). AWS drills into the account
  * explorer; Azure lands on the estate explorer. Anything else (github,
  * terraform, malformed) returns null and the external resourceLink carries.

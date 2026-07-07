@@ -21,7 +21,7 @@ import { runCostSync } from "@/lib/integrations/sync/cost-sync";
  *   1 — overall status "error" (no provider returned rows) or a fatal crash
  */
 async function main(): Promise<void> {
-  const url = process.env.DATABASE_URL ?? "postgres://argus:argus@localhost:5433/argus";
+  const url = process.env.DATABASE_URL ?? "postgres://truesight:truesight@localhost:5433/truesight";
   const client = postgres(url, { max: 1 });
   const db = drizzle(client, { schema, casing: "snake_case" });
 

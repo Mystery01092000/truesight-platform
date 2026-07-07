@@ -3,7 +3,7 @@ import { Logo } from "@/components/brand/Logo";
 
 /**
  * Footer — minimal chrome close. A single hairline top rule over the canvas,
- * the Argus mark, attribution, and an optional link slot. Monochrome, quiet.
+ * the Truesight mark, attribution, and an optional link slot. Monochrome, quiet.
  */
 export type FooterProps = {
   children?: React.ReactNode;
@@ -28,7 +28,7 @@ export function Footer({ children, className }: FooterProps) {
         )}
 
         <p className="text-label leading-[1.4] text-stone">
-          © {new Date().getFullYear()} CentricityWealthTech
+          © {new Date().getFullYear()} Arcane
         </p>
       </div>
     </footer>

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # ---------------------------------------------------------------------------
-# Argus one-off "toolbox" image — runs the READ-ONLY estate discovery CLIs
+# Truesight one-off "toolbox" image — runs the READ-ONLY estate discovery CLIs
 # (AWS + GitHub + Azure) as a single in-VPC Fargate task to populate the prod
 # knowledge base. NOT the app image; never deployed as a service. All secrets
 # are injected at runtime (SSM / task env), never baked into a layer.

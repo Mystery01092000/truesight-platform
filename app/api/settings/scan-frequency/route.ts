@@ -11,12 +11,12 @@ export const dynamic = "force-dynamic";
 
 /**
  * Scan-frequency setting. Stored in the `integration_accounts.config` jsonb on a
- * dedicated platform row (provider `terraform`, external id `argus-platform`) so it
+ * dedicated platform row (provider `terraform`, external id `truesight-platform`) so it
  * persists without a schema migration. `scanFrequencyHours` is how often the
  * scheduled security scan runs.
  */
 const PLATFORM_PROVIDER = "terraform" as const;
-const PLATFORM_EXTERNAL_ID = "argus-platform";
+const PLATFORM_EXTERNAL_ID = "truesight-platform";
 const DEFAULT_HOURS = 6;
 
 interface PlatformConfig {
@@ -79,7 +79,7 @@ export async function PUT(req: Request) {
     .values({
       provider: PLATFORM_PROVIDER,
       externalId: PLATFORM_EXTERNAL_ID,
-      displayName: "Argus platform settings",
+      displayName: "Truesight platform settings",
       config: nextConfig as unknown as Record<string, unknown>,
     })
     .onConflictDoUpdate({

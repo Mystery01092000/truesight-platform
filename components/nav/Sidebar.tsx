@@ -29,7 +29,7 @@ export function Sidebar({ items, activeHref, className, footer }: SidebarProps) 
       )}
     >
       <div className="px-4 py-4">
-        <Link href="/" aria-label="Argus home" className="inline-flex">
+        <Link href="/" aria-label="Truesight home" className="inline-flex">
           <Logo />
         </Link>
       </div>

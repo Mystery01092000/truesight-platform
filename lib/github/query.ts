@@ -192,7 +192,7 @@ export async function getGithubInsights(): Promise<GithubInsights | null> {
 
   if (rows.length === 0) return null;
 
-  const org = rows.find((r) => r.account)?.account ?? "centricitywealthtech";
+  const org = rows.find((r) => r.account)?.account ?? "arcane";
 
   const teamMap = new Map<string, GithubTeamView>();
   const memberMap = new Map<string, GithubMemberView>();

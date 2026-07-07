@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 
 /**
  * Global error boundary for the authenticated app section. Renders an
- * Argus-persona error surface — never a blank screen or raw stack trace.
+ * Truesight-persona error surface — never a blank screen or raw stack trace.
  * The reset() call re-attempts the segment render.
  */
 export default function AppError({
@@ -18,7 +18,7 @@ export default function AppError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("[argus] route error:", error);
+    console.error("[truesight] route error:", error);
   }, [error]);
 
   return (
@@ -32,7 +32,7 @@ export default function AppError({
           <AlertTriangle size={24} className="text-accent-yellow" />
         </div>
         <h2 className="font-display text-[18px] font-medium leading-[1.4] text-ink">
-          Argus lost sight of this view
+          Truesight lost sight of this view
         </h2>
         <p className="mt-2 max-w-sm text-[14px] leading-[1.6] text-mute">
           Something went wrong rendering this page. The estate data is safe — try

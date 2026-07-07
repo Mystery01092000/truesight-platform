@@ -1,5 +1,5 @@
 /**
- * AWS integration barrel — read-only estate discovery for Argus.
+ * AWS integration barrel — read-only estate discovery for Truesight.
  */
 export * from "./client";
 export * from "./adapter";

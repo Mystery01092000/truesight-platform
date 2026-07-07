@@ -48,8 +48,8 @@ try {
   // PLATFORM-ADMINS allowlist (db/seed.ts mirror) — role source of truth for
   // SSO logins. DO NOTHING so operator edits made in /settings survive re-runs.
   const platformAdmins = [
-    { email: "devops@centricity.co.in", note: "Akshat Mukhriya — DevOps Super Admin" },
-    { email: "rishabh.arya@centricity.co.in", note: "Rishabh Arya — Maintainer" },
+    { email: "devops@arcane.tech", note: "DevOps Super Admin" },
+    { email: "maintainer@arcane.tech", note: "Platform Maintainer" },
   ];
   for (const admin of platformAdmins) {
     await sql`

@@ -1,15 +1,15 @@
 # =============================================================================
-# ECS — dedicated Fargate cluster + the Argus service.
-# Cluster name resolves to `argus-prod-cluster` (module names it
+# ECS — dedicated Fargate cluster + the Truesight service.
+# Cluster name resolves to `truesight-prod-cluster` (module names it
 # "<namespace>-cluster") — intentionally SEPARATE from the shared
-# cwt-prod-cluster to isolate Argus.
+# arcane-prod-cluster to isolate Truesight.
 # =============================================================================
 
 module "ecs_cluster" {
   # Shared estate module (local path; git-source alt in ecr.tf header).
   source = "../../../iac-self-service-terraform/terraform/modules/compute/ecs-cluster"
 
-  namespace = local.name_prefix # -> argus-prod-cluster
+  namespace = local.name_prefix # -> truesight-prod-cluster
   tags      = { Service = var.app_name }
 }
 
@@ -23,7 +23,7 @@ resource "aws_ssm_parameter" "app" {
   name        = "${var.ssm_prefix}/${each.key}"
   type        = "SecureString"
   value       = "PLACEHOLDER_FILL_OUT_OF_BAND"
-  description = "Argus prod runtime secret (${each.key}). Real value set out-of-band."
+  description = "Truesight prod runtime secret (${each.key}). Real value set out-of-band."
   tags        = { Name = "${var.ssm_prefix}/${each.key}", Service = var.app_name }
 
   lifecycle {
@@ -32,7 +32,7 @@ resource "aws_ssm_parameter" "app" {
 }
 
 # -----------------------------------------------------------------------------
-# Argus Fargate service (1024 CPU / 2048 MiB, desired 2 / max 4).
+# Truesight Fargate service (1024 CPU / 2048 MiB, desired 2 / max 4).
 # -----------------------------------------------------------------------------
 module "ecs_service" {
   # Shared estate module (local path; git-source alt in ecr.tf header).
@@ -41,8 +41,8 @@ module "ecs_service" {
   # the module to main and re-pin before switching to a main git source.
   source = "../../../iac-self-service-terraform/terraform/modules/compute/ecs-service"
 
-  service_name = var.app_name      # argus
-  namespace    = local.name_prefix # argus-prod
+  service_name = var.app_name      # truesight
+  namespace    = local.name_prefix # truesight-prod
   cluster_id   = module.ecs_cluster.cluster_id
 
   subnet_ids         = var.private_subnet_ids

@@ -17,8 +17,8 @@ const BCRYPT_ROUNDS = 12;
 
 /** Emails granted the mapped role on SSO login (see lib/auth/providers/azure-entra.ts). */
 const PLATFORM_ADMIN_ROWS = [
-  { email: 'devops@centricity.co.in', role: 'admin', note: 'Akshat Mukhriya — DevOps Super Admin' },
-  { email: 'rishabh.arya@centricity.co.in', role: 'admin', note: 'Rishabh Arya — Maintainer' },
+  { email: 'devops@arcane.tech', role: 'admin', note: 'DevOps Super Admin' },
+  { email: 'maintainer@arcane.tech', role: 'admin', note: 'Platform Maintainer' },
 ] as const;
 
 async function main(): Promise<void> {
@@ -33,7 +33,7 @@ async function main(): Promise<void> {
   // scripts/seed.mjs); fall back to hashing a raw ADMIN_PASSWORD for local dev.
   const passwordHash =
     process.env.ADMIN_PASSWORD_HASH ??
-    (await bcrypt.hash(process.env.ADMIN_PASSWORD ?? 'akshatcentricity2026', BCRYPT_ROUNDS));
+    (await bcrypt.hash(process.env.ADMIN_PASSWORD ?? 'truesight-dev-2026', BCRYPT_ROUNDS));
 
   const sql = postgres(connectionString, { max: 1 });
   try {

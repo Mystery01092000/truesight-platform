@@ -41,8 +41,8 @@ const dateFmt = new Intl.DateTimeFormat("en-US", {
 });
 
 /** Service identity derived from a repo's short name — common platform
- *  prefixes/suffixes are stripped so `argus-frontend` and `argus-api`
- *  collapse into the one `argus` service chip. */
+ *  prefixes/suffixes are stripped so `truesight-frontend` and `truesight-api`
+ *  collapse into the one `truesight` service chip. */
 function serviceOf(name: string): string {
   const stripped = name
     .toLowerCase()
@@ -75,7 +75,7 @@ export default async function DeveloperProfilePage({
         <Reveal delay={0.08}>
           <EmptyState
             icon={<UserRound size={24} strokeWidth={1.5} />}
-            title={`Argus hasn't computed stats for ${login} yet`}
+            title={`Truesight hasn't computed stats for ${login} yet`}
             description={
               canRefresh
                 ? "The developer stats rollup has no rows for this login. Refresh the LOC engine to recompute per-developer metrics straight from GitHub."

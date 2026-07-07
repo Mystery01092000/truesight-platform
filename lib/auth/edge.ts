@@ -10,7 +10,7 @@ export async function verifyEdgeToken(
 ): Promise<{ sub: string; role: string } | null> {
   try {
     const secret = new TextEncoder().encode(
-      process.env.SESSION_SECRET || "argus-dev-secret-change-me-in-prod",
+      process.env.SESSION_SECRET || "truesight-dev-secret-change-me-in-prod",
     );
     const { payload } = await jwtVerify(token, secret, { algorithms: ["HS256"] });
     if (!payload.sub) return null;

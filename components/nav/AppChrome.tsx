@@ -36,7 +36,7 @@ export function AppChrome({
       <Sidebar items={items} activeHref={active?.href} />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar
-          breadcrumb={<span className="text-on-dark">{active?.label ?? "Argus"}</span>}
+          breadcrumb={<span className="text-on-dark">{active?.label ?? "Truesight"}</span>}
         >
           <button
             type="button"

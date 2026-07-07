@@ -6,7 +6,7 @@ import postgres from "postgres";
  * Estate change event bus — the server half of the realtime experience.
  *
  * A sync (scheduled Fargate task OR /api/sync) writes to Postgres and issues
- * `pg_notify('argus_estate', …)`. Postgres NOTIFY is cross-connection, so a single
+ * `pg_notify('truesight_estate', …)`. Postgres NOTIFY is cross-connection, so a single
  * dedicated LISTEN connection per web task hears every write — regardless of which
  * task or CLI produced it — and fans it out in-process to every open SSE stream via
  * a Node EventEmitter. That keeps DB connections flat (ONE listener per process, not
@@ -17,7 +17,7 @@ import postgres from "postgres";
  * — the client falls back to interval refresh, so realtime is strictly additive.
  */
 
-const CHANNEL = "argus_estate";
+const CHANNEL = "truesight_estate";
 
 export interface EstateEvent {
   type: string;
@@ -32,15 +32,15 @@ interface Hub {
 }
 
 // Survive Next.js dev HMR: one hub (and one LISTEN connection) per process.
-const globalForHub = globalThis as unknown as { __argusEstateHub?: Hub };
+const globalForHub = globalThis as unknown as { __truesightEstateHub?: Hub };
 
 function hub(): Hub {
-  if (!globalForHub.__argusEstateHub) {
+  if (!globalForHub.__truesightEstateHub) {
     const emitter = new EventEmitter();
     emitter.setMaxListeners(0); // many concurrent SSE subscribers per process
-    globalForHub.__argusEstateHub = { emitter, client: null, starting: null };
+    globalForHub.__truesightEstateHub = { emitter, client: null, starting: null };
   }
-  return globalForHub.__argusEstateHub;
+  return globalForHub.__truesightEstateHub;
 }
 
 /** Open the single dedicated LISTEN connection for this process (idempotent). */
@@ -57,7 +57,7 @@ async function ensureListening(): Promise<void> {
     const client = postgres(url, {
       max: 1,
       idle_timeout: 0,
-      connection: { application_name: "argus-estate-listen" },
+      connection: { application_name: "truesight-estate-listen" },
       onnotice: () => {},
     });
     await client.listen(CHANNEL, (payload: string) => {

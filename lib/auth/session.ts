@@ -5,7 +5,7 @@ import { serverEnv } from "@/lib/config/env";
 import type { AuthedUser } from "@/lib/auth/providers/types";
 import type { Role } from "@/lib/auth/rbac";
 
-const COOKIE = "argus_session";
+const COOKIE = "truesight_session";
 const MAX_AGE_S = 60 * 60 * 8; // 8h sliding session
 
 export interface SessionPayload {

@@ -71,7 +71,7 @@ export const GUIDED_FLOWS: GuidedFlowDef[] = [
   {
     id: "onboard-service",
     title: "Onboard a new service",
-    description: "Bring a new cloud service under Argus governance.",
+    description: "Bring a new cloud service under Truesight governance.",
     steps: [
       {
         id: "connect",

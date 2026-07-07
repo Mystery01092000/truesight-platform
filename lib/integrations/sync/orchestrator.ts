@@ -68,7 +68,7 @@ export async function runSync(opts: RunSyncOptions): Promise<SyncSummary[]> {
   return summaries;
 }
 
-/** Publish a compact estate-change event on the `argus_estate` NOTIFY channel. */
+/** Publish a compact estate-change event on the `truesight_estate` NOTIFY channel. */
 async function notifyEstateChanged(
   db: Db,
   trigger: string,
@@ -82,7 +82,7 @@ async function notifyEstateChanged(
     resources: summaries.reduce((n, s) => n + s.resourceCount, 0),
   });
   // pg_notify(channel, payload) — payload is tiny, well under Postgres' 8000-byte cap.
-  await db.execute(sql`select pg_notify('argus_estate', ${payload})`);
+  await db.execute(sql`select pg_notify('truesight_estate', ${payload})`);
 }
 
 /* -------------------------------------------------------------------------- */

@@ -1,7 +1,7 @@
 import { WatcherScene } from "@/components/brand/WatcherScene";
 
 /**
- * Auth shell — the sign-in card floats over the ambient WatcherScene (the Argus
+ * Auth shell — the sign-in card floats over the ambient WatcherScene (the Truesight
  * aperture watching a live cross-cloud estate), so /login is visual-driven and
  * cinematic rather than a bare card on flat canvas. A vertical canvas gradient
  * keeps the card fully legible over the field, and a line of brand poetry closes
@@ -17,7 +17,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <div className="relative z-10 flex w-full flex-col items-center gap-7">
         {children}
         <p className="max-w-xs text-center text-[12px] leading-[1.6] tracking-[0.3px] text-stone">
-          The hundred-eyed watcher. Nothing in your estate goes unseen.
+          True sight over your estate. Nothing goes unseen.
         </p>
       </div>
     </div>

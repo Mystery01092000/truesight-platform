@@ -23,7 +23,7 @@ import { runSync } from "@/lib/integrations/sync/orchestrator";
  * when the Azure vars are not already present, so a bare `npx tsx` works too.
  *
  * Creates its own single-connection Drizzle client (like db/sync-cli.ts) so it
- * never imports the `server-only` `@/db` module, resolves the Centricity
+ * never imports the `server-only` `@/db` module, resolves the Arcane
  * subscription by display name, and runs a READ-ONLY Resource Graph sync.
  */
 
@@ -52,7 +52,7 @@ function loadEnvLocal(): void {
 async function main(): Promise<void> {
   loadEnvLocal();
 
-  const url = process.env.DATABASE_URL ?? "postgres://argus:argus@localhost:5433/argus";
+  const url = process.env.DATABASE_URL ?? "postgres://truesight:truesight@localhost:5433/truesight";
   const sql = postgres(url, { max: 1 });
   const db = drizzle(sql, { schema, casing: "snake_case" });
 

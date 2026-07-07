@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { verifyEdgeToken } from "@/lib/auth/edge";
 
-const SESSION_COOKIE = "argus_session";
+const SESSION_COOKIE = "truesight_session";
 
 /** Authenticated app segments + API. Public: /, /login, /api/health, /api/auth, /api/landing-stats, assets. */
 const PROTECTED_PREFIXES = [

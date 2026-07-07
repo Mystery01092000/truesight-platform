@@ -1,8 +1,8 @@
 # =============================================================================
-# ALB — small dedicated internet-facing load balancer for Argus.
+# ALB — small dedicated internet-facing load balancer for Truesight.
 #   :443 HTTPS  -> forward to the :3000 IP target group (Next.js)
 #   :80  HTTP   -> 301 redirect to :443
-# Certificate is the regional *.centricitywealth.tech ACM cert (data lookup).
+# Certificate is the regional *.arcane.tech ACM cert (data lookup).
 # =============================================================================
 
 resource "aws_lb" "this" {
@@ -78,7 +78,7 @@ resource "aws_lb_listener" "http_redirect" {
   tags = { Name = "${local.name_prefix}-http-redirect" }
 }
 
-# CUTOVER (CloudFront hardening — enable AFTER argus-infraspace DNS points at
+# CUTOVER (CloudFront hardening — enable AFTER truesight DNS points at
 # the distribution, together with the prefix-list SG rule in
 # security-groups.tf): only requests carrying CloudFront's X-Origin-Verify
 # secret reach the app; direct-to-ALB traffic gets a 403. Also flip the

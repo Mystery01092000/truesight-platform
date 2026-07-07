@@ -96,7 +96,7 @@ export default async function CompliancePage({
           <EmptyState
             icon={<ScrollText size={24} strokeWidth={1.5} />}
             title="Compliance posture is waiting on the first sync"
-            description="Argus evaluates every control against your real cloud estate. Trigger a sync to discover resources, then drift and security findings will resolve each control's verified state automatically."
+            description="Truesight evaluates every control against your real cloud estate. Trigger a sync to discover resources, then drift and security findings will resolve each control's verified state automatically."
           />
         </Reveal>
       ) : (

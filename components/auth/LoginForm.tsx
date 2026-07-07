@@ -92,7 +92,7 @@ export function LoginForm({
           <Logo watching />
           <div>
             <h1 className="text-[20px] font-medium leading-[1.4] text-ink">
-              Sign in to Argus
+              Sign in to Truesight
             </h1>
             <p className="mt-1 text-[14px] leading-[1.6] text-mute">
               Cloud governance with no blind spots.
@@ -138,7 +138,7 @@ export function LoginForm({
         )}
 
         <Button type="submit" variant="primary" disabled={pending} className="mt-2 w-full">
-          {pending ? "Signing in…" : "Enter Argus"}
+          {pending ? "Signing in…" : "Enter Truesight"}
         </Button>
       </form>
 

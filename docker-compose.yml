@@ -1,29 +1,29 @@
-# Local development dependencies for Argus (Postgres + Redis).
+# Local development dependencies for Truesight (Postgres + Redis).
 # NOT a production deployment — the app itself runs via `npm run dev`.
-# Match these to DATABASE_URL / REDIS_URL in your .env.cwt.
+# Match these to DATABASE_URL / REDIS_URL in your .env.local.
 #
 #   docker compose up -d
-#   DATABASE_URL=postgres://argus:argus@localhost:5432/argus
+#   DATABASE_URL=postgres://truesight:truesight@localhost:5432/truesight
 #   REDIS_URL=redis://localhost:6379
 #
 # Host ports are overridable to avoid collisions with other local Postgres/Redis:
-#   ARGUS_DB_PORT=5433 ARGUS_REDIS_PORT=6380 docker compose up -d
+#   TRUESIGHT_DB_PORT=5433 TRUESIGHT_REDIS_PORT=6380 docker compose up -d
 
 services:
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: argus-postgres
+    container_name: truesight-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: argus
-      POSTGRES_PASSWORD: argus
-      POSTGRES_DB: argus
+      POSTGRES_USER: truesight
+      POSTGRES_PASSWORD: truesight
+      POSTGRES_DB: truesight
     ports:
-      - "${ARGUS_DB_PORT:-5432}:5432"
+      - "${TRUESIGHT_DB_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U argus -d argus"]
+      test: ["CMD-SHELL", "pg_isready -U truesight -d truesight"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -31,10 +31,10 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: argus-redis
+    container_name: truesight-redis
     restart: unless-stopped
     ports:
-      - "${ARGUS_REDIS_PORT:-6379}:6379"
+      - "${TRUESIGHT_REDIS_PORT:-6379}:6379"
 
 volumes:
   pgdata:

@@ -88,7 +88,7 @@ export interface AzureCostResult {
  * carrying errors is never cached so a transient failure can't pin the whole TTL.
  */
 export async function getAzureCosts(opts: AzureCostOptions): Promise<AzureCostResult> {
-  const cacheKey = `argus:azure:costs:${opts.startDate}:${opts.endDate}:${opts.granularity ?? "DAILY"}`;
+  const cacheKey = `truesight:azure:costs:${opts.startDate}:${opts.endDate}:${opts.granularity ?? "DAILY"}`;
   return cacheable(
     cacheKey,
     CACHE_TTL_SECONDS,

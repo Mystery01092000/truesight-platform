@@ -1,5 +1,5 @@
 # =============================================================================
-# CloudFront — CDN in front of the Argus ALB (single custom origin, adapted
+# CloudFront — CDN in front of the Truesight ALB (single custom origin, adapted
 # from environments/nr-platform-prod). Next.js on ECS is the only origin:
 #   /_next/static/*        -> immutable, 1-year cache (content-hashed files)
 #   /favicon.ico /images/* -> 1-day cache
@@ -81,7 +81,7 @@ data "aws_cloudfront_origin_request_policy" "all_viewer" {
 # -----------------------------------------------------------------------------
 # Distribution
 # -----------------------------------------------------------------------------
-resource "aws_cloudfront_distribution" "argus" {
+resource "aws_cloudfront_distribution" "truesight" {
   enabled             = true
   is_ipv6_enabled     = true
   comment             = "${local.name_prefix} CDN (Next.js on ECS via ${var.origin_domain_name})"
@@ -93,7 +93,7 @@ resource "aws_cloudfront_distribution" "argus" {
 
   origin {
     domain_name = var.origin_domain_name
-    origin_id   = "alb-argus"
+    origin_id   = "alb-truesight"
 
     custom_origin_config {
       http_port                = 80
@@ -114,7 +114,7 @@ resource "aws_cloudfront_distribution" "argus" {
   default_cache_behavior {
     allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
     cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = "alb-argus"
+    target_origin_id       = "alb-truesight"
     viewer_protocol_policy = "redirect-to-https"
     compress               = true
 
@@ -127,7 +127,7 @@ resource "aws_cloudfront_distribution" "argus" {
     path_pattern           = "/_next/static/*"
     allowed_methods        = ["GET", "HEAD"]
     cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = "alb-argus"
+    target_origin_id       = "alb-truesight"
     viewer_protocol_policy = "redirect-to-https"
     compress               = true
 
@@ -138,7 +138,7 @@ resource "aws_cloudfront_distribution" "argus" {
     path_pattern           = "/favicon.ico"
     allowed_methods        = ["GET", "HEAD"]
     cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = "alb-argus"
+    target_origin_id       = "alb-truesight"
     viewer_protocol_policy = "redirect-to-https"
     compress               = true
 
@@ -149,7 +149,7 @@ resource "aws_cloudfront_distribution" "argus" {
     path_pattern           = "/images/*"
     allowed_methods        = ["GET", "HEAD"]
     cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = "alb-argus"
+    target_origin_id       = "alb-truesight"
     viewer_protocol_policy = "redirect-to-https"
     compress               = true
 

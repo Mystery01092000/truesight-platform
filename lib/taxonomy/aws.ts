@@ -1,9 +1,9 @@
 import type { ResourceKind, ServiceCategory } from './index';
 
 /**
- * Maps an AWS "native type" onto Argus's canonical taxonomy.
+ * Maps an AWS "native type" onto Truesight's canonical taxonomy.
  *
- * Accepts any of the shapes Argus ingests:
+ * Accepts any of the shapes Truesight ingests:
  *  - Terraform resource types  — `aws_ecs_service`, `aws_s3_bucket`
  *  - CloudFormation type names — `AWS::S3::Bucket`, `AWS::ECS::Service`
  *  - Bare service tokens       — `ecs`, `s3`, `rds` (e.g. the service field of an ARN)

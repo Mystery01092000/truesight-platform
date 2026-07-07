@@ -57,7 +57,7 @@ export async function GET() {
 
 /**
  * POST /api/security — admin trigger for a full vulnerability scan across AWS,
- * Azure and GitHub. Read-only against the estate; the only write is into Argus's
+ * Azure and GitHub. Read-only against the estate; the only write is into Truesight's
  * own `security_posture` table.
  */
 export async function POST() {

@@ -1,7 +1,7 @@
 // =============================================================================
-// Argus | Cloud governance platform — PRODUCTION CI/CD
-// Next.js 16 (standalone) -> ECR (cwt-prod/argus, PROD account) -> ECS Fargate
-// (argus-prod-cluster). Auto-triggered by GitHub push; only `main` deploys.
+// Truesight | Cloud governance platform — PRODUCTION CI/CD
+// Next.js 16 (standalone) -> ECR (arcane-prod/truesight, PROD account) -> ECS Fargate
+// (truesight-prod-cluster). Auto-triggered by GitHub push; only `main` deploys.
 // Mirrors the estate pattern in jenkinsfiles/Jenkinsfile.nr-frontend.
 // =============================================================================
 @Library('cwt-jenkins-library') _
@@ -22,14 +22,14 @@ pipeline {
 
     environment {
         AWS_REGION   = 'ap-south-1'
-        SERVICE_NAME = 'argus'
-        PROJECT      = 'argus'
+        SERVICE_NAME = 'truesight'
+        PROJECT      = 'truesight'
         STACK        = 'node'
-        CLUSTER      = 'argus-prod-cluster'
-        APP_HOST     = 'argus-infraspace.centricitywealth.tech'
-        // Argus owns its ECR in the PROD account (404063516552) — override the
+        CLUSTER      = 'truesight-prod-cluster'
+        APP_HOST     = 'truesight.arcane.tech'
+        // Truesight owns its ECR in the PROD account (404063516552) — override the
         // library's default management-account registry via explicit `repo`.
-        ECR_REPO     = '404063516552.dkr.ecr.ap-south-1.amazonaws.com/cwt-prod/argus'
+        ECR_REPO     = '404063516552.dkr.ecr.ap-south-1.amazonaws.com/arcane-prod/truesight'
     }
 
     stages {
@@ -71,7 +71,7 @@ pipeline {
                 //
                 // We deliberately do NOT use a separate cwtDockerBuildPush stage: that
                 // step only authenticates to the central management-account registry
-                // (Constants.ECR_REGISTRY) and cannot push to Argus's prod-account ECR.
+                // (Constants.ECR_REGISTRY) and cannot push to Truesight's prod-account ECR.
                 // cwtEcsDeploy resolves the prod ECR account itself and assumes the org
                 // role before login/push/deploy — matching every other prod service.
                 cwtEcsDeploy(
@@ -94,7 +94,7 @@ pipeline {
                 // The auto-refresh scheduled task (EventBridge → Fargate, owned by
                 // Terraform: deploy/terraform/scheduled-sync.tf) runs a SEPARATE toolbox
                 // image — Dockerfile.sync: node + tsx + the three estate sync CLIs —
-                // pushed to the isolated prod ECR cwt-prod/argus-sync:latest. Rebuilt on
+                // pushed to the isolated prod ECR arcane-prod/truesight-sync:latest. Rebuilt on
                 // every main deploy so the scheduled sync tracks the app's schema/adapters.
                 // Same base-cred + assume-role@404 + ECR-login pattern cwtEcsDeploy uses
                 // (agent runs in the management account; ECR lives in prod). Terraform owns
@@ -103,9 +103,9 @@ pipeline {
                     sh '''
                       set -e
                       REG=404063516552.dkr.ecr.ap-south-1.amazonaws.com
-                      REPO=$REG/cwt-prod/argus-sync
+                      REPO=$REG/arcane-prod/truesight-sync
                       set +x
-                      CREDS=$(aws sts assume-role --role-arn arn:aws:iam::404063516552:role/OrganizationAccountAccessRole --role-session-name argus-sync-image --output json)
+                      CREDS=$(aws sts assume-role --role-arn arn:aws:iam::404063516552:role/OrganizationAccountAccessRole --role-session-name truesight-sync-image --output json)
                       export AWS_ACCESS_KEY_ID=$(echo "$CREDS" | jq -r .Credentials.AccessKeyId)
                       export AWS_SECRET_ACCESS_KEY=$(echo "$CREDS" | jq -r .Credentials.SecretAccessKey)
                       export AWS_SESSION_TOKEN=$(echo "$CREDS" | jq -r .Credentials.SessionToken)
@@ -136,10 +136,10 @@ pipeline {
                   set -e
                   echo "--- Smoke test https://${APP_HOST}/api/health ---"
                   for i in $(seq 1 10); do
-                    CODE=$(curl -sk -o /tmp/argus_health.json -w '%{http_code}' --max-time 15 "https://${APP_HOST}/api/health" || echo 000)
+                    CODE=$(curl -sk -o /tmp/truesight_health.json -w '%{http_code}' --max-time 15 "https://${APP_HOST}/api/health" || echo 000)
                     echo "attempt $i -> HTTP ${CODE}"
                     if [ "${CODE}" = "200" ]; then
-                      cat /tmp/argus_health.json
+                      cat /tmp/truesight_health.json
                       echo "Smoke test passed."
                       exit 0
                     fi

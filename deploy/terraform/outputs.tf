@@ -3,7 +3,7 @@
 # =============================================================================
 
 output "app_url" {
-  description = "Public HTTPS URL for Argus."
+  description = "Public HTTPS URL for Truesight."
   value       = "https://${var.domain_name}"
 }
 
@@ -13,7 +13,7 @@ output "alb_dns_name" {
 }
 
 output "ecr_repository_url" {
-  description = "ECR repo Jenkins pushes to (cwt-prod/argus)."
+  description = "ECR repo Jenkins pushes to (arcane-prod/truesight)."
   value       = module.ecr.repository_urls[var.app_name]
 }
 
@@ -28,7 +28,7 @@ output "ecs_service_name" {
 }
 
 output "log_group_name" {
-  description = "CloudWatch log group for the Argus container."
+  description = "CloudWatch log group for the Truesight container."
   value       = module.ecs_service.log_group_name
 }
 
@@ -54,12 +54,12 @@ output "ssm_secret_prefix" {
 
 output "cloudfront_distribution_id" {
   description = "CloudFront distribution ID (cache invalidations after deploys)."
-  value       = aws_cloudfront_distribution.argus.id
+  value       = aws_cloudfront_distribution.truesight.id
 }
 
 output "cloudfront_domain_name" {
   description = "CloudFront *.cloudfront.net domain (pre-cutover verification target)."
-  value       = aws_cloudfront_distribution.argus.domain_name
+  value       = aws_cloudfront_distribution.truesight.domain_name
 }
 
 output "redis_endpoint" {

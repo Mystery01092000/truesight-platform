@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils/cn";
 import { Pagination } from "@/components/ui/Pagination";
 
 /**
- * DataTable — the one primary tabular surface in Argus (drill-down only).
+ * DataTable — the one primary tabular surface in Truesight (drill-down only).
  * Headless @tanstack/react-table wrapped in the design system: a hairline-edged
  * Surface, a quiet surface-elevated header row, and hairline row separators —
  * never zebra fills or shadows. Columns opt into sorting via the table config.

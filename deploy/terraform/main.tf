@@ -1,5 +1,5 @@
 # =============================================================================
-# Argus | Cloud governance platform — PRODUCTION deployment
+# Truesight | Cloud governance platform — PRODUCTION deployment
 # Next.js 16 (standalone) on ECS Fargate, fronted by a dedicated ALB, backed by
 # a small RDS PostgreSQL instance, all inside the EXISTING prod VPC.
 #
@@ -9,14 +9,14 @@
 #
 # SAFETY: This code REFERENCES existing shared infrastructure (VPC, subnets,
 # ACM cert, Route53 zone) via read-only data sources and NEVER mutates it.
-# Backend state is isolated under argus/prod/*.
+# Backend state is isolated under truesight/prod/*.
 # =============================================================================
 
 terraform {
   # State bucket + lock table are the canonical estate backend.
   backend "s3" {
     bucket         = "terraform-iac-data"
-    key            = "argus/prod/terraform.tfstate"
+    key            = "truesight/prod/terraform.tfstate"
     region         = "ap-south-1"
     dynamodb_table = "keystone-terraform-locks"
     encrypt        = true
@@ -34,14 +34,14 @@ provider "aws" {
 
   assume_role {
     role_arn     = "arn:aws:iam::${var.prod_account_id}:role/${var.assume_role_name}"
-    session_name = "terraform-argus-prod"
+    session_name = "terraform-truesight-prod"
   }
 
   default_tags {
     tags = {
       Owner       = "rishabh"
       Team        = "infra-services"
-      Project     = "argus"
+      Project     = "truesight"
       Environment = "prod"
       ManagedBy   = "terraform"
     }
@@ -58,14 +58,14 @@ provider "aws" {
 
   assume_role {
     role_arn     = "arn:aws:iam::${var.prod_account_id}:role/${var.assume_role_name}"
-    session_name = "terraform-argus-prod-cf"
+    session_name = "terraform-truesight-prod-cf"
   }
 
   default_tags {
     tags = {
       Owner       = "rishabh"
       Team        = "infra-services"
-      Project     = "argus"
+      Project     = "truesight"
       Environment = "prod"
       ManagedBy   = "terraform"
     }
@@ -90,7 +90,7 @@ provider "aws" {
     for_each = var.management_role_arn == "" ? [] : [1]
     content {
       role_arn     = var.management_role_arn
-      session_name = "terraform-argus-dns"
+      session_name = "terraform-truesight-dns"
     }
   }
 
@@ -98,7 +98,7 @@ provider "aws" {
     tags = {
       Owner       = "rishabh"
       Team        = "infra-services"
-      Project     = "argus"
+      Project     = "truesight"
       Environment = "prod"
       ManagedBy   = "terraform"
     }
@@ -109,7 +109,7 @@ provider "aws" {
 # Shared local values.
 # -----------------------------------------------------------------------------
 locals {
-  name_prefix = "${var.app_name}-${var.environment}" # argus-prod
+  name_prefix = "${var.app_name}-${var.environment}" # truesight-prod
 
   # Name tags only (functional tags come from provider default_tags).
   name_tag = { Name = local.name_prefix }

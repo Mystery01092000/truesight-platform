@@ -24,7 +24,7 @@ export default function MarketingLayout({
       <div className="flex min-h-dvh flex-col bg-canvas">
         <header className="sticky top-0 z-50 border-b border-hairline bg-canvas/80 backdrop-blur-md">
           <div className="mx-auto flex h-14 max-w-[1240px] items-center justify-between px-6">
-            <Link href="/" aria-label="Argus home" className="inline-flex">
+            <Link href="/" aria-label="Truesight home" className="inline-flex">
               <Logo />
             </Link>
             <nav className="flex items-center gap-1.5">

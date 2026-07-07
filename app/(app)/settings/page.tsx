@@ -22,7 +22,7 @@ export const dynamic = "force-dynamic";
 
 /** The dedicated platform-settings carrier row (see /api/settings/scan-frequency). */
 const PLATFORM_PROVIDER = "terraform" as const;
-const PLATFORM_EXTERNAL_ID = "argus-platform";
+const PLATFORM_EXTERNAL_ID = "truesight-platform";
 const DEFAULT_SCAN_HOURS = 6;
 
 function dateLabel(date: Date): string {

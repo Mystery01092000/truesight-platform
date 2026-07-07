@@ -24,7 +24,7 @@ import type {
 } from '../lib/taxonomy';
 
 /**
- * Argus Drizzle schema (PostgreSQL).
+ * Truesight Drizzle schema (PostgreSQL).
  *
  * Conventions:
  *  - UUID primary keys via `defaultRandom()` (except `resources`, keyed by URN).

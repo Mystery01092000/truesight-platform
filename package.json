@@ -1,9 +1,9 @@
 {
-  "name": "argus-platform",
+  "name": "truesight-platform",
   "version": "0.1.0",
   "private": true,
-  "description": "Argus — Cloud governance with no blind spots. Enterprise IaaS experience layer across DevOps.",
-  "author": "Rishabh Arya <rishabh.arya@centricity.co.in>",
+  "description": "Truesight — Cloud governance with no blind spots. Enterprise IaaS experience layer across DevOps.",
+  "author": "Arcane Platform Team <platform@arcane.tech>",
   "license": "UNLICENSED",
   "scripts": {
     "dev": "next dev",

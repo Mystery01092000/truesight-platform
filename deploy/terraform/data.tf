@@ -18,7 +18,7 @@ data "aws_vpc" "prod" {
   id = var.vpc_id
 }
 
-# Regional wildcard cert (*.centricitywealth.tech) for the HTTPS listener.
+# Regional wildcard cert (*.arcane.tech) for the HTTPS listener.
 data "aws_acm_certificate" "wildcard" {
   domain      = var.acm_domain
   statuses    = ["ISSUED"]

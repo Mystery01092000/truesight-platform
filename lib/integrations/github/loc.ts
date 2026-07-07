@@ -133,7 +133,7 @@ const strOrNull = (a: Attrs, k: string): string | null =>
 /** Owner segment of a `owner/name` full name (falls back to the org account). */
 function ownerOf(fullName: string | null, account: string | null): string {
   if (fullName && fullName.includes("/")) return fullName.split("/")[0]!;
-  return account ?? "centricitywealthtech";
+  return account ?? "arcane";
 }
 
 /** Discovered GitHub repositories from the KB (kind=repo, present). */
@@ -325,7 +325,7 @@ export async function getRepoLanguages(
 /* ------------------------------ org summary ------------------------------- */
 
 const EMPTY_SUMMARY: OrgLOCSummary = {
-  org: "centricitywealthtech",
+  org: "arcane",
   totalLOC: 0,
   totalAdditions: 0,
   totalDeletions: 0,
@@ -345,7 +345,7 @@ export async function getOrgLOCSummary(): Promise<OrgLOCSummary> {
   const discovered = await readDiscoveredRepos();
   if (discovered.length === 0) return { ...EMPTY_SUMMARY, generatedAt: new Date().toISOString() };
 
-  const org = discovered[0]!.owner || "centricitywealthtech";
+  const org = discovered[0]!.owner || "arcane";
 
   return cacheable(`developers:loc:summary:${org}`, CACHE_TTL_SECONDS, async () => {
     const limit = pLimit(CONCURRENCY);

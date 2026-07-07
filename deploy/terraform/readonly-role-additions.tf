@@ -1,11 +1,11 @@
 # =============================================================================
-# Cost Explorer read permissions for the argus-readonly discovery role.
+# Cost Explorer read permissions for the truesight-readonly discovery role.
 #
-# The `argus-readonly` role (created by the iac-self-service-terraform repo and
-# assumed by the Argus task role for cross-account estate discovery) is granted
+# The `truesight-readonly` role (created by the iac-self-service-terraform repo and
+# assumed by the Truesight task role for cross-account estate discovery) is granted
 # AWS-managed ViewOnlyAccess. That policy does NOT cover Cost Explorer, so the
 # cost/FinOps pillar needs an explicit, least-privilege grant of the read-only
-# `ce:*` actions Argus calls:
+# `ce:*` actions Truesight calls:
 #
 #   - ce:GetCostAndUsage   — GetCostAndUsageCommand (spend grouped by service/tag)
 #   - ce:GetDimensionValues — enumerate service/linked-account dimensions
@@ -19,12 +19,12 @@
 # Read-only lookup of the existing discovery role — never creates or mutates it.
 # Gated: the role is provisioned per-account by iac-self-service-terraform and
 # does not exist in this account yet; a hard lookup would fail the whole plan.
-data "aws_iam_role" "argus_readonly" {
+data "aws_iam_role" "truesight_readonly" {
   count = var.enable_readonly_cost_grant ? 1 : 0
-  name  = "argus-readonly"
+  name  = "truesight-readonly"
 }
 
-data "aws_iam_policy_document" "argus_readonly_cost" {
+data "aws_iam_policy_document" "truesight_readonly_cost" {
   statement {
     sid    = "CostExplorerRead"
     effect = "Allow"
@@ -37,11 +37,11 @@ data "aws_iam_policy_document" "argus_readonly_cost" {
   }
 }
 
-resource "aws_iam_role_policy" "argus_readonly_cost" {
+resource "aws_iam_role_policy" "truesight_readonly_cost" {
   # Inline (not a managed policy attachment) so the grant is self-contained in this
   # module and removed cleanly if this file is ever dropped — no orphaned policies.
   count  = var.enable_readonly_cost_grant ? 1 : 0
-  name   = "argus-readonly-cost-read"
-  role   = data.aws_iam_role.argus_readonly[0].id
-  policy = data.aws_iam_policy_document.argus_readonly_cost.json
+  name   = "truesight-readonly-cost-read"
+  role   = data.aws_iam_role.truesight_readonly[0].id
+  policy = data.aws_iam_policy_document.truesight_readonly_cost.json
 }

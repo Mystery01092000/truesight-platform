@@ -1,5 +1,5 @@
 # =============================================================================
-# Argus | Production deployment IaC — provider + Terraform version pins
+# Truesight | Production deployment IaC — provider + Terraform version pins
 # -----------------------------------------------------------------------------
 # Pinned so every environment (local + Jenkins) resolves identical provider
 # versions. The .terraform.lock.hcl produced from these constraints is committed

@@ -1,4 +1,4 @@
-# Argus — Frontend Premium-Experience Curation Blueprint
+# Truesight — Frontend Premium-Experience Curation Blueprint
 
 > Read-only audit + implementable curation plan for the shipped Next.js 16 / React 19 /
 > Tailwind v4 / React Flow / motion-v12 surface. Source of truth for the premium evolution.
@@ -21,7 +21,7 @@
 | Nav | `components/nav/*`, `lib/nav.ts` | `Sidebar`, `TopBar`, `AppChrome`, `Footer`; **only 3 nav items** |
 | Estate | `components/estate/*` | `ResourceCard`, `ServiceGroup`, `EstateFilters`, `AccountResourceExplorer` |
 | Topology | `components/topology/*`, `lib/topology/*` | `TopologyCanvas`, `ResourceNode`, `GroupNode`, `FlowEdge`, `DetailPanel`, `Legend`, `ScopeTabs`, `focus.ts`; ELK layered engine |
-| Command | `components/command/CommandPalette.tsx` | ⌘K "Ask Argus" |
+| Command | `components/command/CommandPalette.tsx` | ⌘K "Ask Truesight" |
 | Routes | `app/(marketing)`, `app/(auth)/login`, `app/(app)/{overview,aws,aws/[account],topology}` | shipped |
 
 Shipped nav (`lib/nav.ts:10`): **Overview · AWS estate · Topology** only.
@@ -269,7 +269,7 @@ exists).
   the *same* production primitives (glyph tiles, rails, rollups) so landing == app.
 - **Second home:** embed a compact single-row variant as an **Overview band**
   (`app/(app)/overview`) beneath the stat grid — turns the empty overview into a guided
-  "what Argus does" surface for first-run admins (Digio guided-governance).
+  "what Truesight does" surface for first-run admins (Digio guided-governance).
 - **Anatomy:** `Surface level={1} radius="lg"` container · left: tab list + active copy ·
   right: `min-h-40` visual stage. Already the structure — just enrich visuals + copy.
 
@@ -283,7 +283,7 @@ showcase. Aperture (`:27`) is the brand tell — ensure it honors reduced-motion
 CSS, covered by floor).
 
 **Login** (`app/(auth)/login/page.tsx` → `LoginForm`): minimal (20-line page). Add the
-Aperture mark + one-line value prop above the form so the gate feels like Argus, not a bare
+Aperture mark + one-line value prop above the form so the gate feels like Truesight, not a bare
 form; monochrome, single white CTA; focus ring = hairline-strong (no colored ring —
 `TextInput.tsx:6`).
 
@@ -301,8 +301,8 @@ count + collapse, and `ResourceCard` meta uses `text-mute` not `text-ash` (§1.5
 **Topology**: see §3. Legend must document *all three* color domains (kind vs health vs
 drift) or the hue-doubling confuses. Add a "layered / organic" toggle and cluster counts.
 
-**Global voice:** empty/loading/error copy should speak in the Argus persona ("Argus is
-watching N accounts…", "Argus hasn't mapped this estate yet.") — one `EmptyState` primitive,
+**Global voice:** empty/loading/error copy should speak in the Truesight persona ("Truesight is
+watching N accounts…", "Truesight hasn't mapped this estate yet.") — one `EmptyState` primitive,
 reused, monochrome glyph + prose + one CTA.
 
 ---
@@ -378,7 +378,7 @@ drift→Terraform, Optimize cost→Cost, Secure→Security.
 - **P1-5** Login: add Aperture mark + value-prop line. *(components/auth/LoginForm.tsx)*
 - **P1-6** Add provider tint tokens + `ProviderChip` (accent confined to chip). *(app/globals.css, new components/ui/ProviderChip.tsx)*
 - **P1-7** Fix overview "AWS · Azure · GitHub" hint to reflect live providers. *(overview/page.tsx:38)*
-- **P1-8** Single `EmptyState` primitive with Argus persona voice. *(new components/ui/EmptyState.tsx)*
+- **P1-8** Single `EmptyState` primitive with Truesight persona voice. *(new components/ui/EmptyState.tsx)*
 
 ### P2 — reach + parity scaffolding
 - **P2-1** `/azure` estate parity (reuse estate components + taxonomy/azure). *(app/(app)/azure/*)*
