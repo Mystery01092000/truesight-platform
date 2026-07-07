@@ -17,7 +17,10 @@ export type Action =
   | "settings:write"
   | "kb:read"
   | "kb:admin"
-  | "tickets:admin";
+  | "tickets:admin"
+  | "forge:read"
+  | "forge:write"
+  | "forge:deploy";
 
 const MATRIX: Record<Role, Action[] | "*"> = {
   // DevOps Super Admin — full platform configurability.
@@ -35,6 +38,8 @@ const MATRIX: Record<Role, Action[] | "*"> = {
     "kb:read",
     "kb:admin",
     "tickets:admin",
+    "forge:read",
+    "forge:write",
   ],
   viewer: [
     "estate:read",
@@ -44,6 +49,7 @@ const MATRIX: Record<Role, Action[] | "*"> = {
     "security:read",
     "compliance:read",
     "kb:read",
+    "forge:read",
   ],
 };
 
