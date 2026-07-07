@@ -183,3 +183,28 @@ Work is tracked task-by-task for autonomous execution in **[`docs/TASKS.md`](doc
 ordered by phase (0 Docs → 8 Go-live), each task with files, dependencies, and acceptance criteria.
 
 *Built by Arcane, 2026.*
+
+---
+
+## Forge — visual designer & deployer
+
+Forge (`/forge`) is the write-side counterpart to Truesight's read-only estate:
+a React Flow canvas where you drag curated AWS/Azure services (12 per cloud),
+nest them in containers (VPC → Subnet, Resource Group → VNet → Subnet), edit
+each resource's form, and save the design as a plan. **Generate** compiles the
+canvas to Terraform JSON (`main.tf.json`, previewable/downloadable), **Plan**
+streams `terraform plan` output live, and **Deploy/Destroy** (admin-only,
+typed-name confirmation) run `terraform apply/destroy`.
+
+- **Credential isolation** — terraform runs use `DEPLOY_AWS_*` / `DEPLOY_AZURE_*`
+  env vars only (mapped to `AWS_*` / `ARM_*` in the subprocess). The platform's
+  read-only estate credentials are never forwarded; without deploy creds the
+  run buttons disable themselves and everything else still works.
+- **State** — each plan gets a workspace under `var/forge/<planId>/` with local
+  tfstate (snapshotted into Postgres after every run). Volume-mount `/app/var`
+  in production.
+- **RBAC** — `forge:read` (all roles), `forge:write` (admin/operator),
+  `forge:deploy` (admin). Secrets flow through `TF_VAR_forge_db_password` /
+  `TF_VAR_forge_vm_password` (from `DEPLOY_DB_PASSWORD` / `DEPLOY_VM_PASSWORD`).
+- **Catalog** — `lib/forge/catalog/` is data-driven: one `ForgeService` object
+  per service (zod form schema + `toTf()` emitter). Adding a service is one file.

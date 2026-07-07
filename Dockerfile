@@ -48,6 +48,19 @@ ENV NODE_ENV=production \
 RUN addgroup --system --gid 1001 nodejs \
     && adduser --system --uid 1001 nextjs
 
+# Terraform CLI for Forge deploys (arch-aware; pinned version).
+ARG TERRAFORM_VERSION=1.9.8
+RUN apk add --no-cache curl unzip \
+    && ARCH="$(apk --print-arch)" \
+    && case "$ARCH" in x86_64) TF_ARCH=amd64 ;; aarch64) TF_ARCH=arm64 ;; *) echo "unsupported arch $ARCH" && exit 1 ;; esac \
+    && curl -fsSL "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_${TF_ARCH}.zip" -o /tmp/tf.zip \
+    && unzip -q /tmp/tf.zip -d /usr/local/bin \
+    && rm /tmp/tf.zip \
+    && terraform version
+
+# Forge terraform workspaces (per-plan main.tf.json + local tfstate).
+RUN mkdir -p /app/var/forge && chown -R nextjs:nodejs /app/var
+
 # Standalone output already contains a minimal node_modules + server.js.
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static

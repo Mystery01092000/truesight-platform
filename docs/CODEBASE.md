@@ -245,3 +245,14 @@ Found during this survey — the code is authoritative:
    KB embeddings).
 5. **No operational runbook** — one-off migration Fargate tasks, SSM placeholder filling, ECR bootstrap,
    and `terraform apply` sequencing live only in TASKS.md Phase 8 and code comments.
+
+## Forge (visual designer & deployer)
+
+`lib/forge/` — catalog (24 `ForgeService` defs across `aws-*.ts`/`azure-*.ts`),
+`terraform.ts` (canvas validation + tf.json codegen), `hcl-preview.ts`,
+`store.ts` (drizzle CRUD over `forge_plans`/`forge_runs`), `runner.ts`
+(terraform subprocess w/ isolated `DEPLOY_*` env, streamed logs),
+`deploy-env.ts`. UI in `components/forge/` (ForgeStudio, Palette, Inspector,
+canvas nodes, run/preview drawers) and `app/(app)/forge/`; API in
+`app/api/forge/plans*` (CRUD, generate, run, SSE log stream). Tests in
+`lib/forge/__tests__/` (vitest).
