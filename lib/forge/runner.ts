@@ -113,6 +113,7 @@ function runTerraform(
   return new Promise((resolve, reject) => {
     const child = spawn("terraform", args, {
       cwd,
+      stdio: ["ignore", "pipe", "pipe"],
       env: {
         PATH: process.env.PATH ?? "",
         HOME: process.env.HOME ?? "/tmp",
