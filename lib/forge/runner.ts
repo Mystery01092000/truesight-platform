@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import { mkdir, writeFile, readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -111,7 +111,7 @@ function runTerraform(
   runId: string,
 ): Promise<number> {
   return new Promise((resolve, reject) => {
-    const child = spawn("terraform", args, {
+    const child: ChildProcess = spawn("terraform", args, {
       cwd,
       stdio: ["ignore", "pipe", "pipe"],
       env: {
@@ -138,10 +138,10 @@ function runTerraform(
         }, 500);
       }
     };
-    child.stdout.on("data", onData);
-    child.stderr.on("data", onData);
+    child.stdout?.on("data", onData);
+    child.stderr?.on("data", onData);
     child.on("error", reject);
-    child.on("close", (code) => {
+    child.on("close", (code: number | null) => {
       if (flushTimer) clearTimeout(flushTimer);
       flush();
       resolve(code ?? 1);
