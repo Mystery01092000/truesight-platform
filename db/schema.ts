@@ -680,3 +680,33 @@ export type TicketApproval = typeof ticketApprovals.$inferSelect;
 export type NewTicketApproval = typeof ticketApprovals.$inferInsert;
 export type TicketStatusLog = typeof ticketStatusLog.$inferSelect;
 export type NewTicketStatusLog = typeof ticketStatusLog.$inferInsert;
+
+/* ---------------------------------------------------------------------------
+ * Forge — visual designer plans + terraform runs.
+ * ------------------------------------------------------------------------- */
+
+export const forgePlans = pgTable('forge_plans', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  canvasJson: jsonb('canvas_json').$type<import('@/lib/forge/types').ForgeCanvas>().notNull(),
+  tfJson: jsonb('tf_json').$type<Record<string, unknown>>(),
+  tfState: text('tf_state'), // last tfstate snapshot (backup of the workspace file)
+  status: text('status').notNull().default('draft'), // draft|generated|planned|deploying|deployed|failed|destroyed
+  version: integer('version').notNull().default(1),
+  createdBy: text('created_by').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [index('forge_plans_status_idx').on(t.status)]);
+
+export const forgeRuns = pgTable('forge_runs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  planId: uuid('plan_id').notNull().references(() => forgePlans.id, { onDelete: 'cascade' }),
+  kind: text('kind').notNull(), // plan|apply|destroy
+  status: text('status').notNull().default('running'), // running|succeeded|failed
+  log: text('log').notNull().default(''),
+  exitCode: integer('exit_code'),
+  triggeredBy: text('triggered_by').notNull(),
+  startedAt: timestamp('started_at', { withTimezone: true }).defaultNow().notNull(),
+  finishedAt: timestamp('finished_at', { withTimezone: true }),
+}, (t) => [index('forge_runs_plan_idx').on(t.planId)]);
