@@ -11,7 +11,7 @@ const schema = z.object({
   APP_URL: z.string().url().default("http://localhost:3000"),
 
   // Auth — SESSION_SECRET is required in production; dev gets a clearly-fake default.
-  SESSION_SECRET: z.string().min(16).default("argus-dev-secret-change-me-in-prod"),
+  SESSION_SECRET: z.string().min(16).default("truesight-dev-secret-change-me-in-prod"),
   ADMIN_EMAIL: z.string().default("admin"),
   ADMIN_PASSWORD: z.string().optional(),
 
@@ -24,7 +24,7 @@ const schema = z.object({
   // Data
   DATABASE_URL: z
     .string()
-    .default("postgres://argus:argus@localhost:5432/argus"),
+    .default("postgres://truesight:truesight@localhost:5432/truesight"),
   REDIS_URL: z.string().optional(),
 
   // AWS estate (read-only)
@@ -36,17 +36,20 @@ const schema = z.object({
   AWS_DEV_ACCOUNT_ID: z.string().optional(),
   AWS_PROD_ACCESS_KEY_ID: z.string().optional(),
   AWS_PROD_SECRET_ACCESS_KEY: z.string().optional(),
-  AWS_READONLY_ROLE_NAME: z.string().default("argus-readonly"),
+  AWS_READONLY_ROLE_NAME: z.string().default("truesight-readonly"),
 
   // Azure
   AZURE_CLIENT_ID: z.string().optional(),
   AZURE_CLIENT_SECRET: z.string().optional(),
   AZURE_TENANT_ID: z.string().optional(),
-  AZURE_SUBSCRIPTION_NAME: z.string().default("Centricity-Oneinvictus"),
-  AZURE_RESOURCE_GROUP: z.string().default("rg-centricity-prod"),
+  AZURE_SUBSCRIPTION_NAME: z.string().default("Arcane-Prod"),
+  AZURE_RESOURCE_GROUP: z.string().default("rg-arcane-prod"),
 
-  // GitHub
-  GITHUB_ORG: z.string().default("centricitywealthtech"),
+  // GitHub — owner may be an organization or a personal user account.
+  GITHUB_OWNER: z.string().optional(),
+  GITHUB_OWNER_TYPE: z.enum(["org", "user", "auto"]).default("auto"),
+  /** Legacy alias for GITHUB_OWNER (still honored when GITHUB_OWNER is unset). */
+  GITHUB_ORG: z.string().default("arcane"),
   GITHUB_PAT: z.string().optional(),
 
   // Terraform state (read-only)
@@ -54,7 +57,7 @@ const schema = z.object({
 
   // Knowledge Base (semantic search)
   OPENAI_API_KEY: z.string().min(1).optional(),
-  KB_BUCKET_NAME: z.string().default("knowledge-base-iac-argus-backend"),
+  KB_BUCKET_NAME: z.string().default("knowledge-base-iac-truesight-backend"),
   KB_EMBEDDING_MODEL: z.string().default("text-embedding-3-small"),
   KB_EMBEDDING_PROVIDER: z.enum(["openai", "bedrock"]).default("openai"),
   KB_SYNC_SCHEDULE: z.string().optional(), // cron expression, e.g. "rate(10 minutes)"
@@ -107,6 +110,8 @@ export function serverEnv(): ServerEnv {
     AZURE_TENANT_ID: process.env.AZURE_TENANT_ID,
     AZURE_SUBSCRIPTION_NAME: process.env.AZURE_SUBSCRIPTION_NAME,
     AZURE_RESOURCE_GROUP: process.env.AZURE_RESOURCE_GROUP,
+    GITHUB_OWNER: process.env.GITHUB_OWNER,
+    GITHUB_OWNER_TYPE: process.env.GITHUB_OWNER_TYPE,
     GITHUB_ORG: process.env.GITHUB_ORG,
     GITHUB_PAT: process.env.GITHUB_PAT,
     TERRAFORM_STATE_BUCKET: process.env.TERRAFORM_STATE_BUCKET,
@@ -142,7 +147,7 @@ export function serverEnv(): ServerEnv {
   // Never run production on the development fallback secret.
   if (
     parsed.data.NODE_ENV === "production" &&
-    parsed.data.SESSION_SECRET === "argus-dev-secret-change-me-in-prod"
+    parsed.data.SESSION_SECRET === "truesight-dev-secret-change-me-in-prod"
   ) {
     throw new Error("SESSION_SECRET must be set explicitly in production");
   }

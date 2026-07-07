@@ -23,17 +23,17 @@ export default async function GithubPage() {
   if (!insights) {
     return (
       <div className="mx-auto max-w-6xl">
-        <Header org="centricitywealthtech" sub="Org insights — Team → Member → Repo, read-only." />
+        <Header org="arcane" sub="Account insights — Team → Member → Repo, read-only." />
         <Reveal delay={0.1}>
           <Surface level={1} radius="lg" className="p-8 text-center">
             <div className="mx-auto grid size-12 place-items-center rounded-lg border border-hairline bg-surface-card">
               <Users size={24} strokeWidth={1.5} className="text-mute" />
             </div>
             <h2 className="mt-4 text-[18px] font-medium leading-[1.4] text-ink">
-              No GitHub org discovered yet
+              No GitHub account discovered yet
             </h2>
             <p className="mx-auto mt-1.5 max-w-prose text-[14px] leading-[1.6] text-body">
-              Argus hasn&rsquo;t enumerated the organization. Run{" "}
+              Truesight hasn&rsquo;t enumerated the organization or personal account. Run{" "}
               <code className="font-mono text-label text-mute">tsx db/github-sync-cli.ts</code> to
               discover teams, members and repositories read-only — they&rsquo;ll appear here as
               insights.
@@ -48,7 +48,7 @@ export default async function GithubPage() {
   const syncLine =
     lastSync?.startedAt != null
       ? `Last sync ${formatDate(lastSync.startedAt)} · ${lastSync.status}`
-      : "Org insights — Team → Member → Repo, read-only.";
+      : "Account insights — Team → Member → Repo, read-only.";
 
   const stats = [
     { label: "Teams", value: counts.teams, icon: Users },

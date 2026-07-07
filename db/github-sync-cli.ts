@@ -18,8 +18,9 @@ import type { IntegrationAdapter } from "@/lib/integrations/types";
  * integration_sync, resources, resource_snapshots, resource_edges).
  */
 async function main(): Promise<void> {
-  const url = process.env.DATABASE_URL ?? "postgres://argus:argus@localhost:5433/argus";
-  const org = process.env.GITHUB_ORG?.trim() || "centricitywealthtech";
+  const url = process.env.DATABASE_URL ?? "postgres://truesight:truesight@localhost:5433/truesight";
+  const owner =
+    process.env.GITHUB_OWNER?.trim() || process.env.GITHUB_ORG?.trim() || "mystery01092000";
 
   if (!process.env.GITHUB_PAT?.trim()) {
     throw new Error("No GITHUB_PAT in env. Did you `source .env.local`?");
@@ -29,10 +30,10 @@ async function main(): Promise<void> {
   const db = drizzle(sql, { schema, casing: "snake_case" });
 
   const adapters: IntegrationAdapter[] = [
-    createGithubAdapter({ org, label: `GitHub · ${org}` }),
+    createGithubAdapter({ owner, label: `GitHub · ${owner}` }),
   ];
 
-  console.log(`[github-sync] enumerating org ${org} ...`);
+  console.log(`[github-sync] enumerating owner ${owner} (org or personal account) ...`);
 
   for (const a of adapters) {
     const label = (a as { label?: string }).label ?? a.instanceId;
@@ -56,7 +57,7 @@ async function main(): Promise<void> {
     }
     const total = summaries.reduce((n, s) => n + s.resourceCount, 0);
     const edges = summaries.reduce((n, s) => n + s.edgeCount, 0);
-    console.log(`\n[github-sync] DONE — ${total} resources, ${edges} edges across ${summaries.length} org(s).`);
+    console.log(`\n[github-sync] DONE — ${total} resources, ${edges} edges across ${summaries.length} owner(s).`);
   } finally {
     await sql.end();
   }

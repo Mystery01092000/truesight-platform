@@ -11,15 +11,22 @@ import type {
 } from "@/lib/integrations/types";
 import { makeUrn } from "@/lib/integrations/types";
 
-import { createGithubClient, type GithubClient } from "./client";
+import { createGithubClient, type GithubClient, type GithubOwnerType } from "./client";
 
 /* -------------------------------------------------------------------------- */
 /* Config + public shape                                                      */
 /* -------------------------------------------------------------------------- */
 
 export interface GithubAdapterConfig {
-  /** Org login to enumerate. Defaults to `GITHUB_ORG` / `centricitywealthtech`. */
+  /**
+   * Owner login to enumerate — an organization or a personal user account.
+   * Defaults to `GITHUB_OWNER` / `GITHUB_ORG` / `arcane`.
+   */
+  owner?: string;
+  /** @deprecated Use {@link owner}. Honored when `owner` is unset. */
   org?: string;
+  /** Force `org` or `user` scope instead of auto-detecting via the API. */
+  ownerType?: GithubOwnerType;
   /** Friendly display name persisted onto the integration account. */
   label?: string;
   /** Explicit PAT (else resolved from `GITHUB_PAT`). */
@@ -29,10 +36,12 @@ export interface GithubAdapterConfig {
 }
 
 /**
- * Like the AWS adapter, we surface `org`/`label` so the sync orchestrator can
- * key `integration_accounts` and label the run without re-deriving them.
+ * Like the AWS adapter, we surface `owner`/`label` so the sync orchestrator
+ * can key `integration_accounts` and label the run without re-deriving them.
  */
 export interface GithubIntegrationAdapter extends IntegrationAdapter {
+  readonly owner: string;
+  /** @deprecated Alias of {@link owner}. */
   readonly org: string;
   readonly label: string;
 }
@@ -119,30 +128,132 @@ function iso(v: string | null | undefined): string | null {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Top-level enumeration (org vs. personal account)                           */
+/* -------------------------------------------------------------------------- */
+
+interface TopLevel {
+  teams: TeamRow[];
+  orgMembers: UserRow[];
+  repos: RepoRow[];
+}
+
+/** Org scope: teams + org members + org repos, each isolated. */
+async function enumerateOrg(
+  client: GithubClient,
+  org: string,
+  errors: AdapterError[],
+): Promise<TopLevel> {
+  const [teamsR, membersR, reposR] = await Promise.allSettled([
+    client.paginate(client.rest.teams.list, { org, per_page: 100 }) as Promise<TeamRow[]>,
+    client.paginate(client.rest.orgs.listMembers, { org, per_page: 100 }) as Promise<UserRow[]>,
+    client.paginate(client.rest.repos.listForOrg, {
+      org,
+      per_page: 100,
+      type: "all",
+      sort: "pushed",
+    }) as Promise<RepoRow[]>,
+  ]);
+
+  const teams = teamsR.status === "fulfilled" ? teamsR.value : [];
+  if (teamsR.status === "rejected") errors.push(toAdapterError("teams:list", teamsR.reason));
+  const orgMembers = membersR.status === "fulfilled" ? membersR.value : [];
+  if (membersR.status === "rejected") errors.push(toAdapterError("orgs:listMembers", membersR.reason));
+  const repos = reposR.status === "fulfilled" ? reposR.value : [];
+  if (reposR.status === "rejected") errors.push(toAdapterError("repos:listForOrg", reposR.reason));
+
+  return { teams, orgMembers, repos };
+}
+
+/**
+ * User scope: no teams; the account itself is the single "member". Owned
+ * repos come from the authenticated-user endpoint when the PAT belongs to
+ * the account (includes private repos), else the public listing.
+ */
+async function enumerateUser(
+  client: GithubClient,
+  username: string,
+  errors: AdapterError[],
+): Promise<TopLevel> {
+  let orgMembers: UserRow[] = [];
+  try {
+    const u = await client.rest.users.getByUsername({ username });
+    orgMembers = [
+      {
+        id: u.data.id,
+        login: u.data.login,
+        html_url: u.data.html_url,
+        avatar_url: u.data.avatar_url,
+        type: u.data.type,
+        site_admin: u.data.site_admin,
+      },
+    ];
+  } catch (err) {
+    errors.push(toAdapterError("users:getByUsername", err));
+  }
+
+  let repos: RepoRow[] = [];
+  try {
+    const me = await client.rest.users.getAuthenticated();
+    const isSelf = me.data.login.toLowerCase() === username.toLowerCase();
+    repos = isSelf
+      ? ((await client.paginate(client.rest.repos.listForAuthenticatedUser, {
+          per_page: 100,
+          affiliation: "owner",
+          sort: "pushed",
+        })) as RepoRow[])
+      : ((await client.paginate(client.rest.repos.listForUser, {
+          username,
+          per_page: 100,
+          sort: "pushed",
+        })) as RepoRow[]);
+  } catch (err) {
+    errors.push(toAdapterError("repos:listForUser", err));
+  }
+
+  return { teams: [], orgMembers, repos };
+}
+
+/* -------------------------------------------------------------------------- */
 /* Adapter                                                                     */
 /* -------------------------------------------------------------------------- */
 
 export function createGithubAdapter(cfg: GithubAdapterConfig = {}): GithubIntegrationAdapter {
-  const client: GithubClient = createGithubClient({ org: cfg.org, token: cfg.token });
-  const org = client.org;
+  const client: GithubClient = createGithubClient({
+    owner: cfg.owner,
+    org: cfg.org,
+    ownerType: cfg.ownerType,
+    token: cfg.token,
+  });
+  const org = client.owner;
   const label = cfg.label ?? `GitHub · ${org}`;
   const limit = pLimit(cfg.concurrency ?? 8);
 
   return {
     provider: "github",
     instanceId: org,
+    owner: org,
     org,
     label,
 
     async healthCheck(): Promise<AdapterHealth> {
       try {
         const me = await client.rest.users.getAuthenticated();
-        const o = await client.rest.orgs.get({ org });
+        const ownerType = await client.resolveOwnerType();
+        if (ownerType === "org") {
+          const o = await client.rest.orgs.get({ org });
+          return {
+            provider: "github",
+            instanceId: org,
+            ok: true,
+            detail: `viewer=${me.data.login} org=${o.data.login} repos=${o.data.public_repos + (o.data.total_private_repos ?? 0)}`,
+          };
+        }
+        const u = await client.rest.users.getByUsername({ username: org });
         return {
           provider: "github",
           instanceId: org,
           ok: true,
-          detail: `viewer=${me.data.login} org=${o.data.login} repos=${o.data.public_repos + (o.data.total_private_repos ?? 0)}`,
+          detail: `viewer=${me.data.login} user=${u.data.login} public_repos=${u.data.public_repos}`,
         };
       } catch (err) {
         const e = toAdapterError("users:getAuthenticated", err);
@@ -154,24 +265,24 @@ export function createGithubAdapter(cfg: GithubAdapterConfig = {}): GithubIntegr
       const errors: AdapterError[] = [];
       const now = new Date().toISOString();
 
-      // 1. Top-level enumeration (teams, org members, repos) — isolated.
-      const [teamsR, membersR, reposR] = await Promise.allSettled([
-        client.paginate(client.rest.teams.list, { org, per_page: 100 }) as Promise<TeamRow[]>,
-        client.paginate(client.rest.orgs.listMembers, { org, per_page: 100 }) as Promise<UserRow[]>,
-        client.paginate(client.rest.repos.listForOrg, {
-          org,
-          per_page: 100,
-          type: "all",
-          sort: "pushed",
-        }) as Promise<RepoRow[]>,
-      ]);
+      // 0. Resolve scope: organization vs. personal account.
+      let ownerType: GithubOwnerType;
+      try {
+        ownerType = await client.resolveOwnerType();
+      } catch (err) {
+        return {
+          resources: [],
+          edges: [],
+          partial: true,
+          errors: [toAdapterError("owner:resolveType", err)],
+        };
+      }
 
-      const teams = teamsR.status === "fulfilled" ? teamsR.value : [];
-      if (teamsR.status === "rejected") errors.push(toAdapterError("teams:list", teamsR.reason));
-      const orgMembers = membersR.status === "fulfilled" ? membersR.value : [];
-      if (membersR.status === "rejected") errors.push(toAdapterError("orgs:listMembers", membersR.reason));
-      const repos = reposR.status === "fulfilled" ? reposR.value : [];
-      if (reposR.status === "rejected") errors.push(toAdapterError("repos:listForOrg", reposR.reason));
+      // 1. Top-level enumeration — isolated per stream.
+      const { teams, orgMembers, repos } =
+        ownerType === "org"
+          ? await enumerateOrg(client, org, errors)
+          : await enumerateUser(client, org, errors);
 
       // Member registry keyed by id (union of org members + team members).
       const members = new Map<number, UserRow>();
@@ -393,8 +504,9 @@ export function createGithubAdapter(cfg: GithubAdapterConfig = {}): GithubIntegr
 
       /* ---------------------------------------------------------------- */
       /* Build edges (truthful containment)                               */
-      /*   team contains member  (team membership)                        */
-      /*   team contains repo    (team repository access)                 */
+      /*   team contains member    (team membership — org scope)          */
+      /*   team contains repo      (team repository access — org scope)   */
+      /*   account contains repo   (repo ownership — user scope)          */
       /* ---------------------------------------------------------------- */
       for (const t of teams) {
         const tUrn = urnFor(org, "team", t.id);
@@ -403,6 +515,15 @@ export function createGithubAdapter(cfg: GithubAdapterConfig = {}): GithubIntegr
         }
         for (const rid of teamRepos.get(t.id) ?? []) {
           if (rid) edges.push(edge(tUrn, urnFor(org, "repo", rid), "contains"));
+        }
+      }
+      if (ownerType === "user") {
+        const account = orgMembers[0];
+        if (account?.id) {
+          const aUrn = urnFor(org, "member", account.id);
+          for (const rid of repoById.keys()) {
+            edges.push(edge(aUrn, urnFor(org, "repo", rid), "contains"));
+          }
         }
       }
 

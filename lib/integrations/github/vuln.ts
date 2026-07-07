@@ -1,35 +1,75 @@
+import pLimit from "p-limit";
+
 import type { Severity } from "@/lib/taxonomy";
 import type { CloudProvider } from "@/lib/taxonomy";
 import type { SecurityFinding, VulnScanResult } from "@/lib/integrations/security";
 import { makeUrn } from "@/lib/integrations/types";
-import { createGithubClient } from "./client";
+import { createGithubClient, type GithubClient, type GithubOwnerType } from "./client";
 
 /**
  * GitHub codebase vulnerability adapter — read-only capture across two streams:
  *
- *   Dependabot   — vulnerable dependency alerts (`dependabot.listAlertsForOrg`)
- *   CodeQL       — code-scanning alerts (`codeScanning.listAlertsForOrg`)
+ *   Dependabot   — vulnerable dependency alerts
+ *   CodeQL       — code-scanning alerts
  *
- * Both are paginated org-wide over every repository. Each alert maps onto a
- * canonical {@link SecurityFinding} with the vulnerable dependency name +
- * advisory URL in `details.resourceLink` and the advisory summary in
- * `details.remediation`. A failure in one stream never aborts the other.
+ * Org scope uses the org-wide endpoints (`*.listAlertsForOrg`); personal
+ * account scope has no org-wide endpoints, so alerts are gathered per owned
+ * repository instead. Each alert maps onto a canonical
+ * {@link SecurityFinding} with the vulnerable dependency name + advisory URL
+ * in `details.resourceLink` and the advisory summary in `details.remediation`.
+ * A failure in one stream never aborts the other.
  */
 
 export interface ScanGithubVulnsOpts {
+  /** Owner login — an organization or a personal user account. */
+  owner?: string;
+  /** @deprecated Use {@link owner}. Honored when `owner` is unset. */
   org?: string;
+  /** Force `org` or `user` scope instead of auto-detecting via the API. */
+  ownerType?: GithubOwnerType;
   token?: string;
-  /** Concurrency cap for per-repo fan-out. */
+  /** Concurrency cap for per-repo fan-out (user scope only). */
   concurrency?: number;
 }
 
 export async function scanGithubVulns(opts: ScanGithubVulnsOpts = {}): Promise<VulnScanResult> {
-  const client = createGithubClient({ org: opts.org, token: opts.token });
-  const org = client.org;
+  const client = createGithubClient({
+    owner: opts.owner,
+    org: opts.org,
+    ownerType: opts.ownerType,
+    token: opts.token,
+  });
+  const org = client.owner;
   const errors: VulnScanResult["errors"] = [];
   const findings: SecurityFinding[] = [];
 
-  // 1. Dependabot alerts — org-wide.
+  let ownerType: GithubOwnerType;
+  try {
+    ownerType = await client.resolveOwnerType();
+  } catch (err) {
+    return {
+      findings,
+      partial: true,
+      errors: [{ scope: `github:owner:${org}`, message: errMsg(err) }],
+    };
+  }
+
+  if (ownerType === "org") {
+    await scanOrgWide(client, org, findings, errors);
+  } else {
+    await scanPerRepo(client, org, findings, errors, opts.concurrency ?? 8);
+  }
+
+  return { findings, partial: errors.length > 0, errors };
+}
+
+/** Org scope — the two org-wide alert feeds, each isolated. */
+async function scanOrgWide(
+  client: GithubClient,
+  org: string,
+  findings: SecurityFinding[],
+  errors: VulnScanResult["errors"],
+): Promise<void> {
   try {
     const alerts = (await client.paginate(client.rest.dependabot.listAlertsForOrg, {
       org,
@@ -44,7 +84,6 @@ export async function scanGithubVulns(opts: ScanGithubVulnsOpts = {}): Promise<V
     errors.push({ scope: `github:dependabot:${org}`, message: errMsg(err) });
   }
 
-  // 2. CodeQL alerts — org-wide.
   try {
     const alerts = (await client.paginate(client.rest.codeScanning.listAlertsForOrg, {
       org,
@@ -58,8 +97,96 @@ export async function scanGithubVulns(opts: ScanGithubVulnsOpts = {}): Promise<V
   } catch (err) {
     errors.push({ scope: `github:codeql:${org}`, message: errMsg(err) });
   }
+}
 
-  return { findings, partial: errors.length > 0, errors };
+/**
+ * User scope — enumerate owned repos, then fetch both alert feeds per repo.
+ * Repos without code scanning configured return 404s; those are expected and
+ * not recorded as errors.
+ */
+async function scanPerRepo(
+  client: GithubClient,
+  owner: string,
+  findings: SecurityFinding[],
+  errors: VulnScanResult["errors"],
+  concurrency: number,
+): Promise<void> {
+  let repos: { name: string; full_name: string }[] = [];
+  try {
+    const me = await client.rest.users.getAuthenticated();
+    const isSelf = me.data.login.toLowerCase() === owner.toLowerCase();
+    repos = isSelf
+      ? ((await client.paginate(client.rest.repos.listForAuthenticatedUser, {
+          per_page: 100,
+          affiliation: "owner",
+        })) as { name: string; full_name: string }[])
+      : ((await client.paginate(client.rest.repos.listForUser, {
+          username: owner,
+          per_page: 100,
+        })) as { name: string; full_name: string }[]);
+  } catch (err) {
+    errors.push({ scope: `github:repos:${owner}`, message: errMsg(err) });
+    return;
+  }
+
+  const limit = pLimit(concurrency);
+  await Promise.all(
+    repos.flatMap((r) => [
+      limit(async () => {
+        try {
+          const alerts = (await client.paginate(client.rest.dependabot.listAlertsForRepo, {
+            owner,
+            repo: r.name,
+            state: "open",
+            per_page: 100,
+          })) as unknown as DependabotAlertRow[];
+          for (const a of alerts) {
+            const f = mapDependabot(withRepo(a, r.full_name), owner);
+            if (f) findings.push(f);
+          }
+        } catch (err) {
+          if (!isExpectedRepoScanGap(err)) {
+            errors.push({ scope: `github:dependabot:${r.full_name}`, message: errMsg(err) });
+          }
+        }
+      }),
+      limit(async () => {
+        try {
+          const alerts = (await client.paginate(client.rest.codeScanning.listAlertsForRepo, {
+            owner,
+            repo: r.name,
+            state: "open",
+            per_page: 100,
+          })) as unknown as CodeScanningAlertRow[];
+          for (const a of alerts) {
+            const f = mapCodeScanning(withRepo(a, r.full_name), owner);
+            if (f) findings.push(f);
+          }
+        } catch (err) {
+          if (!isExpectedRepoScanGap(err)) {
+            errors.push({ scope: `github:codeql:${r.full_name}`, message: errMsg(err) });
+          }
+        }
+      }),
+    ]),
+  );
+}
+
+/** Per-repo alert rows omit `repository`; stamp it so the mappers stay shared. */
+function withRepo<T extends { repository?: { full_name?: string } }>(
+  alert: T,
+  fullName: string,
+): T {
+  return alert.repository?.full_name ? alert : { ...alert, repository: { full_name: fullName } };
+}
+
+/**
+ * 404 = code scanning / Dependabot not set up on that repo; 403 = alerts
+ * disabled or PAT lacks the scope. Both are normal on personal accounts.
+ */
+function isExpectedRepoScanGap(err: unknown): boolean {
+  const status = (err as { status?: number })?.status;
+  return status === 404 || status === 403;
 }
 
 /* -------------------------------------------------------------------------- */
