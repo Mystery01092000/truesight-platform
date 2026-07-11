@@ -4,9 +4,12 @@
 
 Truesight (after *truesight*, the arcane vision that sees things exactly as they are) is a premium, visual, self-discovering
 single pane across AWS + Azure estates, GitHub org activity, Terraform drift, cost, security, and
-compliance. It runs full-stack, live, with **real data on every screen — no stubs** — at
-[https://truesight.arcane.tech](https://truesight.arcane.tech)
+compliance — plus **Forge**, a visual multi-cloud designer that compiles a drag-and-drop canvas to
+Terraform and runs it with isolated write credentials. It runs full-stack, live, with **real data on
+every screen — no stubs** — at [https://truesight.arcane.tech](https://truesight.arcane.tech)
 for a small set of gated DevOps admins, at **< $50/month**.
+
+![Truesight overview dashboard](docs/screenshots/overview.png)
 
 > Autonomous agents: read this file, then work strictly from [`docs/TASKS.md`](docs/TASKS.md).
 > Every task there has stable IDs, file lists, dependencies, and acceptance criteria so you can
@@ -14,22 +17,83 @@ for a small set of gated DevOps admins, at **< $50/month**.
 
 ---
 
-## What Truesight is — the 7 pillars
+## What Truesight is — the pillars
 
 | # | Pillar | One-liner |
 |---|--------|-----------|
 | 1 | **Landing + gated auth** | Motion-first narrative landing (animated aperture + auto-cycling capability showcase); credential login, `jose` JWT in httpOnly cookie, Azure Entra SSO slot ready. |
 | 2 | **AWS estate explorer** | Multi-account (mgmt/prod/dev) via STS AssumeRole; ECR/ECS/S3/RDS/DocumentDB/SSM/Bedrock/EC2-VPC as animated tiles, tables drill-down only. |
 | 3 | **Azure estate explorer** | Resource Graph KQL over `rg-arcane-prod`, at parity with AWS via reused estate components. |
-| 4 | **GitHub org insights** | `arcane` org: Team→Member→Repo enum + GraphQL insights (languages, commit counts, top devs). |
+| 4 | **GitHub org insights** | Org or personal account: Team→Member→Repo enum + GraphQL insights (languages, commit counts, top devs). |
 | 5 | **Signature topology canvas** | `@xyflow/react` + `elkjs` source-to-runtime graph: Dockerfile stages, Terraform modules, Jenkins pipeline stages linked to live cloud, drift-aware. |
 | 6 | **Compliance / Security / Checklists / KB** | Postgres-backed governance as guided, status-tracked workflows + verified-checklist (✓) view; includes the live vulnerability scanner and drift findings. |
 | 7 | **Cost dashboard** | Real-time spend filterable by product/tag × time; AWS Cost Explorer + Azure Cost Management. |
+| 8 | **Forge — visual designer & deployer** | Drag-and-drop multi-cloud canvas (VPC/Subnet/Resource Group containers, curated AWS + Azure services) compiled to Terraform; Plan/Deploy/Destroy stream live, gated behind separate write credentials. |
+| 9 | **Developer portal** | Per-developer LOC metrics, contribution rankings and stack coverage across the org's repositories. |
+| 10 | **Tickets — developer tools access** | Raise and track AWS / Azure / Jenkins / Grafana / Superset access requests, managed by DevOps & IT with an admin console. |
 
 **Read-only-estate principle.** Truesight **never mutates infrastructure** — no `terraform apply`/`plan`
 against the estate, no writes to any cloud resource. This is enforced at the **IAM boundary**: Truesight
 assumes a purpose-built `truesight-readonly` role (AWS-managed `ViewOnlyAccess`) into each account, and
 Terraform state is `s3:GetObject` only. Read-only is a hard guarantee, not a code convention.
+
+The one deliberate exception is **Forge**, which *writes* infrastructure — but only to stacks it
+designed itself, with dedicated `DEPLOY_*` credentials that are fully isolated from the read-only
+estate role (see [Forge](#forge--visual-designer--deployer)).
+
+---
+
+## Feature tour
+
+All captures below are from a live local run against real integrations — no mock data.
+
+### Landing + gated auth
+Motion-first narrative landing with the animated aperture, live estate badges, and credential
+login (Azure Entra SSO slot ready).
+
+![Landing page](docs/screenshots/landing.png)
+
+### AWS estate explorer
+Account cards with sync status, then every discovered resource — filterable by service, region and
+health — in a drill-down table keyed by URN.
+
+![AWS estate explorer](docs/screenshots/aws-estate.png)
+
+### Topology canvas
+The live weave: resources and dependencies across accounts on an ELK-layered React Flow canvas,
+filterable by cloud and environment, with drift overlays and live deltas over SSE.
+
+![Topology canvas](docs/screenshots/topology.png)
+
+### GitHub insights
+Teams, members, repositories and contributions for the configured org or personal account, with
+language breakdowns and per-repo commit activity.
+
+![GitHub insights](docs/screenshots/github-insights.png)
+
+### Developer portal
+Per-developer net LOC, commit counts, repository coverage and top languages, precomputed into
+`developer_stats` and refreshable via the standalone `db:loc-refresh` CLI.
+
+![Developer portal](docs/screenshots/developers.png)
+
+### Cost & FinOps
+Cross-cloud spend from AWS Cost Explorer + Azure Cost Management: total/top-service/daily-burn
+tiles and a spend breakdown pivotable by service, account, provider and day.
+
+![Cost dashboard](docs/screenshots/cost.png)
+
+### Forge — design & deploy on a canvas
+Drag curated AWS/Azure services into nested containers, edit each resource's form in the inspector,
+then Generate Terraform, stream `terraform plan`, and Deploy/Destroy with typed-name confirmation.
+
+![Forge designer](docs/screenshots/forge-designer.png)
+
+### Knowledge Base — Ask Truesight
+Semantic search and cited RAG answers over docs, estate snapshots, GitHub and Terraform state;
+upload documents straight into the S3-backed ingest pipeline.
+
+![Knowledge base](docs/screenshots/knowledge-base.png)
 
 ---
 
